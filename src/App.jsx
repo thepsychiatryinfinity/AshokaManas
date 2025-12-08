@@ -3,11 +3,12 @@ import {
   Heart, MessageCircle, PenSquare, Lightbulb, Wind, Users, Send, ThumbsUp, X, Shield, 
   Search, AlertTriangle, CheckCircle, Leaf, Hash, User, ChevronRight, Menu, HeartHandshake, 
   BookOpen, Pill, ScrollText, Ban, AlertOctagon, Info, Stethoscope, Baby, Repeat, Coffee, 
-  Siren, FileText, Gavel, Scale, AlertCircle, Globe, Copy, Check, Lock, MessagesSquare
+  Siren, FileText, Gavel, Scale, AlertCircle, Globe, Copy, Check, Lock, MessagesSquare, Key,
+  UserCheck, XCircle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, arrayUnion, increment, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, arrayUnion, increment, serverTimestamp, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firebase Config (YOUR REAL KEYS) ---
 const firebaseConfig = {
@@ -27,7 +28,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- CONSTANTS ---
 const APP_NAME = "AshokaManas";
-const ADMIN_EMAIL = "ashokamanas11@gmail.com"; 
+const MASTER_PASSWORD = "ASHOKA-MASTER-KEY"; // <--- YOUR ADMIN PASSWORD
 const TRIGGER_WORDS = ['die', 'kill', 'suicide', 'end it', 'hurt', 'abuse', 'hate', 'stupid', 'idiot', 'చనిపోవాలని', 'ఆత్మహత్య', 'చంపడం'];
 
 const TRANSLATIONS = {
@@ -48,9 +49,8 @@ const TRANSLATIONS = {
     protocol: "NEVER prescribe meds. Only give general guidance.",
     apply: "Apply to Moderate",
     verifyTitle: "Are you a Doctor?",
-    verifyText: "Get the Blue Badge to mentor students securely.",
-    verifyBtn: "Verify Profile",
-    copyID: "Copy My ID",
+    verifyText: "Request the Blue Badge to join the panel.",
+    verifyBtn: "Request Verification",
     civilityTitle: "Civility Code",
     civilityText: "No abusive, violent, unfair, or blaming language. Be kind or be banned."
   },
@@ -71,9 +71,8 @@ const TRANSLATIONS = {
     protocol: "మందులను సూచించవద్దు.",
     apply: "దరఖాస్తు చేయండి",
     verifyTitle: "మీరు డాక్టరా?",
-    verifyText: "బ్లూ బ్యాడ్జ్ పొందండి.",
+    verifyText: "బ్లూ బ్యాడ్జ్ కోసం అభ్యర్థించండి.",
     verifyBtn: "ధృవీకరించండి",
-    copyID: "కాపీ ఐడి",
     civilityTitle: "మర్యాద నియమాలు",
     civilityText: "దూషించడం, నిందించడం లేదా హింసాత్మక పదాలు వాడరాదు."
   }
@@ -108,33 +107,118 @@ const AppLogo = ({ size = "sm" }) => (
   </div>
 );
 
-// --- MODALS ---
+// --- ADMIN PANEL COMPONENT ---
+const AdminPanel = ({ onClose }) => {
+  const [requests, setRequests] = useState([]);
 
-const VerificationModal = ({ user, onClose }) => {
-  const [copied, setCopied] = useState(false);
-  const copyID = () => {
-    navigator.clipboard.writeText(user.uid);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => {
+    // Listen to verification requests
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'verification_requests'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      setRequests(data);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleApprove = async (req) => {
+    // 1. Upgrade User Profile
+    const userRef = doc(db, 'artifacts', appId, 'public', 'users', req.userId);
+    await setDoc(userRef, { isExpert: true, verifiedAt: Date.now() }, { merge: true });
+    // 2. Delete Request
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', req.id));
+    alert("Doctor Verified Successfully!");
   };
 
-  // UPDATED EMAIL BODY HERE
-  const mailLink = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification Request&body=Hello Admin,%0D%0A%0D%0AI want to join the Clinical Hub as a Verified Psychiatrist.%0D%0A%0D%0AMy User ID: ${user.uid}%0D%0AMy Name:%0D%0AMedical Registration Number:%0D%0A%0D%0A(Please attach a photo of your ID)`;
+  const handleReject = async (reqId) => {
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', reqId));
+  };
+
+  return (
+    <div className="flex-1 bg-white min-h-screen p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Lock size={20} /> Admin Dashboard</h2>
+        <button onClick={onClose}><X size={24} /></button>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="font-bold text-sm text-slate-500 uppercase">Pending Verifications ({requests.length})</h3>
+        {requests.length === 0 && <p className="text-slate-400 text-sm">No pending requests.</p>}
+        
+        {requests.map(req => (
+          <div key={req.id} className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-bold text-slate-800">{req.name}</p>
+                <p className="text-xs text-slate-500 font-mono">ID: {req.userId}</p>
+              </div>
+              <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Pending</span>
+            </div>
+            <p className="text-sm text-slate-600 mb-4"><strong>Reg No:</strong> {req.regNo}</p>
+            
+            <div className="flex gap-2">
+              <button onClick={() => handleApprove(req)} className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-teal-700">
+                <Check size={14} /> Approve
+              </button>
+              <button onClick={() => handleReject(req.id)} className="flex-1 bg-slate-200 text-slate-600 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-slate-300">
+                <X size={14} /> Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- REQUEST MODAL ---
+const RequestVerificationModal = ({ user, onClose }) => {
+  const [name, setName] = useState('');
+  const [regNo, setRegNo] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!name || !regNo) return;
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'verification_requests'), {
+      userId: user.uid,
+      name: name,
+      regNo: regNo,
+      createdAt: Date.now()
+    });
+    setSubmitted(true);
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-900/90 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20} /></button>
-        <div className="text-center">
-          <div className="w-12 h-12 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 text-sky-600"><Stethoscope size={24} /></div>
-          <h3 className="text-lg font-bold text-slate-800">Doctor Verification</h3>
-          <p className="text-xs text-slate-500 mb-4">Send your User ID and Medical License to the admin to get the Blue Badge.</p>
-          <div className="bg-slate-100 p-3 rounded-xl flex items-center justify-between mb-4 border border-slate-200">
-            <code className="text-xs text-slate-600 font-mono truncate max-w-[200px]">{user.uid}</code>
-            <button onClick={copyID} className="text-slate-500 hover:text-teal-600">{copied ? <Check size={16} /> : <Copy size={16} />}</button>
+        
+        {!submitted ? (
+          <div className="text-center">
+            <div className="w-12 h-12 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 text-sky-600"><Stethoscope size={24} /></div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Doctor Verification</h3>
+            <p className="text-xs text-slate-500 mb-6">Submit your details. Admin will verify your Medical License and grant the badge.</p>
+            
+            <div className="space-y-3 text-left">
+              <div>
+                <label className="text-xs font-bold text-slate-500 ml-1">Full Name</label>
+                <input value={name} onChange={e=>setName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-sky-500" placeholder="Dr. Name" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 ml-1">Registration Number</label>
+                <input value={regNo} onChange={e=>setRegNo(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-sky-500" placeholder="MCI / State Council No." />
+              </div>
+              <button onClick={handleSubmit} disabled={!name || !regNo} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-sky-700 transition-colors disabled:opacity-50">Submit Request</button>
+            </div>
           </div>
-          <a href={mailLink} className="block w-full bg-sky-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-sky-700 transition-colors">Email Request (Gmail)</a>
-        </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600"><CheckCircle size={24} /></div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Request Sent!</h3>
+            <p className="text-xs text-slate-500">The Admin will review your details soon.</p>
+            <button onClick={onClose} className="mt-6 text-sky-600 font-bold text-sm">Close</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -144,21 +228,11 @@ const LegalGateModal = ({ onAccept, lang }) => (
   <div className="fixed inset-0 bg-slate-900/90 z-[5000] flex items-center justify-center p-4 backdrop-blur-sm">
     <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
       <div className="flex flex-col items-center justify-center mb-6"><AppLogo size="lg" /><h2 className="text-2xl font-bold text-center text-teal-900 mt-4">{TRANSLATIONS[lang].appName}</h2></div>
-      
       <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4 text-sm text-red-900 space-y-2">
         <div className="flex items-center gap-2 font-bold"><AlertOctagon size={16}/> STRICT CIVILITY CODE</div>
-        <p className="text-xs leading-relaxed">
-          <strong>NO ABUSIVE LANGUAGE:</strong> Any post containing violence, blame, unfair criticism, or unparliamentary words will be removed and the user banned.
-        </p>
-        <p className="text-xs leading-relaxed">
-          <strong>NO HARM:</strong> Do not encourage self-harm or harm to others.
-        </p>
+        <p className="text-xs leading-relaxed"><strong>NO ABUSIVE LANGUAGE:</strong> Any post containing violence, blame, unfair criticism, or unparliamentary words will be removed and the user banned.</p>
       </div>
-
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-sm text-slate-700 space-y-3">
-        <p><strong>1. {TRANSLATIONS[lang].legalTitle}:</strong> {TRANSLATIONS[lang].legalText}</p>
-        <p><strong>2. Protocol:</strong> {TRANSLATIONS[lang].protocol}</p>
-      </div>
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-sm text-slate-700 space-y-3"><p><strong>1. {TRANSLATIONS[lang].legalTitle}:</strong> {TRANSLATIONS[lang].legalText}</p><p><strong>2. Protocol:</strong> {TRANSLATIONS[lang].protocol}</p></div>
       <Button onClick={onAccept} className="w-full py-3 text-lg">{TRANSLATIONS[lang].agree}</Button>
     </div>
   </div>
@@ -173,21 +247,10 @@ const SOSModal = ({ onClose, lang }) => (
   </div>
 );
 
-// --- SIDEBAR GUIDELINES ---
 const CommunityGuidelines = ({ lang }) => {
   const t = TRANSLATIONS[lang];
   return (
-    <div className="border-l-4 border-slate-400 bg-slate-50 rounded-r-xl p-3 mt-4">
-      <div className="flex items-center gap-2 text-slate-700 font-bold mb-2 text-xs">
-        <MessagesSquare size={14} /> {t.civilityTitle}
-      </div>
-      <ul className="space-y-1 text-slate-600 text-[10px]">
-        <li>• No Abusive Words</li>
-        <li>• No Blaming / Shaming</li>
-        <li>• No Unfair Criticism</li>
-        <li>• No Violent Threats</li>
-      </ul>
-    </div>
+    <div className="border-l-4 border-slate-400 bg-slate-50 rounded-r-xl p-3 mt-4"><div className="flex items-center gap-2 text-slate-700 font-bold mb-2 text-xs"><MessagesSquare size={14} /> {t.civilityTitle}</div><ul className="space-y-1 text-slate-600 text-[10px]"><li>• No Abusive Words</li><li>• No Blaming / Shaming</li><li>• No Unfair Criticism</li></ul></div>
   );
 };
 
@@ -236,7 +299,7 @@ export default function AshokaManasPlatform() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20')); // UPDATED TO V20
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20'));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -265,6 +328,7 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !selectedPost) return;
+    if (TRIGGER_WORDS.some(w => newComment.toLowerCase().includes(w))) { setShowSOS(true); return; }
     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20', selectedPost.id);
     await updateDoc(ref, {
       comments: arrayUnion({ text: newComment, authorId: user.uid, isExpert: userData?.isExpert || false, createdAt: Date.now() }),
@@ -295,6 +359,12 @@ export default function AshokaManasPlatform() {
            <button onClick={() => setShowVerify(true)} className="text-[10px] font-bold bg-sky-600 text-white w-full py-1.5 rounded hover:bg-sky-700 transition-colors">{t('verifyBtn')}</button>
         </div>
         
+        <button onClick={() => {
+          const pwd = prompt("Enter Admin Password:");
+          if(pwd === MASTER_PASSWORD) setView('admin');
+          else alert("Wrong Password");
+        }} className="mt-4 flex items-center gap-2 text-xs text-slate-400 hover:text-slate-600 p-2"><Lock size={12}/> Admin Access</button>
+
         <CommunityGuidelines lang={lang} />
       </div>
     </div>
@@ -303,6 +373,8 @@ export default function AshokaManasPlatform() {
   const renderFeed = () => {
     const filteredPosts = posts.filter(p => activeSpace === 'General' ? true : p.space === activeSpace);
     const activeSpaceObj = SPACES.find(s => s.id === activeSpace);
+    const isClinical = activeSpace === 'Clinical';
+    const isAdverse = activeSpace === 'Adverse';
     
     return (
       <div className="flex-1 min-h-screen pb-20 md:pb-0 bg-slate-50/50">
@@ -324,6 +396,32 @@ export default function AshokaManasPlatform() {
         </div>
 
         <div className="p-4 space-y-4 max-w-3xl mx-auto">
+          {/* Custom Banner Logic */}
+          {isClinical && (
+             <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-4 flex gap-3 mb-4">
+                <Stethoscope className="text-cyan-600 shrink-0" size={24} />
+                <div>
+                   <h3 className="text-cyan-900 font-bold text-sm">Professional Zone</h3>
+                   <p className="text-cyan-800/80 text-xs mt-1">
+                     Strict Patient Confidentiality Applies. Do not share PII.
+                   </p>
+                </div>
+             </div>
+          )}
+
+          {isAdverse && (
+             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex gap-3 mb-4">
+                <AlertCircle className="text-orange-600 shrink-0" size={24} />
+                <div>
+                   <h3 className="text-orange-900 font-bold text-sm">Medication Safety Warning</h3>
+                   <p className="text-orange-800/80 text-xs mt-1">
+                     <strong>Do not stop or change medication based on online comments.</strong> 
+                     Side effects vary by individual. Consult your doctor immediately for medical advice.
+                   </p>
+                </div>
+             </div>
+          )}
+
           {filteredPosts.map(post => (
             <div key={post.id} onClick={() => { setSelectedPost(post); setView('post-detail'); }} className={`bg-white p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${post.isExpert ? 'border-sky-200 ring-1 ring-sky-100' : 'border-slate-100'}`}>
               <div className="flex justify-between items-start mb-2">
@@ -357,12 +455,10 @@ export default function AshokaManasPlatform() {
         </div>
         <div className="p-4 max-w-2xl mx-auto">
           
-          {/* CIVILITY REMINDER */}
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 flex gap-2 items-start">
              <AlertOctagon size={16} className="text-slate-400 shrink-0 mt-0.5" />
              <p className="text-xs text-slate-600">
-               <strong>Reminder:</strong> No abusive, blameful, unfair, or violent language. 
-               Keep this space safe for everyone.
+               <strong>Civility Check:</strong> No abusive, blameful, or violent language.
              </p>
           </div>
 
@@ -415,7 +511,9 @@ export default function AshokaManasPlatform() {
             ))}
           </div>
         </div>
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-white border-t border-slate-200 p-4">
+        
+        {/* FIXED: Input Bar stays on top of SOS Button */}
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-white border-t border-slate-200 p-4 z-[9999]">
           <div className="max-w-3xl mx-auto flex gap-2">
             <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder={t('writePlace')} className="flex-1 bg-slate-100 rounded-xl px-4 py-3 text-sm outline-none" />
             <Button onClick={handleComment} disabled={!newComment.trim()}><Send size={18} /></Button>
@@ -429,10 +527,14 @@ export default function AshokaManasPlatform() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      <button onClick={() => setShowSOS(true)} className="fixed bottom-6 right-6 z-[9998] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse"><Siren size={24} /></button>
+      {/* SOS Button Moved Up to bottom-24 */}
+      <button onClick={() => setShowSOS(true)} className="fixed bottom-24 right-6 z-[5000] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse"><Siren size={24} /></button>
       {!hasAgreedToLegal && <LegalGateModal lang={lang} onAccept={() => {setHasAgreedToLegal(true); localStorage.setItem('ashoka_legal_agreed', 'true');}} />}
       {showSOS && <SOSModal lang={lang} onClose={() => setShowSOS(false)} />}
-      {showVerify && <VerificationModal user={user} onClose={() => setShowVerify(false)} />}
+      
+      {/* MODALS */}
+      {showVerify && <RequestVerificationModal user={user} onClose={() => setShowVerify(false)} />}
+      
       <div className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 z-20">
         <div className="p-5 border-b border-slate-100"><AppLogo size="md" /></div>
         <div className="p-4 flex-1 overflow-hidden"><SpaceSidebar /></div>
@@ -449,6 +551,7 @@ export default function AshokaManasPlatform() {
         {view === 'feed' && renderFeed()}
         {view === 'create' && renderCreate()}
         {view === 'post-detail' && renderDetail()}
+        {view === 'admin' && <AdminPanel onClose={() => setView('feed')} />}
       </div>
     </div>
   );
