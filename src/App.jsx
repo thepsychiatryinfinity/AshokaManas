@@ -3,13 +3,13 @@ import {
   Heart, MessageCircle, PenSquare, Lightbulb, Wind, Users, Send, ThumbsUp, X, Shield, 
   Search, AlertTriangle, CheckCircle, Leaf, Hash, User, ChevronRight, Menu, HeartHandshake, 
   BookOpen, Pill, ScrollText, Ban, AlertOctagon, Info, Stethoscope, Baby, Repeat, Coffee, 
-  Siren, FileText, Gavel, Scale, AlertCircle, Globe
+  Siren, FileText, Gavel, Scale, AlertCircle, Globe, Copy, Check, Lock, MessagesSquare
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, arrayUnion, increment, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 
-// --- Firebase Config ---
+// --- Firebase Config (YOUR REAL KEYS) ---
 const firebaseConfig = {
   apiKey: "AIzaSyDyipE8alZJTB7diAmBkgR4AaPeS7x0JrQ",
   authDomain: "ashokamanas.firebaseapp.com",
@@ -19,132 +19,143 @@ const firebaseConfig = {
   appId: "1:1080479867672:web:7087c826da63fd231c746d",
   measurementId: "G-HY8TS7H8LW"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// --- TRANSLATIONS ---
+// --- CONSTANTS ---
+const APP_NAME = "AshokaManas";
+const ADMIN_EMAIL = "ashokamanas11@gmail.com"; 
+// Expanded safety triggers
+const TRIGGER_WORDS = ['die', 'kill', 'suicide', 'end it', 'hurt', 'abuse', 'hate', 'stupid', 'idiot', 'చనిపోవాలని', 'ఆత్మహత్య', 'చంపడం'];
+
 const TRANSLATIONS = {
   en: {
     appName: "AshokaManas",
     clinical: "Clinical Hub",
     adverse: "Adverse Effects",
     general: "General Support",
-    kids: "Children & Teens",
-    daily: "Daily Hurdles",
-    ocd: "OCD Support",
+    addiction: "Addiction Support",
+    child: "Child & Adolescent",
     story: "My Story",
-    stigma: "Breaking Stigma",
     caregiver: "Caregiver Burden",
-    psycho: "Psycho-Education",
-    substance: "Substance Abuse",
-    anxiety: "Anxiety & Panic",
-    depression: "Depression",
-    work: "Work Stress",
     newPost: "New Post",
     discuss: "Discussion",
-    sos: "I need help",
     agree: "I Agree & Enter",
-    support: "Support",
-    replies: "Replies",
-    publish: "Publish",
-    writePlace: "Share your thoughts...",
     legalTitle: "Medical Disclaimer",
     legalText: "This is a peer support platform. Not a medical service. In emergency, call 108/112.",
     protocol: "NEVER prescribe meds. Only give general guidance.",
-    volunteer: "Student Internship?",
-    apply: "Apply to Moderate"
+    apply: "Apply to Moderate",
+    verifyTitle: "Are you a Doctor?",
+    verifyText: "Get the Blue Badge to mentor students securely.",
+    verifyBtn: "Verify Profile",
+    copyID: "Copy My ID",
+    civilityTitle: "Civility Code",
+    civilityText: "No abusive, violent, unfair, or blaming language. Be kind or be banned."
   },
   te: {
     appName: "అశోకమనస్",
     clinical: "క్లినికల్ హబ్ (Doctors)",
-    adverse: "దుష్ప్రభావాలు (Side Effects)",
+    adverse: "దుష్ప్రభావాలు",
     general: "సాధారణ మద్దతు",
-    kids: "పిల్లలు & టీనేజర్స్",
-    daily: "రోజువారీ సవాళ్లు",
-    ocd: "OCD మద్దతు",
+    addiction: "వ్యసన విముక్తి",
+    child: "పిల్లలు & కౌమారదశ",
     story: "నా కథ (My Story)",
-    stigma: "అపోహలు - వాస్తవాలు",
     caregiver: "సంరక్షకుల భారం",
-    psycho: "మానసిక విద్య",
-    substance: "మత్తు పదార్థాల వినియోగం",
-    anxiety: "ఆందోళన & భయం",
-    depression: "డిప్రెషన్ (నిరాశ)",
-    work: "ఒత్తిడి (Work Stress)",
     newPost: "పోస్ట్ చేయండి",
-    discuss: "చర్చ (Discussion)",
-    sos: "నాకు సహాయం కావాలి",
+    discuss: "చర్చ",
     agree: "నేను అంగీకరిస్తున్నాను",
-    support: "మద్దతు",
-    replies: "సమాధానాలు",
-    publish: "ప్రచురించండి",
-    writePlace: "మీ ఆలోచనలను పంచుకోండి...",
-    legalTitle: "నిరాకరణ (Disclaimer)",
+    legalTitle: "నిరాకరణ",
     legalText: "ఇది వైద్య సేవ కాదు. అత్యవసరమైతే వెంటనే 108 కి కాల్ చేయండి.",
-    protocol: "మందులను సూచించవద్దు. సాధారణ సలహా మాత్రమే ఇవ్వండి.",
-    volunteer: "విద్యార్థి ఇంటర్న్‌షిప్?",
-    apply: "దరఖాస్తు చేయండి"
+    protocol: "మందులను సూచించవద్దు.",
+    apply: "దరఖాస్తు చేయండి",
+    verifyTitle: "మీరు డాక్టరా?",
+    verifyText: "బ్లూ బ్యాడ్జ్ పొందండి.",
+    verifyBtn: "ధృవీకరించండి",
+    copyID: "కాపీ ఐడి",
+    civilityTitle: "మర్యాద నియమాలు",
+    civilityText: "దూషించడం, నిందించడం లేదా హింసాత్మక పదాలు వాడరాదు."
   }
 };
 
 const SPACES = [
-  { id: 'Clinical', key: 'clinical', icon: Stethoscope, color: 'text-cyan-700', bg: 'bg-cyan-50' },
-  { id: 'Adverse', key: 'adverse', icon: AlertCircle, color: 'text-orange-700', bg: 'bg-orange-50' }, 
   { id: 'General', key: 'general', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { id: 'KidsTeen', key: 'kids', icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' }, 
-  { id: 'Daily', key: 'daily', icon: Coffee, color: 'text-emerald-700', bg: 'bg-emerald-50' }, 
-  { id: 'OCD', key: 'ocd', icon: Repeat, color: 'text-teal-600', bg: 'bg-teal-50' }, 
-  { id: 'Stories', key: 'story', icon: ScrollText, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
-  { id: 'Stigma', key: 'stigma', icon: Ban, color: 'text-red-600', bg: 'bg-red-50' },
+  { id: 'Clinical', key: 'clinical', icon: Stethoscope, color: 'text-cyan-700', bg: 'bg-cyan-50' },
   { id: 'Caregiver', key: 'caregiver', icon: HeartHandshake, color: 'text-rose-600', bg: 'bg-rose-50' },
-  { id: 'PsychoEd', key: 'psycho', icon: BookOpen, color: 'text-violet-600', bg: 'bg-violet-50' },
-  { id: 'Substance', key: 'substance', icon: Pill, color: 'text-amber-600', bg: 'bg-amber-50' },
-  { id: 'Anxiety', key: 'anxiety', icon: Wind, color: 'text-sky-600', bg: 'bg-sky-50' },
-  { id: 'Depression', key: 'depression', icon: Leaf, color: 'text-slate-600', bg: 'bg-slate-50' },
-  { id: 'Work', key: 'work', icon: Hash, color: 'text-orange-600', bg: 'bg-orange-50' },
+  { id: 'Addiction', key: 'addiction', icon: Pill, color: 'text-amber-600', bg: 'bg-amber-50' },
+  { id: 'ChildAdolescent', key: 'child', icon: Baby, color: 'text-pink-600', bg: 'bg-pink-50' },
+  { id: 'Adverse', key: 'adverse', icon: AlertCircle, color: 'text-orange-700', bg: 'bg-orange-50' }, 
+  { id: 'Stories', key: 'story', icon: ScrollText, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
 ];
-
-const TRIGGER_WORDS = ['die', 'kill', 'suicide', 'end it', 'చనిపోవాలని', 'ఆత్మహత్య'];
 
 // --- Components ---
 
 const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled = false }) => {
-  const base = "font-medium rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2";
   const variants = {
-    primary: "bg-teal-800 text-white hover:bg-teal-900 shadow-md shadow-teal-200",
+    primary: "bg-teal-800 text-white hover:bg-teal-900 shadow-md",
     secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
     ghost: "text-slate-500 hover:bg-slate-100",
     space: "w-full justify-start text-left hover:bg-slate-50 text-slate-600 transition-colors duration-200",
     spaceActive: "w-full justify-start text-left bg-teal-50 text-teal-800 font-bold border border-teal-100 shadow-sm"
   };
-  const sizes = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2.5 text-sm" };
-  return (
-    <button onClick={onClick} disabled={disabled} className={`${base} ${variants[variant]} ${sizes[size]} ${disabled ? 'opacity-50' : ''} ${className}`}>
-      {children}
-    </button>
-  );
+  return <button onClick={onClick} disabled={disabled} className={`font-medium rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all ${variants[variant]} ${size==='sm'?'px-3 py-1.5 text-xs':'px-4 py-2.5 text-sm'} ${disabled?'opacity-50':''} ${className}`}>{children}</button>;
 };
 
-const AppLogo = ({ size = "sm" }) => {
-  const sizes = { sm: "w-8 h-8", md: "w-12 h-12", lg: "w-40 h-40" };
+const AppLogo = ({ size = "sm" }) => (
+  <div className={`${size === 'lg' ? 'w-40 h-40' : size === 'md' ? 'w-12 h-12' : 'w-8 h-8'} flex items-center justify-center`}>
+    <img src="/logo.png" alt="AshokaManas" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span class="text-teal-700 font-bold">AM</span>'; }} />
+  </div>
+);
+
+// --- MODALS ---
+
+const VerificationModal = ({ user, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const copyID = () => {
+    navigator.clipboard.writeText(user.uid);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const mailLink = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification Request&body=Hello Dr. Ashok,%0D%0A%0D%0AI want to join the Clinical Hub as a Verified Psychiatrist.%0D%0A%0D%0AMy User ID: ${user.uid}%0D%0AMy Name:%0D%0AMedical Registration Number:%0D%0A%0D%0A(Please attach a photo of your ID)`;
+
   return (
-    <div className={`${sizes[size]} flex items-center justify-center`}>
-      <img src="/logo.png" alt="AshokaManas" className="w-full h-full object-contain" 
-        onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span class="text-teal-700 font-bold">AM</span>'; }} 
-      />
+    <div className="fixed inset-0 bg-slate-900/90 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20} /></button>
+        <div className="text-center">
+          <div className="w-12 h-12 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 text-sky-600"><Stethoscope size={24} /></div>
+          <h3 className="text-lg font-bold text-slate-800">Doctor Verification</h3>
+          <p className="text-xs text-slate-500 mb-4">Send your User ID and Medical License to the admin to get the Blue Badge.</p>
+          <div className="bg-slate-100 p-3 rounded-xl flex items-center justify-between mb-4 border border-slate-200">
+            <code className="text-xs text-slate-600 font-mono truncate max-w-[200px]">{user.uid}</code>
+            <button onClick={copyID} className="text-slate-500 hover:text-teal-600">{copied ? <Check size={16} /> : <Copy size={16} />}</button>
+          </div>
+          <a href={mailLink} className="block w-full bg-sky-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-sky-700 transition-colors">Email Request (Gmail)</a>
+        </div>
+      </div>
     </div>
   );
 };
 
 const LegalGateModal = ({ onAccept, lang }) => (
   <div className="fixed inset-0 bg-slate-900/90 z-[5000] flex items-center justify-center p-4 backdrop-blur-sm">
-    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto relative">
-      <div className="flex flex-col items-center justify-center mb-6">
-        <AppLogo size="lg" />
-        <h2 className="text-2xl font-bold text-center text-teal-900 mt-4">{TRANSLATIONS[lang].appName}</h2>
+    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex flex-col items-center justify-center mb-6"><AppLogo size="lg" /><h2 className="text-2xl font-bold text-center text-teal-900 mt-4">{TRANSLATIONS[lang].appName}</h2></div>
+      
+      <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4 text-sm text-red-900 space-y-2">
+        <div className="flex items-center gap-2 font-bold"><AlertOctagon size={16}/> STRICT CIVILITY CODE</div>
+        <p className="text-xs leading-relaxed">
+          <strong>NO ABUSIVE LANGUAGE:</strong> Any post containing violence, blame, unfair criticism, or unparliamentary words will be removed and the user banned.
+        </p>
+        <p className="text-xs leading-relaxed">
+          <strong>NO HARM:</strong> Do not encourage self-harm or harm to others.
+        </p>
       </div>
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-sm text-slate-700 space-y-3 leading-relaxed">
+
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 text-sm text-slate-700 space-y-3">
         <p><strong>1. {TRANSLATIONS[lang].legalTitle}:</strong> {TRANSLATIONS[lang].legalText}</p>
         <p><strong>2. Protocol:</strong> {TRANSLATIONS[lang].protocol}</p>
       </div>
@@ -153,68 +164,69 @@ const LegalGateModal = ({ onAccept, lang }) => (
   </div>
 );
 
-// --- FIXED SOS MODAL (HIGHEST PRIORITY) ---
 const SOSModal = ({ onClose, lang }) => (
   <div className="fixed inset-0 bg-rose-900/95 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
     <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border-t-8 border-rose-500 animate-bounce-in relative">
-      
-      {/* Explicit Close Button with High Z-Index */}
-      <button 
-        onClick={onClose} 
-        className="absolute top-2 right-2 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors"
-      >
-        <X size={20} />
-      </button>
-
-      <div className="mt-4">
-        <AlertTriangle size={56} className="text-rose-500 mx-auto mb-4" />
-        <h3 className="text-2xl font-bold text-slate-900 mb-2">{lang === 'te' ? 'అత్యవసర సహాయం' : 'Emergency Help'}</h3>
-        <p className="text-slate-500 mb-6 text-sm">
-          {lang === 'te' ? 'మీరు సురక్షితంగా ఉన్నారా?' : 'Are you feeling unsafe?'}
-        </p>
-        
-        <div className="space-y-3">
-          <a href="tel:108" className="block w-full bg-rose-600 text-white py-4 rounded-xl font-bold hover:bg-rose-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-rose-200">
-            <Siren size={24} /> 
-            {lang === 'te' ? '108 కి కాల్ చేయండి' : 'Call 108 / 988'}
-          </a>
-          <button onClick={onClose} className="block w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-200">
-            {lang === 'te' ? 'నేను క్షేమంగా ఉన్నాను' : 'I am safe now'}
-          </button>
-        </div>
-      </div>
+      <button onClick={onClose} className="absolute top-2 right-2 p-2 bg-slate-100 rounded-full"><X size={20} /></button>
+      <div className="mt-4"><AlertTriangle size={56} className="text-rose-500 mx-auto mb-4" /><h3 className="text-2xl font-bold text-slate-900 mb-2">Emergency Help</h3><div className="space-y-3"><a href="tel:108" className="block w-full bg-rose-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2"><Siren size={24} /> Call 108 / 988</a></div></div>
     </div>
   </div>
 );
 
-// --- Main App ---
+// --- SIDEBAR GUIDELINES ---
+const CommunityGuidelines = ({ lang }) => {
+  const t = TRANSLATIONS[lang];
+  return (
+    <div className="border-l-4 border-slate-400 bg-slate-50 rounded-r-xl p-3 mt-4">
+      <div className="flex items-center gap-2 text-slate-700 font-bold mb-2 text-xs">
+        <MessagesSquare size={14} /> {t.civilityTitle}
+      </div>
+      <ul className="space-y-1 text-slate-600 text-[10px]">
+        <li>• No Abusive Words</li>
+        <li>• No Blaming / Shaming</li>
+        <li>• No Unfair Criticism</li>
+        <li>• No Violent Threats</li>
+      </ul>
+    </div>
+  );
+};
+
+// --- MAIN APP ---
 
 export default function AshokaManasPlatform() {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null); 
   const [hasAgreedToLegal, setHasAgreedToLegal] = useState(false);
   const [lang, setLang] = useState('en'); 
-  
   const [activeSpace, setActiveSpace] = useState('General');
   const [view, setView] = useState('feed'); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [posts, setPosts] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [newPostContent, setNewPostContent] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // SOS State
   const [showSOS, setShowSOS] = useState(false);
+  const [showVerify, setShowVerify] = useState(false); 
   const [newComment, setNewComment] = useState('');
 
   const t = (key) => TRANSLATIONS[lang][key] || key;
 
   useEffect(() => {
     const init = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-      else await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+        else await signInAnonymously(auth);
+      } catch (e) { console.error(e); }
     };
     init();
-    return onAuthStateChanged(auth, setUser);
+    return onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        const userRef = doc(db, 'artifacts', appId, 'public', 'users', u.uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists()) { setUserData(snap.data()); } 
+        else { await setDoc(userRef, { isExpert: false, joinedAt: Date.now() }); setUserData({ isExpert: false }); }
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -224,7 +236,7 @@ export default function AshokaManasPlatform() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v15'));
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18'));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -235,35 +247,27 @@ export default function AshokaManasPlatform() {
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return;
-    
-    // Check for Trigger Words
-    const lower = newPostContent.toLowerCase();
-    if (TRIGGER_WORDS.some(w => lower.includes(w))) { 
-      setShowSOS(true); // Trigger SOS
-      return; // Stop posting
-    }
+    if (TRIGGER_WORDS.some(w => newPostContent.toLowerCase().includes(w))) { setShowSOS(true); return; }
 
-    setIsSubmitting(true);
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v15'), {
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18'), {
       content: newPostContent,
       space: activeSpace, 
       authorId: user.uid,
+      isExpert: userData?.isExpert || false, 
       likes: 0,
       commentCount: 0,
       comments: [],
-      createdAt: serverTimestamp(),
-      authorImpact: Math.floor(Math.random() * 50) 
+      createdAt: serverTimestamp()
     });
     setNewPostContent('');
     setView('feed');
-    setIsSubmitting(false);
   };
 
   const handleComment = async () => {
     if (!newComment.trim() || !selectedPost) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v15', selectedPost.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18', selectedPost.id);
     await updateDoc(ref, {
-      comments: arrayUnion({ text: newComment, authorId: user.uid, createdAt: Date.now() }),
+      comments: arrayUnion({ text: newComment, authorId: user.uid, isExpert: userData?.isExpert || false, createdAt: Date.now() }),
       commentCount: increment(1)
     });
     setNewComment('');
@@ -271,7 +275,7 @@ export default function AshokaManasPlatform() {
 
   const handleLike = async (e, post) => {
     e.stopPropagation();
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v15', post.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18', post.id);
     await updateDoc(ref, { likes: increment(1) });
   };
 
@@ -279,22 +283,19 @@ export default function AshokaManasPlatform() {
     <div className={`space-y-2 h-full flex flex-col ${mobile ? 'p-4' : 'p-0'}`}>
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
         {SPACES.map(space => (
-          <Button
-            key={space.id}
-            variant={activeSpace === space.id ? 'spaceActive' : 'space'}
-            onClick={() => { setActiveSpace(space.id); if(mobile) setMobileMenuOpen(false); setView('feed'); }}
-            className="rounded-lg mb-1"
-          >
-            <div className={`p-1.5 rounded-md ${space.bg} ${space.color} transition-colors`}>
-              <space.icon size={16} />
-            </div>
+          <Button key={space.id} variant={activeSpace === space.id ? 'spaceActive' : 'space'} onClick={() => { setActiveSpace(space.id); if(mobile) setMobileMenuOpen(false); setView('feed'); }} className="rounded-lg mb-1">
+            <div className={`p-1.5 rounded-md ${space.bg} ${space.color}`}><space.icon size={16} /></div>
             {TRANSLATIONS[lang][space.key] || space.name}
           </Button>
         ))}
-        <div className="bg-indigo-50 rounded-xl p-3 mt-4 border border-indigo-100">
-           <h4 className="text-xs font-bold text-indigo-800 mb-1">{t('volunteer')}</h4>
-           <button className="text-[10px] font-bold bg-indigo-600 text-white w-full py-1.5 rounded">{t('apply')}</button>
+        
+        <div className="bg-sky-50 rounded-xl p-3 mt-4 border border-sky-100 shadow-sm">
+           <div className="flex items-center gap-2 mb-1"><Stethoscope size={14} className="text-sky-700" /><h4 className="text-xs font-bold text-sky-800">{t('verifyTitle')}</h4></div>
+           <p className="text-[10px] text-sky-700/80 mb-2 leading-tight">{t('verifyText')}</p>
+           <button onClick={() => setShowVerify(true)} className="text-[10px] font-bold bg-sky-600 text-white w-full py-1.5 rounded hover:bg-sky-700 transition-colors">{t('verifyBtn')}</button>
         </div>
+        
+        <CommunityGuidelines lang={lang} />
       </div>
     </div>
   );
@@ -307,9 +308,7 @@ export default function AshokaManasPlatform() {
       <div className="flex-1 min-h-screen pb-20 md:pb-0 bg-slate-50/50">
         <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-100 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button className="md:hidden p-1 hover:bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}>
-              <Menu size={24} className="text-slate-600" />
-            </button>
+            <button className="md:hidden p-1 hover:bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}><Menu size={24} className="text-slate-600" /></button>
             <div className="flex items-center gap-2">
                <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                  <div className="md:hidden"><AppLogo size="sm"/></div>
@@ -319,53 +318,79 @@ export default function AshokaManasPlatform() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => setLang(lang === 'en' ? 'te' : 'en')}
-              className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200"
-            >
-              <Globe size={14} />
-              {lang === 'en' ? 'తెలుగు' : 'English'}
-            </button>
-            <Button size="sm" onClick={() => setView('create')}>
-              <PenSquare size={16} /> <span className="hidden sm:inline">{t('newPost')}</span>
-            </Button>
+            <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200"><Globe size={14} /> {lang === 'en' ? 'తెలుగు' : 'English'}</button>
+            <Button size="sm" onClick={() => setView('create')}><PenSquare size={16} /> <span className="hidden sm:inline">{t('newPost')}</span></Button>
           </div>
         </div>
 
         <div className="p-4 space-y-4 max-w-3xl mx-auto">
           {filteredPosts.map(post => (
-            <div key={post.id} onClick={() => { setSelectedPost(post); setView('post-detail'); }} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer">
+            <div key={post.id} onClick={() => { setSelectedPost(post); setView('post-detail'); }} className={`bg-white p-5 rounded-2xl border shadow-sm hover:shadow-md transition-all cursor-pointer ${post.isExpert ? 'border-sky-200 ring-1 ring-sky-100' : 'border-slate-100'}`}>
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  {post.isExpert && <span className="bg-sky-100 text-sky-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><Shield size={10} /> Verified Doctor</span>}
+                  {!post.isExpert && <span className="text-[10px] text-slate-400">Anonymous Member</span>}
+                </div>
+              </div>
               <p className="text-slate-800 font-medium leading-relaxed mb-4">{post.content}</p>
               <div className="flex items-center gap-6 text-slate-400 text-sm border-t border-slate-50 pt-2">
-                <button onClick={(e) => handleLike(e, post)} className="flex items-center gap-1.5 hover:text-rose-500">
-                  <Heart size={18} className={post.likes > 0 ? "fill-rose-50 text-rose-500" : ""} /> {post.likes || 0}
-                </button>
-                <div className="flex items-center gap-1.5 hover:text-teal-600">
-                  <MessageCircle size={18} /> {post.commentCount || 0}
-                </div>
+                <button className="flex items-center gap-1.5"><Heart size={18} /> {post.likes || 0}</button>
+                <div className="flex items-center gap-1.5"><MessageCircle size={18} /> {post.commentCount || 0}</div>
               </div>
             </div>
           ))}
-          <div className="mt-8 pt-4 border-t border-slate-200 px-4 text-center">
-             <p className="text-[10px] text-slate-400">{t('legalTitle')}: {t('legalText')}</p>
-          </div>
         </div>
       </div>
     );
   };
 
-  const renderCreate = () => (
-    <div className="flex-1 bg-white min-h-screen">
-      <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-        <button onClick={() => setView('feed')} className="p-2 -ml-2 text-slate-400"><X size={24} /></button>
-        <span className="font-bold text-slate-700">{t('newPost')}</span>
-        <Button size="sm" disabled={!newPostContent.trim() || isSubmitting} onClick={handleCreatePost}>{t('publish')}</Button>
+  const renderCreate = () => {
+    const isClinical = activeSpace === 'Clinical';
+    const isAdverse = activeSpace === 'Adverse';
+    
+    return (
+      <div className="flex-1 bg-white min-h-screen">
+        <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+          <button onClick={() => setView('feed')} className="p-2 -ml-2 text-slate-400"><X size={24} /></button>
+          <span className="font-bold text-slate-700">{t('newPost')}</span>
+          <Button size="sm" disabled={!newPostContent.trim()} onClick={handleCreatePost}>Publish</Button>
+        </div>
+        <div className="p-4 max-w-2xl mx-auto">
+          
+          {/* CIVILITY REMINDER */}
+          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 flex gap-2 items-start">
+             <AlertOctagon size={16} className="text-slate-400 shrink-0 mt-0.5" />
+             <p className="text-xs text-slate-600">
+               <strong>Reminder:</strong> No abusive, blameful, unfair, or violent language. 
+               Keep this space safe for everyone.
+             </p>
+          </div>
+
+          {isClinical && (
+             <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r shadow-sm">
+               <div className="flex gap-3">
+                 <Lock className="text-red-600 shrink-0" size={24} />
+                 <div>
+                   <h4 className="font-bold text-red-900 text-sm">STRICT MEDICAL CONFIDENTIALITY</h4>
+                   <p className="text-xs text-red-800 mt-1 leading-relaxed">
+                     <strong>ABSOLUTELY NO PII.</strong> Do not post patient names, exact dates, or identifiable locations. 
+                   </p>
+                 </div>
+               </div>
+             </div>
+          )}
+          {isAdverse && (
+             <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex gap-3 mb-4">
+                <AlertCircle className="text-orange-600 shrink-0" size={24} />
+                <div><h3 className="text-orange-900 font-bold text-sm">Safety Warning</h3><p className="text-orange-800/80 text-xs mt-1"><strong>Do not stop medication based on comments.</strong> Consult your doctor.</p></div>
+             </div>
+          )}
+          
+          <textarea autoFocus value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} placeholder={t('writePlace')} className="w-full h-48 p-4 text-lg text-slate-800 placeholder:text-slate-300 border-none focus:ring-0 outline-none resize-none" />
+        </div>
       </div>
-      <div className="p-4 max-w-2xl mx-auto">
-        <textarea autoFocus value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} placeholder={t('writePlace')} className="w-full h-48 p-4 text-lg text-slate-800 placeholder:text-slate-300 border-none focus:ring-0 outline-none resize-none" />
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderDetail = () => {
     if (!selectedPost) return null;
@@ -377,12 +402,14 @@ export default function AshokaManasPlatform() {
         </div>
         <div className="max-w-3xl mx-auto">
           <div className="bg-white p-6 mb-4 border-b border-slate-100 shadow-sm">
+             <div className="mb-2">{selectedPost.isExpert && <span className="bg-sky-100 text-sky-700 text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1"><Shield size={10} /> Verified Doctor</span>}</div>
              <p className="text-xl text-slate-800 font-medium mb-6">{selectedPost.content}</p>
              <Button variant="ghost" size="sm" onClick={(e) => handleLike(e, selectedPost)}><ThumbsUp size={18} className="mr-2" /> {t('support')} ({selectedPost.likes})</Button>
           </div>
           <div className="px-4 space-y-4">
             {selectedPost.comments?.map((c, i) => (
-              <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <div key={i} className={`bg-white p-5 rounded-xl border shadow-sm ${c.isExpert ? 'border-sky-200 bg-sky-50/30' : 'border-slate-200'}`}>
+                 <div className="mb-1">{c.isExpert && <span className="text-sky-700 text-[10px] font-bold flex items-center gap-1"><Shield size={10} /> Verified Answer</span>}</div>
                  <p className="text-slate-700 text-sm">{c.text}</p>
               </div>
             ))}
@@ -402,35 +429,22 @@ export default function AshokaManasPlatform() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      
-      {/* FLOATING SOS BUTTON - Now High Priority z-[9998] */}
-      <button onClick={() => setShowSOS(true)} className="fixed bottom-6 right-6 z-[9998] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse">
-        <Siren size={24} />
-      </button>
-
-      {/* LEGAL GATE */}
+      <button onClick={() => setShowSOS(true)} className="fixed bottom-6 right-6 z-[9998] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse"><Siren size={24} /></button>
       {!hasAgreedToLegal && <LegalGateModal lang={lang} onAccept={() => {setHasAgreedToLegal(true); localStorage.setItem('ashoka_legal_agreed', 'true');}} />}
-      
-      {/* CRISIS POP-UP - MAX PRIORITY z-[9999] */}
       {showSOS && <SOSModal lang={lang} onClose={() => setShowSOS(false)} />}
-
+      {showVerify && <VerificationModal user={user} onClose={() => setShowVerify(false)} />}
       <div className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 z-20">
         <div className="p-5 border-b border-slate-100"><AppLogo size="md" /></div>
         <div className="p-4 flex-1 overflow-hidden"><SpaceSidebar /></div>
       </div>
-
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 md:hidden backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}>
           <div className="w-72 h-full bg-white p-4 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-               <AppLogo size="sm" />
-               <button onClick={() => setMobileMenuOpen(false)}><X size={20}/></button>
-             </div>
+             <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100"><AppLogo size="sm" /><button onClick={() => setMobileMenuOpen(false)}><X size={20}/></button></div>
              <div className="flex-1 overflow-y-auto"><SpaceSidebar mobile /></div>
           </div>
         </div>
       )}
-
       <div className="flex-1 md:ml-64 transition-all duration-200">
         {view === 'feed' && renderFeed()}
         {view === 'create' && renderCreate()}
