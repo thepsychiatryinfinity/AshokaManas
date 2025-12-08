@@ -28,7 +28,6 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // --- CONSTANTS ---
 const APP_NAME = "AshokaManas";
 const ADMIN_EMAIL = "ashokamanas11@gmail.com"; 
-// Expanded safety triggers
 const TRIGGER_WORDS = ['die', 'kill', 'suicide', 'end it', 'hurt', 'abuse', 'hate', 'stupid', 'idiot', 'చనిపోవాలని', 'ఆత్మహత్య', 'చంపడం'];
 
 const TRANSLATIONS = {
@@ -119,7 +118,8 @@ const VerificationModal = ({ user, onClose }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const mailLink = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification Request&body=Hello Dr. Ashok,%0D%0A%0D%0AI want to join the Clinical Hub as a Verified Psychiatrist.%0D%0A%0D%0AMy User ID: ${user.uid}%0D%0AMy Name:%0D%0AMedical Registration Number:%0D%0A%0D%0A(Please attach a photo of your ID)`;
+  // UPDATED EMAIL BODY HERE
+  const mailLink = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification Request&body=Hello Admin,%0D%0A%0D%0AI want to join the Clinical Hub as a Verified Psychiatrist.%0D%0A%0D%0AMy User ID: ${user.uid}%0D%0AMy Name:%0D%0AMedical Registration Number:%0D%0A%0D%0A(Please attach a photo of your ID)`;
 
   return (
     <div className="fixed inset-0 bg-slate-900/90 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -236,7 +236,7 @@ export default function AshokaManasPlatform() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18'));
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20')); // UPDATED TO V20
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -249,7 +249,7 @@ export default function AshokaManasPlatform() {
     if (!newPostContent.trim()) return;
     if (TRIGGER_WORDS.some(w => newPostContent.toLowerCase().includes(w))) { setShowSOS(true); return; }
 
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18'), {
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20'), {
       content: newPostContent,
       space: activeSpace, 
       authorId: user.uid,
@@ -265,7 +265,7 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !selectedPost) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18', selectedPost.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20', selectedPost.id);
     await updateDoc(ref, {
       comments: arrayUnion({ text: newComment, authorId: user.uid, isExpert: userData?.isExpert || false, createdAt: Date.now() }),
       commentCount: increment(1)
@@ -275,7 +275,7 @@ export default function AshokaManasPlatform() {
 
   const handleLike = async (e, post) => {
     e.stopPropagation();
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v18', post.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20', post.id);
     await updateDoc(ref, { likes: increment(1) });
   };
 
