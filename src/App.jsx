@@ -3,7 +3,7 @@ import {
   Heart, MessageCircle, PenSquare, Users, Send, ThumbsUp, X, Shield, 
   AlertTriangle, CheckCircle, Leaf, Menu, HeartHandshake, 
   Pill, ScrollText, AlertOctagon, Stethoscope, Baby, Siren, 
-  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban, RefreshCw
+  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban, RefreshCw, Info
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -100,6 +100,17 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', className
 const AppLogo = ({ size = "sm" }) => (
   <div className={`${size === 'lg' ? 'w-40 h-40' : size === 'md' ? 'w-12 h-12' : 'w-8 h-8'} flex items-center justify-center`}>
     <div className="bg-teal-700 rounded-full w-full h-full flex items-center justify-center text-white font-bold shadow-sm">AM</div>
+  </div>
+);
+
+// --- GLOBAL MEDICAL DISCLAIMER (Visible everywhere) ---
+const GlobalDisclaimer = () => (
+  <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-start gap-2">
+    <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+    <p className="text-[10px] sm:text-xs text-amber-900 font-medium leading-snug">
+      <strong>Medical Disclaimer:</strong> This app provides peer support only, not professional medical advice. 
+      In a medical emergency or crisis, please call <strong>108</strong> or <strong>112</strong> immediately.
+    </p>
   </div>
 );
 
@@ -341,16 +352,18 @@ export default function AshokaManasPlatform() {
 
   // --- FIXED AUTH LOADING ---
   useEffect(() => {
-    // Safety Timer: If it hangs for 2.5 seconds, show the "Force Enter" button
-    const timer = setTimeout(() => setTookTooLong(true), 2500);
+    // Safety Timer: If it hangs for 3 seconds, show the "Force Enter" button
+    const timer = setTimeout(() => {
+        if (!auth.currentUser) setTookTooLong(true);
+    }, 3000);
 
     const init = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
         else await signInAnonymously(auth);
       } catch (e) { 
-        console.error(e); 
-        setLoadingError("Connection Failed. Check Internet.");
+        console.error("Auth Error:", e); 
+        setLoadingError("Connection Issue: " + e.message);
       }
     };
     init();
@@ -450,21 +463,26 @@ export default function AshokaManasPlatform() {
     
     return (
       <div className="flex-1 min-h-screen pb-20 md:pb-0 bg-slate-50/50">
-        <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-100 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button className="md:hidden p-1 hover:bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}><Menu size={24} className="text-slate-600" /></button>
-            <div className="flex items-center gap-2">
-               <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                 <div className="md:hidden"><AppLogo size="sm"/></div>
-                 <span className="md:hidden">{TRANSLATIONS[lang][activeSpaceObj?.key]}</span>
-                 <span className="hidden md:block">{t('appName')}</span>
-               </h1>
+        <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-100">
+           {/* GLOBAL DISCLAIMER IN EVERY SPACE */}
+           <GlobalDisclaimer />
+           
+           <div className="px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button className="md:hidden p-1 hover:bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}><Menu size={24} className="text-slate-600" /></button>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <div className="md:hidden"><AppLogo size="sm"/></div>
+                  <span className="md:hidden">{TRANSLATIONS[lang][activeSpaceObj?.key]}</span>
+                  <span className="hidden md:block">{t('appName')}</span>
+                </h1>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200"><Globe size={14} /> {lang === 'en' ? 'తెలుగు' : 'English'}</button>
-            <Button size="sm" onClick={() => setView('create')}><PenSquare size={16} /> <span className="hidden sm:inline">{t('newPost')}</span></Button>
-          </div>
+            <div className="flex gap-2">
+              <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-200"><Globe size={14} /> {lang === 'en' ? 'తెలుగు' : 'English'}</button>
+              <Button size="sm" onClick={() => setView('create')}><PenSquare size={16} /> <span className="hidden sm:inline">{t('newPost')}</span></Button>
+            </div>
+           </div>
         </div>
 
         <div className="p-4 space-y-4 max-w-3xl mx-auto">
@@ -555,20 +573,35 @@ export default function AshokaManasPlatform() {
     );
   };
 
-  // --- LOADING SCREEN (FIXED) ---
+  // --- LOADING SCREEN (FIXED WITH MANUAL ENTRY) ---
   if (!user) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-teal-800 gap-4 p-4">
         <Leaf className="animate-bounce" size={48} />
         <p className="font-medium animate-pulse">Connecting to AshokaManas...</p>
         
-        {loadingError && <p className="text-red-500 text-sm font-bold bg-red-50 px-3 py-1 rounded">{loadingError}</p>}
+        {loadingError && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-center max-w-sm">
+             <p className="text-red-700 font-bold mb-2">Login Error</p>
+             <p className="text-red-500 text-xs">{loadingError}</p>
+             <button onClick={() => window.location.reload()} className="mt-3 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Retry</button>
+          </div>
+        )}
         
-        {/* Safety Button: If loading takes > 2.5s, let user force refresh or retry */}
-        {tookTooLong && (
-          <button onClick={() => window.location.reload()} className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm text-slate-600 shadow-sm hover:bg-slate-50">
-            <RefreshCw size={14}/> Taking too long? Click to Reload
-          </button>
+        {/* MANUAL ENTRY BUTTON: Appears if loading hangs for >3s */}
+        {tookTooLong && !loadingError && (
+          <div className="text-center animate-fade-in">
+             <p className="text-slate-500 text-xs mb-2">Taking longer than usual...</p>
+             <button 
+               onClick={async () => {
+                 try { await signInAnonymously(auth); } 
+                 catch(e) { setLoadingError(e.message); }
+               }} 
+               className="flex items-center gap-2 bg-teal-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-teal-700 transition-transform active:scale-95"
+             >
+               Click to Enter App
+             </button>
+          </div>
         )}
       </div>
     );
