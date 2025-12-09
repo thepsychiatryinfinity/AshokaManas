@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Heart, MessageCircle, PenSquare, Users, Send, ThumbsUp, X, Shield, 
-  AlertTriangle, CheckCircle, Leaf, Menu, HeartHandshake, 
+  AlertTriangle, Leaf, Menu, HeartHandshake, 
   Pill, ScrollText, AlertOctagon, Stethoscope, Baby, Siren, 
-  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban, Copy, Check, Info
+  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban, Check, Copy
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
@@ -54,14 +54,14 @@ const TRANSLATIONS = {
     discuss: "Discussion",
     agree: "I Agree & Enter",
     legalTitle: "Medical Disclaimer",
-    legalText: "This app is for peer support only. It is NOT a medical service. In emergency, call 108.",
+    legalText: "Peer support only. Not medical advice. In emergency, call 108.",
     verifyTitle: "Are you a Doctor?",
     verifyText: "Get the Blue Badge.",
     verifyBtn: "Request Verification",
     adminBtn: "Admin Panel",
     volunteer: "Student Internship?",
     apply: "Apply to Moderate",
-    zeroTolerance: "ZERO TOLERANCE: No Child Abuse, Sexual Abuse, Humiliation, or Violence."
+    zeroTolerance: "ZERO TOLERANCE: No Abuse, Violence, or Humiliation."
   },
   te: {
     appName: "అశోకమనస్",
@@ -97,7 +97,7 @@ const SPACES = [
   { id: 'Stories', key: 'story', icon: ScrollText, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
 ];
 
-// --- Helper Components ---
+// --- Components ---
 const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled = false }) => {
   const variants = {
     primary: "bg-teal-800 text-white hover:bg-teal-900 shadow-md",
@@ -109,7 +109,7 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', className
   return <button onClick={onClick} disabled={disabled} className={`font-medium rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all ${variants[variant]} ${size==='sm'?'px-3 py-1.5 text-xs':'px-4 py-2.5 text-sm'} ${disabled?'opacity-50':''} ${className}`}>{children}</button>;
 };
 
-// Safe Logo with Error State
+// Safe Logo (No Crash)
 const AppLogo = ({ size = "sm" }) => {
   const [error, setError] = useState(false);
   const sizes = { sm: "w-8 h-8", md: "w-12 h-12", lg: "w-32 h-32" };
@@ -135,34 +135,14 @@ const LegalGateModal = ({ onAccept, lang }) => (
 const SOSModal = ({ onClose, lang }) => (
   <div className="fixed inset-0 bg-rose-900/95 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
     <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border-t-8 border-rose-500 animate-bounce-in relative">
-      <div className="mt-4"><AlertTriangle size={56} className="text-rose-500 mx-auto mb-4" /><h3 className="text-2xl font-bold text-slate-900 mb-2">Unsafe Content Detected</h3>
-      <p className="text-slate-600 mb-6 text-sm">Your post flags our safety system. If you are in danger, please get help.</p>
+      <div className="mt-4"><AlertTriangle size={56} className="text-rose-500 mx-auto mb-4" /><h3 className="text-2xl font-bold text-slate-900 mb-2">Unsafe Content</h3>
+      <p className="text-slate-600 mb-6 text-sm">Your content was blocked due to our safety policy.</p>
       <div className="space-y-3"><a href="tel:108" className="block w-full bg-rose-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"><Siren size={24} /> Call 108 / 988</a><button onClick={onClose} className="block w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200">Go Back & Edit</button></div></div>
     </div>
   </div>
 );
 
-const VerificationModal = ({ user, onClose }) => {
-  const [copied, setCopied] = useState(false);
-  const copyID = () => { navigator.clipboard.writeText(user.uid); setCopied(true); setTimeout(() => setCopied(false), 2000); };
-  const mailLink = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification&body=User ID: ${user?.uid}`;
-  return (
-    <div className="fixed inset-0 bg-slate-900/90 z-[6000] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative text-center">
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20} /></button>
-        <h3 className="text-lg font-bold text-slate-800">Doctor Verification</h3>
-        <p className="text-xs text-slate-500 mb-4">Email your ID & Medical License to Admin.</p>
-        <div className="bg-slate-100 p-3 rounded-xl flex items-center justify-between mb-4 border border-slate-200">
-          <code className="text-xs text-slate-600 font-mono truncate max-w-[200px]">{user?.uid}</code>
-          <button onClick={copyID} className="text-slate-500">{copied ? <Check size={16} /> : <Copy size={16} />}</button>
-        </div>
-        <a href={mailLink} className="block w-full bg-sky-600 text-white py-3 rounded-xl font-bold text-sm">Email Admin</a>
-      </div>
-    </div>
-  );
-};
-
-// --- ADMIN PANEL ---
+// --- ADMIN & VERIFY ---
 const AdminPanel = ({ onClose }) => {
   const [requests, setRequests] = useState([]);
   useEffect(() => {
@@ -177,7 +157,6 @@ const AdminPanel = ({ onClose }) => {
   const handleApprove = async (req) => {
     if (!req.userId) return;
     try {
-      // NOTE: Using 'data/user_profiles' to match security rules
       const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'user_profiles_' + req.userId);
       await setDoc(userRef, { isExpert: true, verifiedAt: Date.now(), name: req.name, uid: req.userId }, { merge: true });
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', req.id));
@@ -185,9 +164,7 @@ const AdminPanel = ({ onClose }) => {
     } catch (e) { alert("Error: " + e.message); }
   };
 
-  const handleReject = async (reqId) => {
-    if(confirm("Reject?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', reqId));
-  };
+  const handleReject = async (reqId) => { if(confirm("Reject?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', reqId)); };
 
   return (
     <div className="flex-1 bg-white min-h-screen p-4">
@@ -205,7 +182,6 @@ const AdminPanel = ({ onClose }) => {
   );
 };
 
-// --- REQUEST MODAL ---
 const RequestVerificationModal = ({ user, onClose }) => {
   const [name, setName] = useState('');
   const [regNo, setRegNo] = useState('');
@@ -214,14 +190,11 @@ const RequestVerificationModal = ({ user, onClose }) => {
   const handleSubmit = async () => {
     if (!name || !regNo) return;
     if (regNo.trim() === "ASHOKA-MASTER-KEY") {
-      // NOTE: Using 'data/user_profiles' to match security rules
       const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'user_profiles_' + user.uid);
       await setDoc(userRef, { isExpert: true, isAdmin: true, verifiedAt: Date.now(), uid: user.uid }, { merge: true });
       alert("✅ ADMIN ACCESS GRANTED. Refresh page."); onClose(); return;
     }
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'verification_requests'), {
-      userId: user.uid, name: name, regNo: regNo, createdAt: Date.now()
-    });
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'verification_requests'), { userId: user.uid, name: name, regNo: regNo, createdAt: Date.now() });
     setSubmitted(true);
   };
 
@@ -254,22 +227,18 @@ export default function AshokaManasPlatform() {
   const [showSOS, setShowSOS] = useState(false);
   const [showVerify, setShowVerify] = useState(false); 
   const [newComment, setNewComment] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   const t = (key) => TRANSLATIONS[lang][key] || key;
 
-  // Force loading finish
+  // --- AUTH ---
   useEffect(() => {
     signInAnonymously(auth).catch(e => console.log(e));
-    setTimeout(() => setIsLoading(false), 2500); 
+    return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
-  useEffect(() => onAuthStateChanged(auth, (u) => { setUser(u); if(u) setIsLoading(false); }), []);
-
-  // Fetch User Data - SAFE PATH FIX
+  // --- USER PROFILE ---
   useEffect(() => {
     if (!user) return;
-    // We now look in 'data/user_profiles_' to match the 'public/data' rule
     const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'user_profiles_' + user.uid), (docSnap) => {
       if (docSnap.exists()) setUserData(docSnap.data());
     });
@@ -281,9 +250,9 @@ export default function AshokaManasPlatform() {
     if (agreed) setHasAgreedToLegal(true);
   }, []);
 
-  // Fetch Posts
+  // --- FETCH POSTS ---
   useEffect(() => {
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v32')); 
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v33')); 
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -300,7 +269,7 @@ export default function AshokaManasPlatform() {
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !checkSafety(newPostContent)) return;
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v32'), {
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v33'), {
       content: newPostContent, space: activeSpace, authorId: user?.uid, isExpert: userData?.isExpert || false, likes: 0, commentCount: 0, comments: [], createdAt: serverTimestamp()
     });
     setNewPostContent(''); setView('feed');
@@ -308,14 +277,14 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !checkSafety(newComment)) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v32', selectedPost.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v33', selectedPost.id);
     await updateDoc(ref, { comments: arrayUnion({ text: newComment, authorId: user?.uid, isExpert: userData?.isExpert || false, createdAt: Date.now() }), commentCount: increment(1) });
     setNewComment('');
   };
 
   const handleLike = async (e, post) => {
     e.stopPropagation();
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v32', post.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v33', post.id);
     await updateDoc(ref, { likes: increment(1) });
   };
 
@@ -344,7 +313,7 @@ export default function AshokaManasPlatform() {
         <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-100">
            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-start gap-2"><AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" /><p className="text-[10px] sm:text-xs text-amber-900 font-medium"><strong>Disclaimer:</strong> {TRANSLATIONS[lang].legalText}</p></div>
            <div className="px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3"><button className="md:hidden p-2 bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}><Menu size={24} className="text-slate-700" /></button><div className="flex items-center gap-2"><h1 className="text-lg font-bold text-slate-800 flex items-center gap-2"><div className="md:hidden"><AppLogo size="sm"/></div><span className="md:hidden">{TRANSLATIONS[lang][activeSpaceObj?.key]}</span><span className="hidden md:block">{t('appName')}</span></h1></div></div>
+            <div className="flex items-center gap-3"><button className="md:hidden p-2 bg-slate-100 rounded-lg" onClick={() => setMobileMenuOpen(true)}><Menu size={24} className="text-slate-700" /></button><h1 className="text-lg font-bold text-slate-800 flex items-center gap-2"><div className="md:hidden"><AppLogo size="sm"/></div><span className="md:hidden">{TRANSLATIONS[lang][activeSpaceObj?.key]}</span><span className="hidden md:block">{t('appName')}</span></h1></div>
             <div className="flex gap-2"><button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="flex items-center gap-1 bg-slate-100 px-3 py-2 rounded-lg text-xs font-bold text-slate-700"><Globe size={14} /> {lang === 'en' ? 'తెలుగు' : 'English'}</button><Button size="sm" onClick={() => setView('create')}><PenSquare size={16} /> <span className="hidden sm:inline">{t('newPost')}</span></Button></div>
            </div>
         </div>
@@ -368,7 +337,8 @@ export default function AshokaManasPlatform() {
     <div className="flex-1 bg-white min-h-screen">
       <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10"><button onClick={() => setView('feed')} className="p-2 -ml-2 text-slate-400"><X size={24} /></button><span className="font-bold text-slate-700">{t('newPost')}</span><Button size="sm" disabled={!newPostContent.trim()} onClick={handleCreatePost}>Publish</Button></div>
       <div className="p-4 max-w-2xl mx-auto">
-        <div className="bg-slate-100 rounded-lg p-2 mb-4 text-xs text-slate-500 font-medium text-center">Posting to: <span className="text-slate-800 font-bold">{TRANSLATIONS[lang][SPACES.find(s=>s.id===activeSpace)?.key]}</span></div>
+        <div className="bg-slate-100 rounded-lg p-2 mb-2 text-xs text-slate-500 font-medium text-center">Posting to: <span className="text-slate-800 font-bold">{TRANSLATIONS[lang][SPACES.find(s=>s.id===activeSpace)?.key]}</span></div>
+        <div className="bg-red-50 p-2 mb-4 rounded border border-red-100 text-xs text-red-800 flex gap-2"><AlertOctagon size={14}/><span>Zero Tolerance: No abuse, violence, or humiliation.</span></div>
         <textarea autoFocus value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} placeholder={t('writePlace')} className="w-full h-48 p-4 text-lg text-slate-800 border-none focus:ring-0 outline-none resize-none" />
       </div>
     </div>
@@ -385,12 +355,11 @@ export default function AshokaManasPlatform() {
     );
   };
 
-  if (isLoading) return <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-teal-800 gap-4 p-4"><Leaf className="animate-bounce" size={48} /><p className="font-medium animate-pulse">Loading AshokaManas...</p></div>;
-
+  // --- FORCE RENDER (No more Leaf) ---
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {!hasAgreedToLegal && <LegalGateModal lang={lang} onAccept={() => {setHasAgreedToLegal(true); localStorage.setItem('ashoka_legal_agreed', 'true');}} />}
-      {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
+      {showBlocked && <SOSModal onClose={() => setShowBlocked(false)} />}
       {showVerify && <RequestVerificationModal user={user} onClose={() => setShowVerify(false)} />}
       <div className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 z-20"><div className="p-5 border-b border-slate-100"><AppLogo size="md" /></div><div className="p-4 flex-1 overflow-hidden"><SpaceSidebar activeSpace={activeSpace} setActiveSpace={setActiveSpace} userData={userData} setShowVerify={setShowVerify} lang={lang} setView={setView} /></div></div>
       {mobileMenuOpen && <div className="fixed inset-0 z-50 bg-slate-900/50 md:hidden backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}><div className="w-72 h-full bg-white p-4 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}><div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100"><AppLogo size="sm" /><button onClick={() => setMobileMenuOpen(false)}><X size={20}/></button></div><div className="flex-1 overflow-y-auto"><SpaceSidebar activeSpace={activeSpace} setActiveSpace={setActiveSpace} setMobileMenuOpen={setMobileMenuOpen} userData={userData} setShowVerify={setShowVerify} lang={lang} setView={setView} mobile /></div></div></div>}
