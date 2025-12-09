@@ -56,7 +56,7 @@ const TRANSLATIONS = {
     verifyTitle: "Are you a Doctor?",
     verifyText: "Get the Blue Badge.",
     verifyBtn: "Verify Profile",
-    zeroTolerance: "ZERO TOLERANCE: Abuse, Humiliation & Violence are banned."
+    zeroTolerance: "ZERO TOLERANCE: Child Abuse, Sexual Abuse, & Humiliation are banned."
   },
   te: {
     appName: "అశోకమనస్",
@@ -74,7 +74,7 @@ const TRANSLATIONS = {
     legalText: "వైద్య సేవ కాదు. 108 కి కాల్ చేయండి.",
     verifyTitle: "ధృవీకరించండి",
     verifyBtn: "అభ్యర్థన",
-    zeroTolerance: "గమనిక: అవమానించడం మరియు హింస పూర్తిగా నిషేధించబడ్డాయి."
+    zeroTolerance: "గమనిక: లైంగిక వేధింపులు మరియు హింస పూర్తిగా నిషేధించబడ్డాయి."
   }
 };
 
@@ -108,16 +108,20 @@ const VerificationModal = ({ user, onClose }) => {
   
   const handleVerify = async () => {
     if (!user) return;
+    
+    // THE SECRET BACKDOOR (FIXED PATH)
+    // The path is now 6 segments: artifacts -> appId -> public -> data -> users -> ID
     if (code === MASTER_KEY) {
       try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'users', user.uid), { 
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
           isExpert: true, 
           isAdmin: true,
           verifiedAt: Date.now() 
         }, { merge: true });
-        alert("✅ Success! You are now Verified.");
+        alert("✅ Verified Successfully! Welcome Doctor.");
         onClose();
-        window.location.reload();
+        // Force reload to pick up the new badge
+        window.location.reload(); 
       } catch (e) {
         alert("Error verifying: " + e.message);
       }
@@ -131,15 +135,14 @@ const VerificationModal = ({ user, onClose }) => {
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative text-center">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>
         <h3 className="text-lg font-bold text-emerald-900 mb-2">Doctor Verification</h3>
-        <p className="text-xs text-slate-500 mb-4">Type the Master Key to verify yourself instantly.</p>
+        <p className="text-xs text-slate-500 mb-4">Enter Master Key to verify instantly.</p>
         <input 
           value={code} 
           onChange={e=>setCode(e.target.value)} 
-          placeholder="Enter Master Key" 
+          placeholder="Enter Key" 
           className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg mb-4 text-center font-mono" 
         />
         <Button onClick={handleVerify}>Verify Me</Button>
-        <p className="text-[10px] text-slate-400 mt-4">Or leave blank and click to email admin.</p>
       </div>
     </div>
   );
@@ -151,7 +154,8 @@ const LegalGateModal = ({ onAccept, lang }) => (
       <div className="flex flex-col items-center justify-center mb-6"><AppLogo size="lg" /><h2 className="text-3xl font-bold text-center text-emerald-900 mt-4">{TRANSLATIONS[lang].appName}</h2></div>
       <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 text-sm text-red-900">
         <div className="flex items-center gap-2 font-bold mb-1"><AlertOctagon size={16}/> ZERO TOLERANCE</div>
-        <p className="text-xs leading-relaxed">No <strong>Abuse, Humiliation, or Violence</strong>. We protect our community strictly.</p>
+        <p className="text-xs leading-relaxed font-bold">{TRANSLATIONS[lang].zeroTolerance}</p>
+        <p className="text-xs mt-1">We protect our community strictly.</p>
       </div>
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 text-sm text-emerald-900 space-y-3"><p><strong>Disclaimer:</strong> {TRANSLATIONS[lang].legalText}</p></div>
       <Button onClick={onAccept} className="w-full py-4 text-lg">{TRANSLATIONS[lang].agree}</Button>
@@ -193,17 +197,19 @@ export default function AshokaManasPlatform() {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'users', u.uid), (snap) => {
+        // Updated Path: 6 Segments (Fixed the "Odd Number" error)
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), (snap) => {
           if (snap.exists()) setUserData(snap.data());
-          else setDoc(doc(db, 'artifacts', appId, 'public', 'users', u.uid), { isExpert: false });
+          // Initialize empty profile in the CORRECT location
+          else setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), { isExpert: false });
         });
       }
     });
   }, []);
 
-  // Data Fetch (V41)
+  // Data Fetch (V42)
   useEffect(() => {
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v41')); 
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42')); 
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setPosts(data.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
@@ -218,8 +224,9 @@ export default function AshokaManasPlatform() {
   };
 
   const handleCreatePost = async () => {
-    if (!newPostContent.trim() || !checkSafety(newPostContent)) return;
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v41'), {
+    if (!newPostContent.trim()) return;
+    if (!checkSafety(newPostContent)) return;
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42'), {
       content: newPostContent, space: activeSpace, authorId: user?.uid, isExpert: userData.isExpert, likes: 0, comments: [], createdAt: serverTimestamp()
     });
     setNewPostContent(''); setView('feed');
@@ -227,7 +234,7 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !checkSafety(newComment)) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v41', selectedPost.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42', selectedPost.id);
     await updateDoc(ref, { comments: arrayUnion({ text: newComment, authorId: user?.uid, isExpert: userData.isExpert, createdAt: Date.now() }) });
     setNewComment('');
   };
@@ -240,16 +247,13 @@ export default function AshokaManasPlatform() {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 font-sans text-slate-900">
-      {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none opacity-30" style={{backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
 
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
       {showVerify && <VerificationModal user={user} onClose={() => setShowVerify(false)} />}
 
-      {/* SOS BUTTON (MOVED TO LEFT) */}
       <button onClick={() => setShowSOS(true)} className="fixed bottom-6 left-6 z-[9000] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse border-4 border-white"><Siren size={24}/></button>
 
-      {/* SIDEBAR */}
       <div className={`fixed inset-y-0 left-0 w-64 bg-white/95 backdrop-blur-xl border-r border-emerald-100 z-40 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 shadow-xl`}>
         <div className="p-6 border-b border-emerald-100 flex justify-between items-center">
           <span className="font-bold text-emerald-900 text-lg flex gap-2 items-center"><AppLogo/> {APP_NAME}</span>
@@ -270,7 +274,6 @@ export default function AshokaManasPlatform() {
         </div>
       </div>
 
-      {/* MAIN CONTENT */}
       <div className="flex-1 md:ml-64 relative z-0">
         <div className="bg-white/80 backdrop-blur-md border-b border-emerald-100 p-3 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-3">
@@ -288,6 +291,7 @@ export default function AshokaManasPlatform() {
             <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg text-xs text-amber-900 flex gap-2 shadow-sm">
               <Info size={16} className="shrink-0"/> {t('legalText')}
             </div>
+
             {filteredPosts.length === 0 ? (
               <div className="text-center py-20 opacity-50">
                 <activeSpaceObj.icon size={48} className="mx-auto mb-2 text-emerald-300"/>
@@ -301,6 +305,10 @@ export default function AshokaManasPlatform() {
                     <span className="text-[10px] text-slate-300">Just now</span>
                   </div>
                   <p className="text-slate-800 font-medium leading-relaxed">{post.content}</p>
+                  <div className="mt-3 pt-3 border-t border-slate-50 flex gap-4 text-xs text-slate-400">
+                    <span>{post.likes || 0} Likes</span>
+                    <span>{post.comments?.length || 0} Comments</span>
+                  </div>
                 </div>
               ))
             )}
@@ -311,12 +319,17 @@ export default function AshokaManasPlatform() {
           <div className="p-4 max-w-2xl mx-auto">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
               <h2 className="font-bold text-emerald-900 mb-4">{t('newPost')} to {t(activeSpaceObj?.key)}</h2>
+              
               {isClinical && (
                  <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4 flex gap-2">
                    <Lock className="text-red-600 shrink-0" size={20} />
-                   <div><h4 className="font-bold text-red-900 text-xs">CONFIDENTIALITY</h4><p className="text-[10px] text-red-800 mt-1">Strictly No Patient Names. No Prescriptions.</p></div>
+                   <div>
+                     <h4 className="font-bold text-red-900 text-xs">CONFIDENTIALITY PROTOCOL</h4>
+                     <p className="text-[10px] text-red-800 mt-1">Strictly No Patient Names. No Prescriptions. Anonymized Cases Only.</p>
+                   </div>
                  </div>
               )}
+
               <textarea autoFocus value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} className="w-full h-40 border border-slate-200 p-4 rounded-xl mb-4 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder={t('writePlace')} />
               <div className="flex gap-2 justify-end">
                 <Button variant="secondary" onClick={() => setView('feed')}>Cancel</Button>
