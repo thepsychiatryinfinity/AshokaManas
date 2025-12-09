@@ -25,24 +25,12 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// --- SAFETY & MODERATION FILTERS ---
-// These words will trigger an immediate block and SOS modal.
+// --- SAFETY FILTERS ---
 const BLOCKED_WORDS = [
-  // 1. Harm & Suicide
-  'suicide', 'kill myself', 'die', 'end it', 'hang myself', 'poison', 'cut myself',
-  'ఆత్మహత్య', 'చనిపోవాలని',
-  
-  // 2. Kidnapping & Crime
-  'kidnap', 'abduct', 'ransom', 'hostage', 'murder', 'shoot', 'gun', 'knife', 'bomb', 
-  'threaten', 'kill you', 'beat you', 'demand money',
-  
-  // 3. Vulgarity & Bad Words
-  'fuck', 'shit', 'bitch', 'asshole', 'bastard', 'cunt', 'dick', 'pussy', 'sex', 'porn', 'nude',
-  'lanja', 'puku', 'modda', 'dengu', // Telugu vulgarity
-  
-  // 4. Abuse & Humiliation
-  'stupid', 'idiot', 'loser', 'ugly', 'fat', 'dumb', 'retard', 'useless', 'worthless', 
-  'ashamed', 'disgusting', 'fool', 'crazy', 'mad', 'nonsense'
+  'suicide', 'kill myself', 'die', 'end it', 'hang myself', 'poison', 'cut myself', 'ఆత్మహత్య',
+  'kidnap', 'abduct', 'ransom', 'hostage', 'murder', 'shoot', 'gun', 'knife', 'bomb',
+  'fuck', 'shit', 'bitch', 'asshole', 'bastard', 'cunt', 'dick', 'pussy', 'sex', 'porn', 'nude', 'lanja', 'puku', 'modda',
+  'stupid', 'idiot', 'loser', 'ugly', 'fat', 'dumb', 'retard', 'useless', 'worthless'
 ];
 
 const TRANSLATIONS = {
@@ -141,7 +129,7 @@ const SpaceSidebar = ({ activeSpace, setActiveSpace, setMobileMenuOpen, userData
       </div>
 
       <div className="mt-auto px-4 pb-6 space-y-4">
-        {/* Verification Card (Show only if NOT an expert) */}
+        {/* Verification Card (Hide if already Expert) */}
         {!userData?.isExpert && (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
             <h4 className="font-bold text-slate-800 text-sm mb-1">{t.verifyTitle}</h4>
@@ -155,12 +143,12 @@ const SpaceSidebar = ({ activeSpace, setActiveSpace, setMobileMenuOpen, userData
           </div>
         )}
 
-        {/* Admin Panel Link (Only visible to ADMINS/EXPERTS) */}
+        {/* ADMIN BUTTON - Shows if isAdmin is true */}
         {userData?.isAdmin && (
-           <div className="bg-teal-50 border border-teal-100 rounded-xl p-3">
+           <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 animate-pulse">
              <div className="flex items-center gap-2 mb-2 text-teal-800 font-bold text-xs"><Lock size={14}/> ADMIN ACCESS</div>
-             <button onClick={() => setView('admin')} className="w-full bg-teal-700 text-white text-xs font-bold py-2 rounded-lg hover:bg-teal-800 flex items-center justify-center gap-2">
-               <UserCheck size={14} /> Verify Doctors
+             <button onClick={() => { setView('admin'); if(setMobileMenuOpen) setMobileMenuOpen(false); }} className="w-full bg-teal-700 text-white text-xs font-bold py-2 rounded-lg hover:bg-teal-800 flex items-center justify-center gap-2">
+               <UserCheck size={14} /> Open Admin Panel
              </button>
            </div>
         )}
@@ -169,12 +157,11 @@ const SpaceSidebar = ({ activeSpace, setActiveSpace, setMobileMenuOpen, userData
   );
 };
 
-// --- ADMIN PANEL (Verification Center) ---
+// --- ADMIN PANEL ---
 const AdminPanel = ({ onClose }) => {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    // 1. Fetch pending requests
     const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'verification_requests'));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -186,10 +173,8 @@ const AdminPanel = ({ onClose }) => {
   const handleApprove = async (req) => {
     if (!req.userId) return;
     try {
-      // 2. Grant "Expert" status to the user
       const userRef = doc(db, 'artifacts', appId, 'public', 'users', req.userId);
       await setDoc(userRef, { isExpert: true, verifiedAt: Date.now(), name: req.name }, { merge: true });
-      // 3. Remove request
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'verification_requests', req.id));
       alert(`Verified Dr. ${req.name} successfully.`);
     } catch (e) {
@@ -206,20 +191,18 @@ const AdminPanel = ({ onClose }) => {
   return (
     <div className="flex-1 bg-white min-h-screen p-4">
       <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Lock size={20} /> Doctor Verification Center</h2>
+        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Lock size={20} /> Admin Verification Center</h2>
         <button onClick={onClose} className="bg-slate-100 p-2 rounded-full"><X size={20} /></button>
       </div>
       
       <div className="max-w-2xl mx-auto space-y-4">
         <h3 className="font-bold text-sm text-slate-500 uppercase tracking-wide">Pending Requests ({requests.length})</h3>
-        
         {requests.length === 0 && (
           <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
             <CheckCircle className="mx-auto text-slate-300 mb-2" size={32} />
-            <p className="text-slate-500 text-sm">No pending requests.</p>
+            <p className="text-slate-500 text-sm">No pending doctor requests.</p>
           </div>
         )}
-
         {requests.map(req => (
           <div key={req.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -227,12 +210,8 @@ const AdminPanel = ({ onClose }) => {
               <p className="text-sm text-slate-600"><strong>Reg No:</strong> {req.regNo}</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handleApprove(req)} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-teal-700 shadow-sm flex items-center gap-2">
-                <CheckCircle size={16}/> Approve
-              </button>
-              <button onClick={() => handleReject(req.id)} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50">
-                Reject
-              </button>
+              <button onClick={() => handleApprove(req)} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-teal-700 shadow-sm flex items-center gap-2"><CheckCircle size={16}/> Approve</button>
+              <button onClick={() => handleReject(req.id)} className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50">Reject</button>
             </div>
           </div>
         ))}
@@ -241,7 +220,7 @@ const AdminPanel = ({ onClose }) => {
   );
 };
 
-// --- REQUEST MODAL (With MASTER KEY) ---
+// --- REQUEST MODAL (With Master Key Fix) ---
 const RequestVerificationModal = ({ user, onClose }) => {
   const [name, setName] = useState('');
   const [regNo, setRegNo] = useState('');
@@ -251,12 +230,12 @@ const RequestVerificationModal = ({ user, onClose }) => {
     if (!name || !regNo) return;
 
     // *** MASTER KEY LOGIC ***
-    // If you type this specific code, you become ADMIN immediately.
-    if (regNo === "ASHOKA-MASTER-KEY") {
+    if (regNo.trim() === "ASHOKA-MASTER-KEY") {
       const userRef = doc(db, 'artifacts', appId, 'public', 'users', user.uid);
+      // We set isAdmin: true. The real-time listener in the main App will pick this up instantly.
       await setDoc(userRef, { isExpert: true, isAdmin: true, verifiedAt: Date.now() }, { merge: true });
-      alert("✅ You are now the Admin. Check the sidebar for the new panel.");
-      window.location.reload(); 
+      alert("✅ ACCESS GRANTED. Look at the bottom of the sidebar!");
+      onClose(); // Close modal immediately
       return;
     }
 
@@ -278,7 +257,7 @@ const RequestVerificationModal = ({ user, onClose }) => {
           <div className="text-center">
             <div className="w-12 h-12 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 text-sky-600"><Stethoscope size={24} /></div>
             <h3 className="text-lg font-bold text-slate-800 mb-2">Doctor Verification</h3>
-            <p className="text-xs text-slate-500 mb-6">Enter your details. The Admin will verify you.</p>
+            <p className="text-xs text-slate-500 mb-6">Enter your details.</p>
             <div className="space-y-3 text-left">
               <input value={name} onChange={e=>setName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm outline-none" placeholder="Full Name (Dr. ...)" />
               <input value={regNo} onChange={e=>setRegNo(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm outline-none" placeholder="Medical Reg Number" />
@@ -316,7 +295,7 @@ const LegalGateModal = ({ onAccept, lang }) => (
   </div>
 );
 
-// --- CONTENT BLOCKED MODAL ---
+// --- BLOCKED CONTENT MODAL ---
 const BlockedContentModal = ({ onClose, triggerWord }) => (
   <div className="fixed inset-0 bg-rose-900/95 z-[9999] flex items-center justify-center p-4 backdrop-blur-md">
     <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border-t-8 border-rose-500 animate-bounce-in relative">
@@ -365,16 +344,29 @@ export default function AshokaManasPlatform() {
       } catch (e) { console.error(e); }
     };
     init();
+    
+    // Auth Listener
     return onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      if (u) {
-        const userRef = doc(db, 'artifacts', appId, 'public', 'users', u.uid);
-        const snap = await getDoc(userRef);
-        if (snap.exists()) { setUserData(snap.data()); } 
-        else { await setDoc(userRef, { isExpert: false, joinedAt: Date.now() }); setUserData({ isExpert: false }); }
-      }
     });
   }, []);
+
+  // REAL-TIME USER DATA LISTENER (Fixes the Admin issue)
+  useEffect(() => {
+    if (!user) return;
+    const userRef = doc(db, 'artifacts', appId, 'public', 'users', user.uid);
+    
+    const unsub = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUserData(docSnap.data());
+      } else {
+        // Initialize user if not exists
+        setDoc(userRef, { isExpert: false, joinedAt: Date.now() });
+        setUserData({ isExpert: false });
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     const agreed = localStorage.getItem('ashoka_legal_agreed');
@@ -392,25 +384,20 @@ export default function AshokaManasPlatform() {
     return () => unsub();
   }, [user]);
 
-  // *** SAFETY CHECKER ***
   const checkSafety = (text) => {
     const lowerText = text.toLowerCase();
     const foundWord = BLOCKED_WORDS.find(word => lowerText.includes(word));
     if (foundWord) {
       setBlockedTrigger(foundWord);
       setShowBlocked(true);
-      return false; // FAIL
+      return false; 
     }
-    return true; // PASS
+    return true; 
   };
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return;
-    
-    // 1. Run Safety Check
     if (!checkSafety(newPostContent)) return;
-
-    // 2. Post if safe
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20'), {
       content: newPostContent,
       space: activeSpace, 
@@ -427,10 +414,7 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !selectedPost) return;
-    
-    // 1. Run Safety Check
     if (!checkSafety(newComment)) return;
-
     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20', selectedPost.id);
     await updateDoc(ref, {
       comments: arrayUnion({ text: newComment, authorId: user.uid, isExpert: userData?.isExpert || false, createdAt: Date.now() }),
@@ -451,7 +435,6 @@ export default function AshokaManasPlatform() {
     return <Icon size={14} className={activeSpaceObj.color.split(' ')[0]} />;
   };
 
-  // *** STRICT FILTERING RENDER ***
   const renderFeed = () => {
     const activeSpaceObj = SPACES.find(s => s.id === activeSpace);
     const filteredPosts = posts.filter(p => p.space === activeSpace);
