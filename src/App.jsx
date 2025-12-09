@@ -3,7 +3,7 @@ import {
   Heart, MessageCircle, PenSquare, Users, Send, ThumbsUp, X, Shield, 
   AlertTriangle, CheckCircle, Leaf, Menu, HeartHandshake, 
   Pill, ScrollText, AlertOctagon, Stethoscope, Baby, Siren, 
-  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban
+  AlertCircle, Globe, Lock, ChevronRight, UserCheck, Ban, RefreshCw
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -20,6 +20,7 @@ const firebaseConfig = {
   measurementId: "G-HY8TS7H8LW"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -220,7 +221,7 @@ const AdminPanel = ({ onClose }) => {
   );
 };
 
-// --- REQUEST MODAL (With Master Key Fix) ---
+// --- REQUEST MODAL (With Master Key) ---
 const RequestVerificationModal = ({ user, onClose }) => {
   const [name, setName] = useState('');
   const [regNo, setRegNo] = useState('');
@@ -229,13 +230,12 @@ const RequestVerificationModal = ({ user, onClose }) => {
   const handleSubmit = async () => {
     if (!name || !regNo) return;
 
-    // *** MASTER KEY LOGIC ***
+    // *** MASTER KEY LOGIC (SIMPLE VERIFY) ***
     if (regNo.trim() === "ASHOKA-MASTER-KEY") {
       const userRef = doc(db, 'artifacts', appId, 'public', 'users', user.uid);
-      // We set isAdmin: true. The real-time listener in the main App will pick this up instantly.
       await setDoc(userRef, { isExpert: true, isAdmin: true, verifiedAt: Date.now() }, { merge: true });
       alert("✅ ACCESS GRANTED. Look at the bottom of the sidebar!");
-      onClose(); // Close modal immediately
+      onClose(); 
       return;
     }
 
@@ -263,6 +263,7 @@ const RequestVerificationModal = ({ user, onClose }) => {
               <input value={regNo} onChange={e=>setRegNo(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm outline-none" placeholder="Medical Reg Number" />
               <button onClick={handleSubmit} disabled={!name || !regNo} className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-sky-700">Submit Request</button>
             </div>
+            <p className="text-[10px] text-slate-400 mt-4">To be admin, use your Master Key here.</p>
           </div>
         ) : (
           <div className="text-center py-8">
@@ -333,15 +334,24 @@ export default function AshokaManasPlatform() {
   const [blockedTrigger, setBlockedTrigger] = useState('');
   const [showVerify, setShowVerify] = useState(false); 
   const [newComment, setNewComment] = useState('');
+  const [loadingError, setLoadingError] = useState('');
+  const [tookTooLong, setTookTooLong] = useState(false);
 
   const t = (key) => TRANSLATIONS[lang][key] || key;
 
+  // --- FIXED AUTH LOADING ---
   useEffect(() => {
+    // Safety Timer: If it hangs for 2.5 seconds, show the "Force Enter" button
+    const timer = setTimeout(() => setTookTooLong(true), 2500);
+
     const init = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
         else await signInAnonymously(auth);
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error(e); 
+        setLoadingError("Connection Failed. Check Internet.");
+      }
     };
     init();
     
@@ -351,7 +361,7 @@ export default function AshokaManasPlatform() {
     });
   }, []);
 
-  // REAL-TIME USER DATA LISTENER (Fixes the Admin issue)
+  // REAL-TIME USER DATA LISTENER
   useEffect(() => {
     if (!user) return;
     const userRef = doc(db, 'artifacts', appId, 'public', 'users', user.uid);
@@ -360,7 +370,6 @@ export default function AshokaManasPlatform() {
       if (docSnap.exists()) {
         setUserData(docSnap.data());
       } else {
-        // Initialize user if not exists
         setDoc(userRef, { isExpert: false, joinedAt: Date.now() });
         setUserData({ isExpert: false });
       }
@@ -546,7 +555,24 @@ export default function AshokaManasPlatform() {
     );
   };
 
-  if (!user) return <div className="h-screen flex items-center justify-center text-teal-700"><Leaf className="animate-bounce" size={40} /></div>;
+  // --- LOADING SCREEN (FIXED) ---
+  if (!user) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-teal-800 gap-4 p-4">
+        <Leaf className="animate-bounce" size={48} />
+        <p className="font-medium animate-pulse">Connecting to AshokaManas...</p>
+        
+        {loadingError && <p className="text-red-500 text-sm font-bold bg-red-50 px-3 py-1 rounded">{loadingError}</p>}
+        
+        {/* Safety Button: If loading takes > 2.5s, let user force refresh or retry */}
+        {tookTooLong && (
+          <button onClick={() => window.location.reload()} className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 rounded-lg text-sm text-slate-600 shadow-sm hover:bg-slate-50">
+            <RefreshCw size={14}/> Taking too long? Click to Reload
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
