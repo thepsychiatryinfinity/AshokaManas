@@ -4,10 +4,10 @@ import {
   Search, AlertTriangle, CheckCircle, Leaf, Hash, User, ChevronRight, Menu, HeartHandshake, 
   BookOpen, Pill, ScrollText, Ban, AlertOctagon, Info, Stethoscope, Baby, Repeat, Coffee, 
   Siren, FileText, Gavel, Scale, AlertCircle, Globe, Copy, Check, Lock, MessagesSquare, Key,
-  UserCheck, XCircle
+  UserCheck, XCircle, LogOut
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, signOut } from 'firebase/auth';
 import { getFirestore, collection, addDoc, onSnapshot, query, doc, updateDoc, arrayUnion, increment, serverTimestamp, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firebase Config (YOUR REAL KEYS) ---
@@ -21,6 +21,7 @@ const firebaseConfig = {
   measurementId: "G-HY8TS7H8LW"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -28,7 +29,6 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- CONSTANTS ---
 const APP_NAME = "AshokaManas";
-const MASTER_PASSWORD = "ASHOKA-MASTER-KEY"; 
 const TRIGGER_WORDS = ['die', 'kill', 'suicide', 'end it', 'hurt', 'abuse', 'hate', 'stupid', 'idiot', 'చనిపోవాలని', 'ఆత్మహత్య', 'చంపడం'];
 
 const TRANSLATIONS = {
@@ -88,7 +88,7 @@ const SPACES = [
   { id: 'Stories', key: 'story', icon: ScrollText, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
 ];
 
-// --- Components ---
+// --- Helper Components ---
 
 const Button = ({ children, onClick, variant = 'primary', size = 'md', className = '', disabled = false }) => {
   const variants = {
@@ -103,9 +103,62 @@ const Button = ({ children, onClick, variant = 'primary', size = 'md', className
 
 const AppLogo = ({ size = "sm" }) => (
   <div className={`${size === 'lg' ? 'w-40 h-40' : size === 'md' ? 'w-12 h-12' : 'w-8 h-8'} flex items-center justify-center`}>
-    <img src="/logo.png" alt="AshokaManas" className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerHTML = '<span class="text-teal-700 font-bold">AM</span>'; }} />
+    {/* You can replace this with your actual Logo URL later */}
+    <div className="bg-teal-700 rounded-full w-full h-full flex items-center justify-center text-white font-bold">AM</div>
   </div>
 );
+
+// --- SIDEBAR COMPONENT ---
+const SpaceSidebar = ({ activeSpace, setActiveSpace, setMobileMenuOpen, userData, setShowVerify, lang, setView }) => {
+  const t = TRANSLATIONS[lang];
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="space-y-1 mb-6">
+        <h3 className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Spaces</h3>
+        {SPACES.map(space => (
+          <Button
+            key={space.id}
+            variant={activeSpace === space.id ? 'spaceActive' : 'space'}
+            onClick={() => {
+              setActiveSpace(space.id);
+              if (setMobileMenuOpen) setMobileMenuOpen(false);
+            }}
+            className="px-4 py-3 rounded-lg mx-2"
+          >
+            <div className={`p-1.5 rounded-md ${activeSpace === space.id ? 'bg-white' : space.bg}`}>
+              <space.icon size={18} className={space.color} />
+            </div>
+            <span>{t[space.key]}</span>
+          </Button>
+        ))}
+      </div>
+
+      <div className="mt-auto px-4 pb-6 space-y-4">
+        {/* Verification Card for Doctors */}
+        {!userData?.isExpert && (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <h4 className="font-bold text-slate-800 text-sm mb-1">{t.verifyTitle}</h4>
+            <p className="text-xs text-slate-500 mb-3">{t.verifyText}</p>
+            <button 
+              onClick={() => { setShowVerify(true); if(setMobileMenuOpen) setMobileMenuOpen(false); }}
+              className="w-full bg-white border border-slate-300 text-slate-700 text-xs font-bold py-2 rounded-lg hover:bg-slate-50"
+            >
+              {t.verifyBtn}
+            </button>
+          </div>
+        )}
+
+        {/* Admin Link (Only visible if expert, or for demo purposes) */}
+        {userData?.isExpert && (
+           <button onClick={() => setView('admin')} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium w-full px-2">
+             <Lock size={16} /> Admin Panel
+           </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // --- ADMIN PANEL COMPONENT ---
 const AdminPanel = ({ onClose }) => {
@@ -229,13 +282,6 @@ const SOSModal = ({ onClose, lang }) => (
   </div>
 );
 
-const CommunityGuidelines = ({ lang }) => {
-  const t = TRANSLATIONS[lang];
-  return (
-    <div className="border-l-4 border-slate-400 bg-slate-50 rounded-r-xl p-3 mt-4"><div className="flex items-center gap-2 text-slate-700 font-bold mb-2 text-xs"><MessagesSquare size={14} /> {t.civilityTitle}</div><ul className="space-y-1 text-slate-600 text-[10px]"><li>• No Abusive Words</li><li>• No Blaming / Shaming</li><li>• No Unfair Criticism</li></ul></div>
-  );
-};
-
 // --- MAIN APP ---
 
 export default function AshokaManasPlatform() {
@@ -281,7 +327,7 @@ export default function AshokaManasPlatform() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20')); // Still using V20 database for continuity
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20')); 
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
@@ -294,9 +340,10 @@ export default function AshokaManasPlatform() {
     if (!newPostContent.trim()) return;
     if (TRIGGER_WORDS.some(w => newPostContent.toLowerCase().includes(w))) { setShowSOS(true); return; }
 
+    // STRICT CHECK: Ensure the post is tagged with the CURRENT activeSpace
     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v20'), {
       content: newPostContent,
-      space: activeSpace, 
+      space: activeSpace, // This is key: it assigns the post to the current room
       authorId: user.uid,
       isExpert: userData?.isExpert || false, 
       likes: 0,
@@ -325,14 +372,21 @@ export default function AshokaManasPlatform() {
     await updateDoc(ref, { likes: increment(1) });
   };
 
-  // --- STRICT FILTERING FIX IS HERE ---
+  // Helper for Space Icon
+  const FilterIcon = ({ activeSpaceObj }) => {
+    if(!activeSpaceObj) return null;
+    const Icon = activeSpaceObj.icon;
+    return <Icon size={14} className={activeSpaceObj.color.split(' ')[0]} />;
+  };
+
+  // --- STRICT FILTERING APPLIED HERE ---
   const renderFeed = () => {
-    // OLD LINE: const filteredPosts = posts.filter(p => activeSpace === 'General' ? true : p.space === activeSpace);
-    
-    // NEW LINE: STRICT FILTERING
-    const filteredPosts = posts.filter(p => p.space === activeSpace);
-    
+    // 1. Find the current space object details
     const activeSpaceObj = SPACES.find(s => s.id === activeSpace);
+    
+    // 2. STRICT FILTER: Only show posts where post.space matches the current activeSpace EXACTLY
+    // "General" is no longer special. It is just another bucket.
+    const filteredPosts = posts.filter(p => p.space === activeSpace);
     
     return (
       <div className="flex-1 min-h-screen pb-20 md:pb-0 bg-slate-50/50">
@@ -354,10 +408,10 @@ export default function AshokaManasPlatform() {
         </div>
 
         <div className="p-4 space-y-4 max-w-3xl mx-auto">
-          {/* Banner for Space Context */}
-          <div className="bg-slate-100 rounded-lg p-3 text-xs text-slate-500 mb-4 flex items-center gap-2 border border-slate-200">
+          {/* Banner for Space Context - Visual Confirmation for User */}
+          <div className={`rounded-lg p-3 text-xs flex items-center gap-2 border ${activeSpaceObj?.bg} border-slate-200 text-slate-600`}>
              <FilterIcon activeSpaceObj={activeSpaceObj} />
-             You are viewing: <strong>{TRANSLATIONS[lang][activeSpaceObj?.key] || activeSpaceObj?.name}</strong>
+             <span>You are viewing <strong>ONLY</strong>: <strong>{TRANSLATIONS[lang][activeSpaceObj?.key] || activeSpaceObj?.name}</strong></span>
           </div>
 
           {filteredPosts.map(post => (
@@ -378,8 +432,8 @@ export default function AshokaManasPlatform() {
           
           {filteredPosts.length === 0 && (
             <div className="text-center py-20 text-slate-400">
-              <p>No posts in this space yet.</p>
-              <Button onClick={() => setView('create')} variant="ghost" className="mt-2 text-indigo-600">Be the first to post</Button>
+              <p>No posts in this specific space yet.</p>
+              <Button onClick={() => setView('create')} variant="ghost" className="mt-2 text-indigo-600">Be the first to post here</Button>
             </div>
           )}
         </div>
@@ -387,16 +441,6 @@ export default function AshokaManasPlatform() {
     );
   };
 
-  // Helper for Space Icon
-  const FilterIcon = ({ activeSpaceObj }) => {
-    if(!activeSpaceObj) return null;
-    const Icon = activeSpaceObj.icon;
-    return <Icon size={14} className={activeSpaceObj.color.split(' ')[0]} />;
-  };
-
-  // ... (Keep renderCreate, renderDetail, and other renders as they were in V24) ...
-  // Re-pasting them here for completeness to ensure you have a full file
-  
   const renderCreate = () => {
     const isClinical = activeSpace === 'Clinical';
     const isAdverse = activeSpace === 'Adverse';
@@ -409,6 +453,11 @@ export default function AshokaManasPlatform() {
           <Button size="sm" disabled={!newPostContent.trim()} onClick={handleCreatePost}>Publish</Button>
         </div>
         <div className="p-4 max-w-2xl mx-auto">
+          {/* Visual confirmation of where they are posting */}
+          <div className="bg-slate-100 rounded-lg p-2 mb-4 text-xs text-slate-500 font-medium text-center">
+            Posting to: <span className="text-slate-800 font-bold">{TRANSLATIONS[lang][SPACES.find(s=>s.id===activeSpace)?.key]}</span>
+          </div>
+          
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 flex gap-2 items-start"><AlertOctagon size={16} className="text-slate-400 shrink-0 mt-0.5" /><p className="text-xs text-slate-600"><strong>Civility Check:</strong> No abusive, blameful, or violent language.</p></div>
           {isClinical && <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r shadow-sm"><div className="flex gap-3"><Lock className="text-red-600 shrink-0" size={24} /><div><h4 className="font-bold text-red-900 text-sm">STRICT MEDICAL CONFIDENTIALITY</h4><p className="text-xs text-red-800 mt-1 leading-relaxed"><strong>ABSOLUTELY NO PII.</strong> Do not post patient names, exact dates, or identifiable locations.</p></div></div></div>}
           {isAdverse && <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 flex gap-3 mb-4"><AlertCircle className="text-orange-600 shrink-0" size={24} /><div><h3 className="text-orange-900 font-bold text-sm">Safety Warning</h3><p className="text-orange-800/80 text-xs mt-1"><strong>Do not stop medication based on comments.</strong> Consult your doctor.</p></div></div>}
@@ -461,13 +510,33 @@ export default function AshokaManasPlatform() {
       
       <div className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 z-20">
         <div className="p-5 border-b border-slate-100"><AppLogo size="md" /></div>
-        <div className="p-4 flex-1 overflow-hidden"><SpaceSidebar /></div>
+        <div className="p-4 flex-1 overflow-hidden">
+          <SpaceSidebar 
+            activeSpace={activeSpace} 
+            setActiveSpace={setActiveSpace} 
+            userData={userData}
+            setShowVerify={setShowVerify}
+            lang={lang}
+            setView={setView}
+          />
+        </div>
       </div>
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 md:hidden backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}>
           <div className="w-72 h-full bg-white p-4 shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100"><AppLogo size="sm" /><button onClick={() => setMobileMenuOpen(false)}><X size={20}/></button></div>
-             <div className="flex-1 overflow-y-auto"><SpaceSidebar mobile /></div>
+             <div className="flex-1 overflow-y-auto">
+               <SpaceSidebar 
+                 activeSpace={activeSpace} 
+                 setActiveSpace={setActiveSpace} 
+                 setMobileMenuOpen={setMobileMenuOpen}
+                 userData={userData}
+                 setShowVerify={setShowVerify}
+                 lang={lang}
+                 setView={setView}
+                 mobile 
+               />
+             </div>
           </div>
         </div>
       )}
@@ -480,5 +549,3 @@ export default function AshokaManasPlatform() {
     </div>
   );
 }
-
-
