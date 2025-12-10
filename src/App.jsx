@@ -32,10 +32,13 @@ const appId = "default-app-id";
 
 // --- CONSTANTS ---
 const APP_NAME = "AshokaManas";
-const MASTER_KEY = "ASHOKA-ADMIN-2025"; 
 const ADMIN_EMAIL = "ashokamanas11@gmail.com";
-const POSTS_COLLECTION = 'ashoka_posts_v44'; // Keeping Data Safe
+const POSTS_COLLECTION = 'ashoka_posts_v44'; // KEEPING DATA SAFE
 const POST_LIMIT = 20;
+
+// --- DUAL KEYS (SECURITY UPGRADE) ---
+const KEY_ADMIN = "ASHOKA-SUPER-ADMIN-99"; // FOR YOU ONLY (Admin + Doctor)
+const KEY_DOCTOR = "ASHOKA-DOC-VERIFY";   // FOR FRIENDS (Doctor Only)
 
 const BLOCKED_WORDS = [
   'suicide', 'kill myself', 'die', 'end it', 'hang myself', 'poison', 'cut myself', 
@@ -121,18 +124,28 @@ const VerificationModal = ({ user, onClose }) => {
   
   const handleVerify = async () => {
     if (!user) return;
-    if (code === MASTER_KEY) {
-      try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
-          isExpert: true, isAdmin: true, verifiedAt: Date.now() 
-        }, { merge: true });
-        alert("✅ Success! You are now the Admin.");
-        onClose();
-        window.location.reload(); 
-      } catch (e) { alert("Error: " + e.message); }
+    
+    // --- SPLIT KEY LOGIC ---
+    let updateData = { verifiedAt: Date.now() };
+    let successMsg = "";
+
+    if (code === KEY_ADMIN) {
+      updateData = { ...updateData, isExpert: true, isAdmin: true };
+      successMsg = "✅ Admin Access Granted.";
+    } else if (code === KEY_DOCTOR) {
+      updateData = { ...updateData, isExpert: true, isAdmin: false };
+      successMsg = "✅ Doctor Verification Successful.";
     } else {
       window.location.href = `mailto:${ADMIN_EMAIL}?subject=Doctor Verification&body=ID: ${user.uid}`;
+      return;
     }
+
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), updateData, { merge: true });
+      alert(successMsg);
+      onClose();
+      window.location.reload(); 
+    } catch (e) { alert("Error: " + e.message); }
   };
 
   return (
@@ -140,9 +153,10 @@ const VerificationModal = ({ user, onClose }) => {
       <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative text-center">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>
         <h3 className="text-lg font-bold text-emerald-900 mb-2">Doctor Verification</h3>
-        <p className="text-xs text-slate-500 mb-4">Enter Master Key to verify instantly.</p>
-        <input value={code} onChange={e=>setCode(e.target.value)} placeholder="Enter Key" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg mb-4 text-center font-mono" />
+        <p className="text-xs text-slate-500 mb-4">Enter Verification Code.</p>
+        <input value={code} onChange={e=>setCode(e.target.value)} placeholder="Enter Code" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg mb-4 text-center font-mono" />
         <Button onClick={handleVerify}>Verify Me</Button>
+        <p className="text-[10px] text-slate-400 mt-4">Or click without code to email admin.</p>
       </div>
     </div>
   );
@@ -159,9 +173,9 @@ const AdminPanel = ({ onClose }) => {
         <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
           <h3 className="font-bold text-emerald-800 mb-2">Your Superpowers:</h3>
           <ul className="text-sm text-emerald-700 space-y-2">
-            <li>✅ <strong>Delete Any Post:</strong> Use the Trash Can icon on feed.</li>
-            <li>✅ <strong>Verify Doctors:</strong> Use Master Key or Firebase Console.</li>
-            <li>✅ <strong>Safety:</strong> Phone numbers & abusive words are auto-blocked.</li>
+            <li>✅ <strong>Delete Posts:</strong> You see a Trash Can on EVERY post.</li>
+            <li>🔑 <strong>Doctor Key:</strong> Share "ASHOKA-DOC-VERIFY".</li>
+            <li>🔐 <strong>Admin Key:</strong> Keep "ASHOKA-SUPER-ADMIN-99".</li>
           </ul>
         </div>
       </div>
@@ -176,7 +190,6 @@ const LegalGateModal = ({ onAccept, lang }) => (
       <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 text-sm text-red-900">
         <div className="flex items-center gap-2 font-bold mb-1"><AlertOctagon size={16}/> ZERO TOLERANCE</div>
         <p className="text-xs leading-relaxed font-bold">{TRANSLATIONS[lang].zeroTolerance}</p>
-        <p className="text-xs mt-1">We protect our community strictly.</p>
       </div>
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 text-sm text-emerald-900 space-y-3"><p><strong>Disclaimer:</strong> {TRANSLATIONS[lang].legalText}</p></div>
       <Button onClick={onAccept} className="w-full py-4 text-lg">{TRANSLATIONS[lang].agree}</Button>
@@ -188,7 +201,8 @@ const SOSModal = ({ onClose }) => (
   <div className="fixed inset-0 bg-rose-950/98 z-[10000] flex items-center justify-center p-4 backdrop-blur-md">
     <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border-t-8 border-rose-500 relative">
       <div className="mt-4"><AlertTriangle size={56} className="text-rose-500 mx-auto mb-4" /><h3 className="text-2xl font-bold text-slate-900 mb-2">Safety Alert</h3>
-      <p className="text-slate-600 mb-6 text-sm">We detected unsafe language or restricted contact info (Phone/Email). This is not allowed.</p>
+      <p className="text-slate-600 mb-2 text-sm font-bold">We care about you too much to let you post this.</p>
+      <p className="text-slate-500 mb-6 text-xs">If you are in crisis, please speak to a counselor right now.</p>
       <div className="space-y-3"><a href="tel:108" className="block w-full bg-rose-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"><Siren size={24} /> Call 108 / 988</a><button onClick={onClose} className="block w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200">Go Back & Edit</button></div></div>
     </div>
   </div>
@@ -203,10 +217,7 @@ export default function AshokaManasPlatform() {
   const [activeSpace, setActiveSpace] = useState('General');
   const [view, setView] = useState('feed'); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  // Pagination State
   const [posts, setPosts] = useState([]);
-  
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedPost, setSelectedPost] = useState(null);
   const [newComment, setNewComment] = useState('');
@@ -229,14 +240,13 @@ export default function AshokaManasPlatform() {
     });
   }, []);
 
-  // Data Fetch (Limited to 20 recent for speed)
+  // Data Fetch
   useEffect(() => {
     const q = query(
       collection(db, 'artifacts', appId, 'public', 'data', POSTS_COLLECTION),
       orderBy('createdAt', 'desc'),
       limit(POST_LIMIT)
     );
-    
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setPosts(data);
@@ -246,10 +256,8 @@ export default function AshokaManasPlatform() {
 
   const checkSafety = (text) => {
     const lower = text.toLowerCase();
-    // 1. Block Bad Words
     if (BLOCKED_WORDS.some(w => lower.includes(w))) { setShowSOS(true); return false; }
-    // 2. Block Phone Numbers & Emails
-    if (/\b\d{10}\b/.test(text) || /\S+@\S+\.\S+/.test(text)) { setShowSOS(true); return false; }
+    if (/\b\d{10}\b/.test(text) || /(https?:\/\/[^\s]+)/.test(text)) { setShowSOS(true); return false; }
     return true;
   };
 
@@ -281,15 +289,37 @@ export default function AshokaManasPlatform() {
   const filteredPosts = posts.filter(p => p.space === activeSpace);
   const isClinical = activeSpace === 'Clinical';
 
-  // --- FULL LEGAL PAGE ---
+  // --- LEGAL CENTER PAGE ---
   if (view === 'legal') return (
     <div className="flex-1 bg-white min-h-screen p-6 font-sans text-slate-900">
       <button onClick={() => setView('feed')} className="mb-6 flex items-center gap-2 text-emerald-800 font-bold"><ChevronRight className="rotate-180"/> Back</button>
-      <h1 className="text-2xl font-bold mb-4">Legal Center</h1>
-      <div className="space-y-6 text-sm text-slate-600">
-        <section><h2 className="text-lg font-bold text-teal-700">1. Dos & Don'ts</h2><p>DO share feelings. DON'T share names, numbers, or abusive language. Zero tolerance for harassment.</p></section>
-        <section><h2 className="text-lg font-bold text-teal-700">2. Privacy</h2><p>We do not store PII. Participation is anonymous.</p></section>
-        <section><h2 className="text-lg font-bold text-teal-700">3. Grievance</h2><p>Contact: {ADMIN_EMAIL}</p></section>
+      <h1 className="text-2xl font-bold mb-4">Community Constitution</h1>
+      
+      <div className="space-y-6 text-sm">
+        <section className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+          <h2 className="text-lg font-bold text-teal-800 mb-2 flex items-center gap-2"><Check size={18}/> THE DOs</h2>
+          <ul className="list-disc pl-5 space-y-1 text-teal-900">
+             <li>Do share your feelings and struggles honestly.</li>
+             <li>Do be kind and respectful to others.</li>
+             <li>Do report any post that makes you uncomfortable.</li>
+             <li>Do verify your profile if you are a medical professional.</li>
+          </ul>
+        </section>
+
+        <section className="bg-red-50 p-4 rounded-xl border border-red-100">
+          <h2 className="text-lg font-bold text-red-800 mb-2 flex items-center gap-2"><X size={18}/> THE DON'Ts</h2>
+          <ul className="list-disc pl-5 space-y-1 text-red-900">
+             <li>Don't share your Phone Number, Email, or Instagram. (Immediate Ban).</li>
+             <li>Don't use abusive, violent, or blaming language. (Zero Tolerance).</li>
+             <li>Don't ask for or give specific medical prescriptions.</li>
+             <li>Don't assume this app replaces your doctor. In emergencies, call 108.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-bold text-teal-700">Grievance Officer</h2>
+          <p className="text-slate-600">Contact: {ADMIN_EMAIL}</p>
+        </section>
       </div>
     </div>
   );
@@ -302,6 +332,11 @@ export default function AshokaManasPlatform() {
       {showVerify && <VerificationModal user={user} onClose={() => setShowVerify(false)} />}
 
       <button onClick={() => setShowSOS(true)} className="fixed bottom-6 left-6 z-[9000] w-14 h-14 bg-rose-600 text-white rounded-full shadow-lg shadow-rose-300 flex items-center justify-center animate-pulse border-4 border-white"><Siren size={24}/></button>
+      
+      {/* STICKY FOOTER DISCLAIMER */}
+      <div className="fixed bottom-0 left-0 right-0 bg-amber-100 text-amber-900 text-[10px] p-1 text-center z-[8000] font-bold border-t border-amber-200">
+        ⚠️ Not a medical service. For emergencies, click SOS.
+      </div>
 
       <div className={`fixed inset-y-0 left-0 w-64 bg-white/95 backdrop-blur-xl border-r border-emerald-100 z-40 transform ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-200 shadow-xl`}>
         <div className="p-6 border-b border-emerald-100 flex justify-between items-center">
@@ -315,14 +350,14 @@ export default function AshokaManasPlatform() {
             </Button>
           ))}
           <div className="mt-6 pt-6 border-t border-emerald-100 space-y-2">
-            <Button variant="ghost" onClick={() => { setView('legal'); setMobileMenuOpen(false); }} className="text-xs w-full"><FileText size={14}/> Privacy & Terms</Button>
+            <Button variant="ghost" onClick={() => { setView('legal'); setMobileMenuOpen(false); }} className="text-xs w-full"><FileText size={14}/> Rules & Safety</Button>
             {!userData?.isExpert && <Button variant="secondary" onClick={() => setShowVerify(true)} className="text-xs w-full">{t('verifyBtn')}</Button>}
             {userData?.isAdmin && <Button variant="primary" onClick={() => setView('admin')} className="text-xs w-full"><Lock size={14}/> {t('adminBtn')}</Button>}
           </div>
         </div>
       </div>
 
-      <div className="flex-1 md:ml-64 relative z-0">
+      <div className="flex-1 md:ml-64 relative z-0 pb-6">
         <div className="bg-white/80 backdrop-blur-md border-b border-emerald-100 p-3 flex justify-between items-center sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-3">
             <button className="md:hidden p-2 bg-emerald-100 rounded text-emerald-800" onClick={() => setMobileMenuOpen(true)}><Menu size={20}/></button>
@@ -336,10 +371,6 @@ export default function AshokaManasPlatform() {
 
         {view === 'feed' && (
           <div className="p-4 space-y-4 pb-24 max-w-3xl mx-auto">
-            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg text-xs text-amber-900 flex gap-2 shadow-sm">
-              <Info size={16} className="shrink-0"/> {t('legalText')}
-            </div>
-
             {filteredPosts.length === 0 ? (
               <div className="text-center py-20 opacity-50">
                 <activeSpaceObj.icon size={48} className="mx-auto mb-2 text-emerald-300"/>
@@ -351,12 +382,15 @@ export default function AshokaManasPlatform() {
                   <div className="flex justify-between mb-2">
                     {post.isExpert ? <span className="bg-sky-100 text-sky-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><Shield size={10}/> Doctor</span> : <span className="text-[10px] text-slate-400">Anonymous</span>}
                     
-                    {/* TRASH ICON: Visible to Author AND Admin */}
                     {(user?.uid === post.authorId || userData?.isAdmin) && (
                        <button onClick={(e) => handleDelete(e, post)} className="text-slate-300 hover:text-red-500"><Trash2 size={14}/></button>
                     )}
                   </div>
                   <p className="text-slate-800 font-medium leading-relaxed">{post.content}</p>
+                  <div className="mt-3 pt-3 border-t border-slate-50 flex gap-4 text-xs text-slate-400">
+                    <span>{post.likes || 0} Likes</span>
+                    <span>{post.comments?.length || 0} Comments</span>
+                  </div>
                 </div>
               ))
             )}
@@ -397,7 +431,7 @@ export default function AshokaManasPlatform() {
                 </div>
               ))}
             </div>
-            <div className="fixed bottom-0 right-0 md:left-64 bg-white border-t border-slate-200 p-4 flex gap-2 z-[9000] w-full md:w-auto">
+            <div className="fixed bottom-6 right-0 md:left-64 bg-white border-t border-slate-200 p-4 flex gap-2 z-[9000] w-full md:w-auto mb-4">
               <input value={newComment} onChange={(e) => setNewComment(e.target.value)} className="flex-1 bg-slate-100 rounded-xl px-4 outline-none" placeholder="Reply..." />
               <Button onClick={handleComment}><Send size={18}/></Button>
             </div>
