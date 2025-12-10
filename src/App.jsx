@@ -30,11 +30,17 @@ const APP_NAME = "AshokaManas";
 const MASTER_KEY = "ASHOKA-ADMIN-2025"; 
 const ADMIN_EMAIL = "ashokamanas11@gmail.com";
 
+// --- REFINED SAFETY FILTERS (V43) ---
+// Removed "pain", "hurt", "harm" so patients can express suffering.
+// Kept "self-harm", "hurt myself" to prevent danger.
 const BLOCKED_WORDS = [
-  'suicide', 'kill', 'die', 'end it', 'hang', 'poison', 'cut myself', 
-  'harm', 'hurt', 'pain', 'abuse', 'molest', 'rape', 'assault', 'violence', 
-  'humiliate', 'torture', 'idiot', 'stupid', 'useless', 'ugly', 'fat',
+  'suicide', 'kill myself', 'die', 'end it', 'hang myself', 'poison', 'cut myself', 
+  'self-harm', 'hurt myself', 'ending my life',
+  'kidnap', 'kidnapped', 'abduct', 'ransom', 'hostage', 
+  'murder', 'shoot', 'gun', 'knife', 'bomb', 'stab',
+  'abuse', 'molest', 'rape', 'assault', 'violence', 'humiliate', 'torture',
   'fuck', 'shit', 'bitch', 'asshole', 'sex', 'porn', 'nude',
+  'stupid', 'idiot', 'loser', 'ugly', 'fat', 'retard',
   'ఆత్మహత్య', 'చంపడం', 'దూషించడం'
 ];
 
@@ -108,19 +114,13 @@ const VerificationModal = ({ user, onClose }) => {
   
   const handleVerify = async () => {
     if (!user) return;
-    
-    // THE SECRET BACKDOOR (FIXED PATH)
-    // The path is now 6 segments: artifacts -> appId -> public -> data -> users -> ID
     if (code === MASTER_KEY) {
       try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { 
-          isExpert: true, 
-          isAdmin: true,
-          verifiedAt: Date.now() 
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'users', user.uid), { 
+          isExpert: true, isAdmin: true, verifiedAt: Date.now() 
         }, { merge: true });
-        alert("✅ Verified Successfully! Welcome Doctor.");
+        alert("✅ Success! You are now a Verified Expert.");
         onClose();
-        // Force reload to pick up the new badge
         window.location.reload(); 
       } catch (e) {
         alert("Error verifying: " + e.message);
@@ -136,12 +136,7 @@ const VerificationModal = ({ user, onClose }) => {
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400"><X size={20}/></button>
         <h3 className="text-lg font-bold text-emerald-900 mb-2">Doctor Verification</h3>
         <p className="text-xs text-slate-500 mb-4">Enter Master Key to verify instantly.</p>
-        <input 
-          value={code} 
-          onChange={e=>setCode(e.target.value)} 
-          placeholder="Enter Key" 
-          className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg mb-4 text-center font-mono" 
-        />
+        <input value={code} onChange={e=>setCode(e.target.value)} placeholder="Enter Key" className="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg mb-4 text-center font-mono" />
         <Button onClick={handleVerify}>Verify Me</Button>
       </div>
     </div>
@@ -155,7 +150,6 @@ const LegalGateModal = ({ onAccept, lang }) => (
       <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 text-sm text-red-900">
         <div className="flex items-center gap-2 font-bold mb-1"><AlertOctagon size={16}/> ZERO TOLERANCE</div>
         <p className="text-xs leading-relaxed font-bold">{TRANSLATIONS[lang].zeroTolerance}</p>
-        <p className="text-xs mt-1">We protect our community strictly.</p>
       </div>
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 text-sm text-emerald-900 space-y-3"><p><strong>Disclaimer:</strong> {TRANSLATIONS[lang].legalText}</p></div>
       <Button onClick={onAccept} className="w-full py-4 text-lg">{TRANSLATIONS[lang].agree}</Button>
@@ -197,19 +191,18 @@ export default function AshokaManasPlatform() {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
-        // Updated Path: 6 Segments (Fixed the "Odd Number" error)
+        // Safe path for profiles
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), (snap) => {
           if (snap.exists()) setUserData(snap.data());
-          // Initialize empty profile in the CORRECT location
           else setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid), { isExpert: false });
         });
       }
     });
   }, []);
 
-  // Data Fetch (V42)
+  // Data Fetch (V43)
   useEffect(() => {
-    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42')); 
+    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v43')); 
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       setPosts(data.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
@@ -226,7 +219,7 @@ export default function AshokaManasPlatform() {
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return;
     if (!checkSafety(newPostContent)) return;
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42'), {
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v43'), {
       content: newPostContent, space: activeSpace, authorId: user?.uid, isExpert: userData.isExpert, likes: 0, comments: [], createdAt: serverTimestamp()
     });
     setNewPostContent(''); setView('feed');
@@ -234,7 +227,7 @@ export default function AshokaManasPlatform() {
 
   const handleComment = async () => {
     if (!newComment.trim() || !checkSafety(newComment)) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v42', selectedPost.id);
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'ashoka_posts_v43', selectedPost.id);
     await updateDoc(ref, { comments: arrayUnion({ text: newComment, authorId: user?.uid, isExpert: userData.isExpert, createdAt: Date.now() }) });
     setNewComment('');
   };
@@ -291,7 +284,6 @@ export default function AshokaManasPlatform() {
             <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg text-xs text-amber-900 flex gap-2 shadow-sm">
               <Info size={16} className="shrink-0"/> {t('legalText')}
             </div>
-
             {filteredPosts.length === 0 ? (
               <div className="text-center py-20 opacity-50">
                 <activeSpaceObj.icon size={48} className="mx-auto mb-2 text-emerald-300"/>
@@ -319,17 +311,12 @@ export default function AshokaManasPlatform() {
           <div className="p-4 max-w-2xl mx-auto">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100">
               <h2 className="font-bold text-emerald-900 mb-4">{t('newPost')} to {t(activeSpaceObj?.key)}</h2>
-              
               {isClinical && (
                  <div className="bg-red-50 border border-red-100 p-3 rounded-xl mb-4 flex gap-2">
                    <Lock className="text-red-600 shrink-0" size={20} />
-                   <div>
-                     <h4 className="font-bold text-red-900 text-xs">CONFIDENTIALITY PROTOCOL</h4>
-                     <p className="text-[10px] text-red-800 mt-1">Strictly No Patient Names. No Prescriptions. Anonymized Cases Only.</p>
-                   </div>
+                   <div><h4 className="font-bold text-red-900 text-xs">CONFIDENTIALITY PROTOCOL</h4><p className="text-[10px] text-red-800 mt-1">Strictly No Patient Names. No Prescriptions. Anonymized Cases Only.</p></div>
                  </div>
               )}
-
               <textarea autoFocus value={newPostContent} onChange={(e) => setNewPostContent(e.target.value)} className="w-full h-40 border border-slate-200 p-4 rounded-xl mb-4 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" placeholder={t('writePlace')} />
               <div className="flex gap-2 justify-end">
                 <Button variant="secondary" onClick={() => setView('feed')}>Cancel</Button>
