@@ -107,10 +107,13 @@ const SPACES = [
   { id: 'Stories', key: 'story', icon: ScrollText, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
 ];
 
-// --- UTILS ---
+// --- UTILS (Bulletproof Time Fix) ---
 const getTimeAgo = (timestamp) => {
-  if (!timestamp) return 'Just now';
+  // Safety Check: If time is missing or not ready yet, say "Just now"
+  if (!timestamp || typeof timestamp.toDate !== 'function') return 'Just now';
+  
   const seconds = Math.floor((new Date() - timestamp.toDate()) / 1000);
+  
   let interval = seconds / 31536000;
   if (interval > 1) return Math.floor(interval) + "y ago";
   interval = seconds / 2592000;
@@ -121,8 +124,10 @@ const getTimeAgo = (timestamp) => {
   if (interval > 1) return Math.floor(interval) + "h ago";
   interval = seconds / 60;
   if (interval > 1) return Math.floor(interval) + "m ago";
+  
   return "Just now";
 };
+
 
 // Deterministic Avatar Color
 const getAvatarColor = (uid) => {
