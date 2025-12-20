@@ -20,17 +20,19 @@ const firebaseConfig = JSON.parse(__firebase_config || "{}");
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v55-titanium';
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v55-final-master';
 
 const ADMIN_KEY = "ASHOKA-SUPER-ADMIN-99";
 const DOCTOR_KEY = "ASHOKA-DOC-VERIFY";
 
-// --- TITANIUM AUDIO ENGINE ---
+// --- TITANIUM SOUND ENGINE ---
 const SoundEngine = {
   ctx: null,
   riverNode: null,
   init() { 
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     if (this.ctx.state === 'suspended') this.ctx.resume();
   },
   playFreq(f, type = 'sine', d = 0.8) {
@@ -43,7 +45,7 @@ const SoundEngine = {
     o.start(); o.stop(this.ctx.currentTime + d);
   },
   playHeart() { this.playFreq(60, 'sine', 0.6); },
-  playPop() { this.playFreq(1000, 'sine', 0.1); },
+  playPop() { this.playFreq(1200, 'sine', 0.1); },
   playBurn() { this.playFreq(80, 'sawtooth', 2.0); },
   toggleRiver(active) {
     this.init();
@@ -60,9 +62,9 @@ const SoundEngine = {
       }
       this.riverNode = this.ctx.createBufferSource();
       this.riverNode.buffer = buffer; this.riverNode.loop = true;
-      const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 450;
+      const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
       const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.2;
-      const lfoG = this.ctx.createGain(); lfoG.gain.value = 180;
+      const lfoG = this.ctx.createGain(); lfoG.gain.value = 150;
       lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
       const g = this.ctx.createGain(); g.gain.value = 0.03;
       this.riverNode.connect(f); f.connect(g); g.connect(this.ctx.destination);
@@ -71,32 +73,34 @@ const SoundEngine = {
   }
 };
 
-// --- DATA: LEGAL VERBATIM ---
+// --- DATA: LEGAL CONTENT ---
 const LEGAL_CONTENT = [
   { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform (App or Website) does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any other verified expert on the platform. The content provided here is for Informational, Educational, and Peer Support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. We cannot provide immediate medical intervention.\n\nIf you are feeling suicidal, planning self-harm, or experiencing a medical emergency, STOP using this app immediately and:\nCall 108 (Ambulance/Emergency).\nCall 14416 (Tele-MANAS Government Helpline).\nGo to the nearest Emergency Room.\n\n3. No Prescriptions\nAshokaManas is a supportive community. Verified Experts on this platform provide guidance on coping strategies, lifestyle changes, and general medical facts. They will NOT provide official medical prescriptions, diagnosis, or treatment plans via public chats. Any mention of medication is for educational discussion only.\n\n4. User Responsibility\nYou agree that you are responsible for your own health decisions. Never disregard professional medical advice or delay seeking it because of something you have read on AshokaManas." },
-  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Nature of Platform (Intermediary Status)\nAshokaManas functions as an 'Intermediary' under the Information Technology Act, 2000. We provide the technical platform for users to communicate. We are not responsible for the content posted by users.\n\n2. Eligibility\nYou must be 18 years or older to use this platform independently. Users under 18 may use the 'Child & Adolescent' space only under the supervision of a parent or legal guardian.\n\n3. Zero Tolerance Policy\nWe enforce a strict policy against Abuse, Violence, Privacy Violations, and Impersonation. Banning is immediate and permanent for violators.\n\n4. Termination\nAshokaManas reserves the right to suspend, ban, or delete any user account without prior notice if these terms are violated." },
-  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism\nWe follow a strict 'No-Knowledge' privacy architecture. We DO NOT collect: Real Names, Phone Numbers, Email Addresses, GPS Location, or Contacts.\n\n2. Anonymity\nInteractions are anonymous. However, we cooperate with Indian Law Enforcement Agencies by providing server logs if requested via valid court orders in criminal investigations.\n\n3. Data Storage\nStored securely on Google Firebase (Cloud Firestore)." },
-  { t: "CODE OF CONDUCT", m: "FOR USERS:\nDO speak openly, support others with kind words, use the flag button for safety.\nDON'T share phone numbers, ask for money, or treat this as a dating app.\n\nFOR EXPERTS:\nDO provide psycho-education, clarify myths.\nDON'T give specific prescriptions or dosages in public comments." },
+  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Nature of Platform (Intermediary Status)\nAshokaManas functions as an 'Intermediary' under the Information Technology Act, 2000. We provide the technical platform for users to communicate. We are not responsible for the content posted by users.\n\n2. Eligibility\nYou must be 18 years or older to use this platform independently. Users under 18 may use the 'Child & Adolescent' space only under the supervision of a parent or legal guardian.\n\n3. Zero Tolerance Policy\nWe enforce a strict policy against:\nAbuse: Harassment, bullying, or hate speech based on religion, caste, gender, or disability.\nViolence: Promoting self-harm, suicide, or violence against others.\nPrivacy Violations: Sharing phone numbers, addresses, or photos of others without consent.\nImpersonation: Pretending to be a doctor or another user.\n\n4. Termination\nAshokaManas reserves the right to suspend, ban, or delete any user account without prior notice if these terms are violated." },
+  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism\nWe follow a strict 'No-Knowledge' privacy architecture.\nWe DO NOT collect: Real Names, Phone Numbers, Email Addresses, GPS Location, or Contacts.\n\n2. Anonymity\nYour interactions on the platform are anonymous to other users. However, in the event of a criminal investigation, we are legally required to cooperate with Indian Law Enforcement Agencies by providing server logs if requested via valid court orders.\n\n3. Data Storage\nYour data is securely stored on Google Firebase servers (Cloud Firestore)." },
+  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly about your feelings.\n✅ DO support others with kind words.\n❌ DON'T share personal contact info.\n❌ DON'T treat this as a dating app.\n\nFOR EXPERTS:\n✅ DO provide psycho-education.\n❌ DON'T give specific prescriptions or dosages in public comments." },
   { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer:\nName: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: Within 24-48 Hours." },
-  { t: "INDEMNIFICATION", m: "You agree to indemnify and hold harmless Dr. Pydala Rama Krishna Reddy, AshokaManas, and its affiliates from any claims, damages, or legal fees arising from your violation of these Terms or your posting of any illegal content. If your actions cost us money, you agree to reimburse us." },
+  { t: "GOVERNING LAW", m: "These Terms shall be governed by the laws of India. Any dispute shall be subject to the exclusive jurisdiction of the courts located in Nandyala District, Andhra Pradesh, India." },
+  { t: "INDEMNIFICATION", m: "You agree to indemnify AshokaManas and its affiliates from any claims. Bad-faith litigation results in the user being liable for 100% of legal fees (Loser Pays All)." },
   { t: "USER BILL OF RIGHTS", m: "Right to Anonymity: We promise not to track you.\nRight to Safety: We promise to delete abuse.\nRight to Ownership: Your story belongs to you.\nRight to Forget: You can delete your account anytime." },
-  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital information intermediary and peer-support community. It is NOT a 'Clinical Establishment' under the Clinical Establishments (Registration and Regulation) Act, 2010. We do not admit patients, provide pathology, or offer emergency care." }
+  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital information intermediary and peer-support community. It is NOT a 'Clinical Establishment' under the Clinical Establishments Act, 2010. We do not admit patients or provide emergency care." },
+  { t: "GRATUITOUS SERVICE", m: "Services are provided Free and Voluntarily. Users agree they do not hold the rights of a 'Consumer' under the Consumer Protection Act, 2019 regarding outcomes of free peer interactions." }
 ];
 
 const HALLS = [
   { id: 'General', label: 'General Support', te: 'సాధారణ మద్దతు', icon: Users, color: 'emerald', sticky: 'Identity Protected. Professional peer involvement only.' },
   { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్ హబ్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Restricted for Verified Experts. Psycho-educational insights only.' },
-  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital. You are not alone in this emotional journey.' },
+  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'You support others, we support you. Self-care is a mandate.' },
   { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'Total anonymity guaranteed. One day at a time.' },
-  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Platform intended for adults. Minors must use under parent/guardian guidance.' },
+  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Strict parental guidance required for minor safety.' },
   { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'CRITICAL: Never stop medication without consulting your doctor.' },
-  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey belongs to you. Share safely within our professional code.' },
+  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey is yours. Share safely within our professional code.' },
 ];
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState({ isExpert: false, streak: 0, level: 'Member' });
-  const [view, setView] = useState('gate'); // gate, home, lab, games, legal, profile, admin
+  const [userData, setUserData] = useState({ isExpert: false, streak: 0, level: 'Leaf' });
+  const [view, setView] = useState('gate'); 
   const [activeHall, setActiveHall] = useState(null);
   const [lang, setLang] = useState('en');
   const [darkMode, setDarkMode] = useState(false);
@@ -105,12 +109,10 @@ export default function App() {
   const [showSOS, setShowSOS] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+    onAuthStateChanged(auth, async (u) => {
+      if (u) setUser(u);
       else await signInAnonymously(auth);
-    };
-    init();
-    return onAuthStateChanged(auth, setUser);
+    });
   }, []);
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function App() {
     const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
     return onSnapshot(ref, (snap) => {
       if (snap.exists()) setUserData(snap.data());
-      else setDoc(ref, { uid: user.uid, isExpert: false, streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
+      else setDoc(ref, { uid: user.uid, isExpert: false, streak: 1, level: 'Leaf Member', lastActive: serverTimestamp() });
     });
   }, [user]);
 
@@ -129,10 +131,10 @@ export default function App() {
   if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} disclaimer={STICKY_TEXT} />;
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#04110C] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-[#04120D] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
       <div className="fixed inset-0 pointer-events-none z-[1000] opacity-[0.02] bg-[radial-gradient(circle,black_1px,transparent_1px)] bg-[size:30px_30px]"></div>
 
-      {/* SAFETY BAR */}
+      {/* TOP SAFETY BAR */}
       <div className="fixed top-0 left-0 right-0 z-[400] bg-[#FBDF3A] border-b-2 border-[#D97706] p-3 flex justify-between items-center shadow-xl">
         <div className="flex items-center gap-2 text-yellow-950 font-black">
           <Pin size={16} className="text-yellow-700" />
@@ -145,7 +147,7 @@ export default function App() {
 
       <header className="fixed top-[52px] left-0 right-0 p-4 md:p-6 flex justify-between items-center bg-inherit/90 backdrop-blur-3xl z-[350] border-b border-black/5">
         <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
-          <div className="p-2 bg-[#065F46] rounded-xl shadow-lg group-hover:rotate-6 transition-transform">
+          <div className="p-2 bg-[#065F46] rounded-xl shadow-lg">
             <TreePine className="text-white" size={24} />
           </div>
           <div>
@@ -167,7 +169,7 @@ export default function App() {
       <main className="max-w-4xl mx-auto pt-[140px] px-5 pb-48 relative z-10 animate-in fade-in duration-1000">
         
         {!activeHall && view !== 'admin' && (
-          <div className="mb-8 relative group animate-in slide-in-from-top-4">
+          <div className="mb-8 relative group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
             <input 
               type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
@@ -198,7 +200,7 @@ export default function App() {
   );
 }
 
-// --- SUB-VIEWS ---
+// --- GATE (The Main Entry Point) ---
 
 function GateView({ onAccept, lang, setLang, disclaimer }) {
   return (
@@ -210,20 +212,18 @@ function GateView({ onAccept, lang, setLang, disclaimer }) {
       <h1 className="text-6xl font-black tracking-tighter mb-4 leading-none text-white">AshokaManas<sup className="text-xl ml-1 font-bold italic">™</sup></h1>
       
       <div className="max-w-md w-full space-y-4 mb-14 text-left">
-        <GateSection icon={ShieldAlert} title="Medical Disclaimer" text="No doctor-patient relationship created. Content is for informational, educational, and peer-support purposes only. Not an emergency service." />
-        <GateSection icon={EyeOff} title="Zero Tolerance" text="Absolute ban against abuse, harassment, or solicitation. Banning is immediate and permanent for violators." />
-        <GateSection icon={Users} title="Minor Protection" text="Independent use is for 18+. Minors must use ONLY under strict direct supervision of a parent or legal guardian." />
+        <GateSection icon={ShieldAlert} title="MEDICAL DISCLAIMER" text="Use of this platform does not create a doctor-patient relationship. Content is for informational, educational, and peer support purposes only. Not an emergency service." />
+        <GateSection icon={EyeOff} title="ZERO TOLERANCE" text="Absolute ban against abuse, harassment, promotion of violence, or privacy violations. Banning is immediate and permanent for violators." />
+        <GateSection icon={Users} title="MINOR PROTECTION" text="Independent use is for 18+. Minors must use ONLY under the direct supervision of a parent or legal guardian." />
       </div>
 
-      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-[#042116] rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all">
-          {lang === 'en' ? 'AGREE & CONTINUE' : 'అంగీకరిస్తున్నాను'}
-      </button>
-
+      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-[#042116] rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter hover:bg-emerald-50">AGREE & CONTINUE</button>
+      
       <div className="mt-10 flex gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400/40">
         <button onClick={() => setLang('en')} className={lang === 'en' ? 'text-white border-b-2 border-white' : ''}>English</button>
         <button onClick={() => setLang('te')} className={lang === 'te' ? 'text-white border-b-2 border-white' : ''}>తెలుగు</button>
       </div>
-      <p className="mt-20 text-[9px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
+      <p className="mt-20 text-[10px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
     </div>
   );
 }
@@ -232,7 +232,7 @@ function GateSection({ icon: Icon, title, text }) {
   return (
     <div className="p-5 bg-white/5 rounded-[35px] border border-white/10 flex gap-5 backdrop-blur-xl">
       <Icon size={24} className="shrink-0 text-emerald-400 mt-1" />
-      <div><h4 className="text-[10px] font-black uppercase text-emerald-500 mb-1">{title}</h4><p className="text-[11px] font-bold leading-tight opacity-90">{text}</p></div>
+      <div><h4 className="text-[10px] font-black uppercase text-emerald-500 mb-1 tracking-widest">{title}</h4><p className="text-[11px] font-bold leading-tight opacity-90">{text}</p></div>
     </div>
   );
 }
@@ -251,12 +251,12 @@ function HomeHub({ setHall, setView, lang, query }) {
           </div>
           <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Safe Interaction</h2>
           <div className="h-1.5 w-24 bg-emerald-400 mx-auto rounded-full"></div>
-          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Heart of the forest</p>
+          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Click the forest heart</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {HALLS_DATA.filter(h => (lang === 'en' ? h.label : h.te).toLowerCase().includes(query.toLowerCase())).map(h => (
+        {HALLS.filter(h => (lang === 'en' ? h.label : h.te).toLowerCase().includes(query.toLowerCase())).map(h => (
           <button key={h.id} onClick={() => setHall(h)} className="p-8 bg-white dark:bg-[#064E3B]/20 rounded-[50px] shadow-sm hover:shadow-2xl transition-all text-left flex items-center gap-6 border border-emerald-50 dark:border-emerald-900 group">
             <div className={`p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900 text-emerald-600 shadow-sm group-hover:scale-110 transition-transform`}><h.icon size={32} /></div>
             <h3 className="font-black text-xl uppercase tracking-tighter leading-none text-emerald-950 dark:text-emerald-50">{lang === 'en' ? h.label : h.te}</h3>
@@ -311,6 +311,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
           </div>
         </div>
       </div>
+
       <div className="space-y-6">
         <div className="flex gap-4 p-6 bg-white dark:bg-emerald-900/30 rounded-[45px] shadow-sm border border-emerald-100">
           <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share anonymously..." className="flex-1 bg-transparent border-none outline-none resize-none h-20 text-sm font-bold" />
@@ -329,7 +330,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-black/5">
                 <div className="flex items-center gap-4">
-                   <button onClick={() => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { likes: (p.likes || 0) + 1 })} className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase"><ThumbsUp size={14}/> Support {p.likes || 0}</button>
+                   <button onClick={() => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { likes: (p.likes || 0) + 1 })} className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase transition-colors hover:text-emerald-400"><ThumbsUp size={14}/> {p.likes || 0}</button>
                    <span className="text-[9px] font-black opacity-30 uppercase">{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'}</span>
                 </div>
               </div>
@@ -341,6 +342,8 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
   );
 }
 
+// --- HEALING TOOLS (Fixed Burn Vault) ---
+
 function LabView({ lang, query }) {
   const [active, setActive] = useState(null);
   if (active === 'burn') return <BurnVault onBack={() => setActive(null)} />;
@@ -348,7 +351,7 @@ function LabView({ lang, query }) {
   if (active === 'pancha') return <Panchabhoota onBack={() => setActive(null)} lang={lang} />;
   return (
     <div className="grid grid-cols-1 gap-6 pb-32 animate-in fade-in">
-       <div className="text-center mb-6"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Healing Lab<sup className="text-lg italic">™</sup></h2></div>
+       <div className="text-center mb-6"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Healing Lab<sup className="text-lg italic font-bold">™</sup></h2></div>
        <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={() => setActive('burn')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
        <StationCard icon={Wind} title="Prana Breath" te="ప్రాణ శ్వాస" onClick={() => setActive('breath')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
        <StationCard icon={Sparkles} title="Panchabhoota" te="పంచభూతాలు" onClick={() => setActive('pancha')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
@@ -358,7 +361,13 @@ function LabView({ lang, query }) {
 
 function BurnVault({ onBack }) {
   const [t, setT] = useState(""); const [burn, setB] = useState(false);
-  const handle = () => { if(!t) return; SoundEngine.init(); SoundEngine.playBurn(); setB(true); setTimeout(()=>{setT("");setB(false);},3000); };
+  const handle = () => { 
+    if(!t.trim()) return; 
+    SoundEngine.init(); 
+    SoundEngine.playBurn(); 
+    setB(true); 
+    setTimeout(() => { setT(""); setB(false); }, 3000); 
+  };
   return (
     <div className="bg-[#04110C] p-12 rounded-[70px] text-center min-h-[500px] flex flex-col justify-center relative overflow-hidden shadow-2xl border-4 border-white/5">
       <button onClick={onBack} className="absolute top-10 left-10 text-white/30 font-black text-xs uppercase tracking-widest">Back</button>
@@ -366,9 +375,9 @@ function BurnVault({ onBack }) {
         <Flame className="mx-auto text-orange-500 mb-10 animate-pulse" size={100} />
         <h3 className="text-white font-black text-3xl uppercase mb-10 tracking-tighter leading-none">The Burn Vault</h3>
         <textarea value={t} onChange={e=>setT(e.target.value)} className="w-full p-10 bg-white/5 text-white rounded-[60px] outline-none border border-white/10 resize-none h-48 font-bold text-xl" placeholder="Release trauma here..." />
-        <button onClick={handle} className="w-full py-8 bg-orange-600 text-white rounded-[50px] font-black text-2xl mt-12 shadow-2xl active:scale-95">RELEASE</button>
+        <button onClick={handle} className="w-full py-8 bg-orange-600 text-white rounded-[50px] font-black text-2xl mt-12 shadow-2xl active:scale-95 transition-all">RELEASE</button>
       </div>
-      {burn && <div className="absolute inset-0 flex items-center justify-center text-[180px] animate-bounce">🔥</div>}
+      {burn && <div className="absolute inset-0 flex items-center justify-center text-[180px] animate-bounce z-50">🔥</div>}
     </div>
   );
 }
@@ -399,7 +408,7 @@ function PranaBreath({ onBack }) {
           <p className="text-8xl font-black text-blue-600 dark:text-emerald-300 drop-shadow-md">{c > 0 ? c : ''}</p>
         </div>
       </div>
-      <h3 className="text-6xl font-black text-blue-950 dark:text-blue-300 uppercase tracking-tighter leading-none">{ph}</h3>
+      <h3 className="text-6xl font-black text-blue-950 dark:text-emerald-50 uppercase tracking-tighter leading-none">{ph}</h3>
       {ph === "Ready" && <button onClick={start} className="px-20 py-8 bg-blue-600 text-white rounded-full font-black text-2xl mt-16 shadow-2xl active:scale-95">START 4-7-8</button>}
     </div>
   );
@@ -419,8 +428,8 @@ function Panchabhoota({ onBack, lang }) {
       <div className="grid grid-cols-1 gap-4">
         {els.map(el => (
           <button key={el.id} onClick={() => { SoundEngine.init(); SoundEngine.playFreq(el.f, 'triangle', 1.5); }} 
-                  className="p-10 bg-emerald-50 dark:bg-emerald-950 rounded-[60px] flex items-center gap-10 shadow-sm hover:scale-105 active:scale-95 transition-all text-left border border-emerald-100">
-            <div className="p-6 bg-white rounded-[35px] shadow-lg"><el.icon size={36} className="text-emerald-600" /></div>
+                  className="p-10 bg-emerald-50 dark:bg-emerald-950 rounded-[60px] flex items-center gap-10 shadow-sm hover:scale-105 active:scale-95 transition-all text-left border border-emerald-100 group">
+            <div className="p-6 bg-white rounded-[35px] shadow-lg group-hover:rotate-6 transition-transform"><el.icon size={36} className="text-emerald-600" /></div>
             <div>
               <h3 className="font-black uppercase text-2xl leading-none text-emerald-950 dark:text-emerald-100">{lang === 'en' ? el.name : el.te}</h3>
               <p className="text-[10px] font-bold mt-2 text-emerald-600 opacity-40 uppercase tracking-widest">{el.d}</p>
@@ -432,6 +441,8 @@ function Panchabhoota({ onBack, lang }) {
   );
 }
 
+// --- GAMES (Fixed Bubble Pop) ---
+
 function GamesView({ lang }) {
   const [active, setActive] = useState(null);
   if (active === 'snake') return <SnakeGame onBack={() => setActive(null)} />;
@@ -440,8 +451,8 @@ function GamesView({ lang }) {
   return (
     <div className="grid grid-cols-1 gap-8 pb-32 animate-in fade-in">
       <div className="text-center mb-4"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Mind Games<sup className="text-lg italic font-bold">™</sup></h2></div>
-      <GameBtn icon={Gamepad2} title="Nature Snake" desc="Nature-toned calm." color="bg-emerald-50 dark:bg-emerald-900/10" onClick={() => setActive('snake')} />
-      <GameBtn icon={Zap} title="Bubble Pop" desc="Stress relief tapping." color="bg-blue-50 dark:bg-blue-900/10" onClick={() => setActive('bubbles')} />
+      <GameBtn icon={Gamepad2} title="Nature Snake" desc="Classic nature tones." color="bg-emerald-50 dark:bg-emerald-900/10" onClick={() => setActive('snake')} />
+      <GameBtn icon={Zap} title="Bubble Pop" desc="Tap to hear the pop." color="bg-blue-50 dark:bg-blue-900/10" onClick={() => setActive('bubbles')} />
       <GameBtn icon={Brush} title="Mandala Art" desc="Sacred geometry tracing." color="bg-purple-50 dark:bg-purple-900/10" onClick={() => setActive('mandala')} />
     </div>
   );
@@ -470,18 +481,33 @@ function SnakeGame({ onBack }) {
         <button onClick={()=>setD({x:0,y:1})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">↓</button>
         <button onClick={()=>setD({x:1,y:0})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">→</button>
       </div>
-      {go && <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center rounded-[80px]"><p className="text-white font-black uppercase text-3xl mb-10">Game Over</p><button onClick={()=>{setS([{x:10,y:10}]);setGo(false);}} className="px-16 py-5 bg-emerald-600 text-white rounded-full font-black text-xl shadow-2xl">RESTART</button></div>}
+      {go && <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center rounded-[80px] z-[60]"><p className="text-white font-black uppercase text-3xl mb-10">Game Over</p><button onClick={()=>{setS([{x:10,y:10}]);setGo(false);}} className="px-16 py-5 bg-emerald-600 text-white rounded-full font-black text-xl shadow-2xl">RESTART</button></div>}
     </div>
   );
 }
 
 function BubblePop({ onBack }) {
   const [b, setB] = useState(Array.from({length:12},(_,i)=>({id:i,x:Math.random()*80,y:Math.random()*80})));
-  const pop = (id) => { SoundEngine.init(); SoundEngine.playPop(); setB(b.filter(x=>x.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80,y:Math.random()*80}]),1200); };
+  const pop = (id) => { 
+    SoundEngine.init(); 
+    SoundEngine.playPop(); 
+    setB(p => p.filter(x => x.id !== id)); 
+    setTimeout(() => setB(p => [...p, {id: Date.now(), x: Math.random()*80, y: Math.random()*80}]), 1200); 
+  };
   return (
-    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-12 rounded-[80px] h-[600px] relative overflow-hidden shadow-inner border-2 border-blue-100/50">
-      <button onClick={onBack} className="absolute top-10 left-10 text-blue-400 font-black text-xs uppercase">← Back</button>
-      {b.map(x=>(<button key={x.id} onClick={()=>pop(x.id)} className="absolute w-28 h-28 bg-blue-400/20 rounded-full border-4 border-blue-400/40 flex items-center justify-center transition-all active:scale-0 shadow-lg" style={{left:`${x.x}%`,top:`${x.y}%`}}><div className="w-8 h-8 bg-white/30 rounded-full"></div></button>))}
+    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-12 rounded-[80px] h-[600px] relative overflow-hidden shadow-inner border-2 border-blue-100/50 animate-in zoom-in">
+      <button onClick={onBack} className="absolute top-10 left-10 text-blue-400 font-black text-xs uppercase z-20">← Back</button>
+      <div className="mt-10 text-center font-black uppercase tracking-[0.3em] opacity-20 text-xs">Tap bubbles to clear mind</div>
+      {b.map(x => (
+        <button 
+          key={x.id} 
+          onClick={() => pop(x.id)} 
+          className="absolute w-28 h-28 bg-blue-400/20 rounded-full border-4 border-blue-400/40 flex items-center justify-center transition-all active:scale-0 shadow-lg cursor-pointer z-10" 
+          style={{left: `${x.x}%`, top: `${x.y}%`}}
+        >
+          <div className="w-8 h-8 bg-white/30 rounded-full"></div>
+        </button>
+      ))}
     </div>
   );
 }
@@ -498,11 +524,13 @@ function MandalaArt({ onBack, lang }) {
   return (
     <div className="bg-emerald-50 dark:bg-emerald-950/20 p-12 rounded-[80px] text-center relative shadow-inner border border-emerald-100">
       <button onClick={onBack} className="absolute top-10 left-10 text-emerald-400 font-black text-xs uppercase tracking-widest">Back</button>
-      <canvas ref={ref} width={360} height={360} onMouseDown={()=>setD(true)} onMouseUp={()=>setD(false)} onMouseMove={draw} onTouchStart={()=>setD(true)} onTouchEnd={()=>setD(false)} onTouchMove={draw} className="mx-auto bg-white rounded-full shadow-2xl border-[16px] border-emerald-50 cursor-crosshair mt-10" />
-      <button onClick={()=>ref.current.getContext('2d').clearRect(0,0,360,360)} className="mt-12 px-16 py-5 bg-emerald-900 text-white rounded-full font-black text-xs uppercase shadow-xl hover:bg-emerald-800 transition-all">Clear Canvas</button>
+      <canvas ref={ref} width={340} height={340} onMouseDown={()=>setD(true)} onMouseUp={()=>setD(false)} onMouseMove={draw} onTouchStart={()=>setD(true)} onTouchEnd={()=>setD(false)} onTouchMove={draw} className="mx-auto bg-white rounded-full shadow-2xl border-[16px] border-emerald-50 cursor-crosshair mt-10" />
+      <button onClick={()=>ref.current.getContext('2d').clearRect(0,0,340,340)} className="mt-12 px-16 py-5 bg-emerald-900 text-white rounded-full font-black text-xs uppercase shadow-xl hover:bg-emerald-800 transition-all">Clear Canvas</button>
     </div>
   );
 }
+
+// --- LEGAL ---
 
 function LegalView({ lang, query }) {
   return (
@@ -531,12 +559,14 @@ function LegalTile({ title, text }) {
   );
 }
 
+// --- PROFILE & ADMIN ---
+
 function ProfileView({ userData, setView, user }) {
   const [vCode, setVCode] = useState("");
   const verify = async () => {
     if (vCode === DOCTOR_KEY) {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { isExpert: true, level: 'Verified Expert' });
-      alert("Verified Expert status granted.");
+      alert("Verified Expert badge granted.");
     }
   };
   return (
@@ -544,16 +574,16 @@ function ProfileView({ userData, setView, user }) {
        <div className="bg-[#064E3B] text-white p-16 rounded-[100px] text-center shadow-2xl relative overflow-hidden">
           <div className="relative z-10 space-y-8">
             <div className="w-28 h-28 bg-white/10 rounded-[45px] mx-auto flex items-center justify-center border border-white/20 shadow-inner"><User size={56} /></div>
-            <h2 className="text-6xl font-black uppercase tracking-tighter leading-none">Profile Status</h2>
+            <h2 className="text-6xl font-black uppercase tracking-tighter leading-none">Profile Rank</h2>
             <div className="grid grid-cols-2 gap-4 mt-8">
-              <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-4xl font-black leading-none">{userData.streak}</p><p className="text-[10px] uppercase font-black opacity-30 tracking-[0.3em] mt-2">Day Streak</p></div>
+              <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-4xl font-black leading-none">{userData.streak}</p><p className="text-[10px] uppercase font-black opacity-30 tracking-[0.3em] mt-2">Streak</p></div>
               <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-3xl font-black leading-none">{userData.isExpert ? 'Expert' : 'Member'}</p><p className="text-[10px] uppercase font-black opacity-30 mt-2">Rank</p></div>
             </div>
           </div>
        </div>
        <div className="bg-white dark:bg-emerald-950/20 p-12 rounded-[70px] shadow-xl border border-emerald-50">
-          <h3 className="text-3xl font-black uppercase flex items-center gap-3 text-emerald-950 dark:text-emerald-50"><ShieldCheck size={36} className="text-blue-500"/> Expert Verification</h3>
-          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-6">Verified Experts gain restricted Clinical Hub access.</p>
+          <h3 className="text-3xl font-black uppercase flex items-center gap-3 text-emerald-950 dark:text-emerald-100"><ShieldCheck size={36} className="text-blue-500"/> Expert Verification</h3>
+          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-6">Enter authorization key for private Clinical Hub access.</p>
           <div className="mt-8 flex gap-4">
              <input type="password" value={vCode} onChange={e => setVCode(e.target.value)} className="flex-1 p-6 bg-emerald-50 dark:bg-emerald-950 rounded-[35px] outline-none font-black text-center text-2xl border-none shadow-inner" placeholder="••••••••" />
              <button onClick={verify} className="px-12 bg-emerald-800 text-white rounded-full font-black uppercase text-xs shadow-lg">Verify</button>
@@ -573,7 +603,7 @@ function AdminView() {
   );
 }
 
-// --- SHARED HELPERS ---
+// --- UI HELPERS ---
 
 function NavBtn({ icon: Icon, active, onClick }) {
   return (
@@ -605,8 +635,8 @@ function ExpertGate({ setView, onBack }) {
   return (
     <div className="bg-white dark:bg-emerald-950 p-12 rounded-[60px] text-center space-y-10 shadow-2xl animate-in zoom-in border border-emerald-100">
       <Lock size={80} className="mx-auto text-emerald-400 opacity-20" />
-      <h2 className="text-4xl font-black uppercase tracking-tighter">Expert Restricted Area</h2>
-      <p className="text-sm font-bold opacity-60 leading-relaxed max-w-sm mx-auto">Verified clinicians only. Gain your badge in the profile station to enter.</p>
+      <h2 className="text-4xl font-black uppercase tracking-tighter">Expert Access Only</h2>
+      <p className="text-sm font-bold opacity-60 leading-relaxed max-w-sm mx-auto">Please gain your blue badge in the profile station to enter.</p>
       <button onClick={() => { setView('profile'); onBack(); }} className="px-14 py-5 bg-emerald-800 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl">Verification Portal</button>
     </div>
   );
@@ -624,5 +654,5 @@ const SOSModal = ({ onClose }) => (
   </div>
 );
 
-const HALLS_DATA = HALLS; // Alias for mapping
+const HALLS_DATA = HALLS;
 
