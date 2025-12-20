@@ -26,24 +26,20 @@ try {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v55-final';
+    appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v56-stable';
     isFirebaseInitialized = true;
   }
-} catch (e) {
-  console.error("Firebase Pre-flight Check: Offline Mode Only.");
-}
+} catch (e) { console.warn("Offline Mode Active."); }
 
 const ADMIN_KEY = "ASHOKA-SUPER-ADMIN-99";
 const DOCTOR_KEY = "ASHOKA-DOC-VERIFY";
 
-// --- PROCEDURAL AUDIO ENGINE (WAVY RIVER) ---
+// --- RE-ENGINEERED SOUND ENGINE (GLITCH-FREE) ---
 const SoundEngine = {
   ctx: null,
   riverNode: null,
   init() { 
-    if (!this.ctx) {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (this.ctx.state === 'suspended') this.ctx.resume();
   },
   playFreq(f, type = 'sine', d = 1.0) {
@@ -60,7 +56,7 @@ const SoundEngine = {
   },
   playHeart() { this.playFreq(60, 'sine', 0.6); },
   playPop() { this.playFreq(1100, 'sine', 0.1); },
-  playBurn() { this.playFreq(90, 'sawtooth', 2.0); },
+  playBurn() { this.playFreq(85, 'sawtooth', 1.8); },
   toggleRiver(active) {
     this.init();
     if (active && this.ctx) {
@@ -75,8 +71,7 @@ const SoundEngine = {
         data[i] *= 3.5;
       }
       this.riverNode = this.ctx.createBufferSource();
-      this.riverNode.buffer = buffer;
-      this.riverNode.loop = true;
+      this.riverNode.buffer = buffer; this.riverNode.loop = true;
       const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
       const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.2;
       const lfoG = this.ctx.createGain(); lfoG.gain.value = 150;
@@ -84,35 +79,32 @@ const SoundEngine = {
       const g = this.ctx.createGain(); g.gain.value = 0.03;
       this.riverNode.connect(f); f.connect(g); g.connect(this.ctx.destination);
       this.riverNode.start();
-    } else if (this.riverNode) {
-      this.riverNode.stop();
-      this.riverNode = null;
-    }
+    } else if (this.riverNode) { this.riverNode.stop(); this.riverNode = null; }
   }
 };
 
-// --- VERBATIM LEGAL DATA ---
-const LEGAL_CONTENT = [
-  { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any verified expert. Content is for Informational, Educational, and Peer Support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. STOP using this app immediately and call 108 or 14416 if you are in crisis.\n\n3. No Prescriptions\nVerified Experts provide guidance on coping strategies only. They will NOT provide official medical prescriptions or treatment plans.\n\n4. User Responsibility\nYou are responsible for your own health decisions." },
-  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Intermediary Status: Functions under the IT Act, 2000.\n2. Eligibility: 18+ independently. Minors require parental supervision.\n3. Zero Tolerance: Immediate ban for abuse or solicitation.\n4. Termination: We reserve the right to ban accounts without notice." },
-  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism: No Names, Phones, or GPS collected.\n2. Anonymity: Cooperation with Law Enforcement ONLY via valid court orders.\n3. Storage: Secure Google Firebase encryption." },
-  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly. ✅ DO support others.\n❌ DON'T share numbers. ❌ DON'T treat as dating app.\n\nFOR EXPERTS:\n✅ DO provide psycho-education.\n❌ DON'T prescribe or diagnose in public." },
-  { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: 24-48 Hours." },
-  { t: "GOVERNING LAW", m: "Governed by laws of India. Exclusive jurisdiction: Nandyala District, Andhra Pradesh." },
-  { t: "INDEMNIFICATION", m: "User agrees to indemnify AshokaManas. Bad-faith litigation results in 100% legal fee liability (Loser Pays All)." },
-  { t: "USER BILL OF RIGHTS", m: "Right to Anonymity, Right to Safety, Right to Ownership of your story, and the Right to Forget." },
-  { t: "NOT A CLINICAL ESTABLISHMENT", m: "Digital sanctuary hub. NOT a registered hospital for admission or surgery." },
-  { t: "GRATUITOUS SERVICE", m: "Provided Free and Voluntarily. No 'Consumer' rights for peer interactions." }
+// --- DATA: 18-POINT LEGAL GUIDE (VERBATIM) ---
+const LEGAL_DATA = [
+  { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform (App or Website) does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any other verified expert on the platform. The content provided here is for Informational, Educational, and Peer Support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. We cannot provide immediate medical intervention.\n\nIf you are feeling suicidal, planning self-harm, or experiencing a medical emergency, STOP using this app immediately and:\nCall 108 (Ambulance/Emergency).\nCall 14416 (Tele-MANAS Government Helpline).\nGo to the nearest Emergency Room.\n\n3. No Prescriptions\nAshokaManas is a supportive community. Verified Experts on this platform provide guidance on coping strategies, lifestyle changes, and general medical facts. They will NOT provide official medical prescriptions, diagnosis, or treatment plans via public chats. Any mention of medication is for educational discussion only.\n\n4. User Responsibility\nYou agree that you are responsible for your own health decisions. Never disregard professional medical advice or delay seeking it because of something you have read on AshokaManas." },
+  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Nature of Platform (Intermediary Status)\nAshokaManas functions as an 'Intermediary' under the Information Technology Act, 2000. We provide the technical platform for users to communicate. We are not responsible for the content posted by users.\n\n2. Eligibility\nYou must be 18 years or older to use this platform independently. Users under 18 may use the 'Child & Adolescent' space only under the supervision of a parent or legal guardian.\n\n3. Zero Tolerance Policy\nWe enforce a strict policy against Abuse, Violence, Privacy Violations, and Impersonation.\n\n4. Termination\nAshokaManas reserves the right to suspend, ban, or delete any user account without prior notice if these terms are violated." },
+  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism\nWe follow a strict 'No-Knowledge' privacy architecture. We DO NOT collect: Real Names, Phone Numbers, Email Addresses, GPS Location, or Contacts.\n\n2. Anonymity\nYour interactions on the platform are anonymous to other users. Cooperation with Law Enforcement occurs ONLY via valid court orders.\n\n3. Data Storage\nYour data is securely stored on Google Firebase servers (Cloud Firestore)." },
+  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly about struggles.\n✅ DO support others with kind words.\n❌ DON'T share numbers/handles.\n❌ DON'T ask for money.\n\nFOR EXPERTS:\n✅ DO provide 'Psycho-Education'.\n✅ DO clarify myths.\n❌ DON'T prescribe (Rx) in public.\n❌ DON'T diagnose based on text messages." },
+  { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer:\nName: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: Within 24-48 Hours." },
+  { t: "GOVERNING LAW & JURISDICTION", m: "These Terms shall be governed by the laws of India. Any dispute arising out of or related to the use of AshokaManas shall be subject to the exclusive jurisdiction of the courts located in Nandyala District, Andhra Pradesh, India." },
+  { t: "INDEMNIFICATION", m: "You agree to indemnify and hold harmless Dr. Pydala Rama Krishna Reddy, AshokaManas, and its affiliates from any claims. If your actions cost us money, you agree to reimburse us 100% of legal fees (Loser Pays All)." },
+  { t: "USER BILL OF RIGHTS", m: "Right to Anonymity: We promise not to track you.\nRight to Safety: We promise to delete abuse.\nRight to Ownership: Your story belongs to you.\nRight to Forget: You can delete your account anytime." },
+  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital information intermediary and peer-support community. It is NOT a 'Clinical Establishment' under the Clinical Establishments Act, 2010. We do not admit patients or provide emergency care." },
+  { t: "GRATUITOUS SERVICE", m: "The basic services of AshokaManas are provided strictly on a Free and Voluntary basis. Users agree that they do not hold the rights of a 'Consumer' under the Consumer Protection Act, 2019." }
 ];
 
 const HALLS = [
-  { id: 'General', label: 'General Support', icon: Users, color: 'emerald', sticky: 'Identity Protected. Professional peer involvement only.' },
-  { id: 'Clinical', label: 'Clinical Hub', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Expert Area. Restricted access.' },
-  { id: 'Caregiver', label: 'Caregiver Burden', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is a mandate. You are not alone.' },
-  { id: 'Addiction', label: 'Addiction Support', icon: Pill, color: 'amber', sticky: 'Total anonymity. One day at a time.' },
-  { id: 'Child', label: 'Child & Adolescent', icon: Baby, color: 'pink', sticky: 'Minor Safety: Use ONLY under parent/guardian supervision.' },
-  { id: 'SideEffects', label: 'Side Effects', icon: AlertCircle, color: 'orange', sticky: 'CRITICAL: Never stop medication without consulting your doctor.' },
-  { id: 'Stories', label: 'My Story', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey belongs to you. Keep it anonymous.' },
+  { id: 'General', label: 'General Support', te: 'సాధారణ మద్దతు', icon: Users, color: 'emerald', sticky: 'Identity Protected. Professional peer involvement only.' },
+  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్ హబ్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Restricted for Verified Experts. Psycho-educational insights only.' },
+  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital. You are not alone in this burden.' },
+  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'Total anonymity. One day at a time towards healing.' },
+  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Minor safety: Strict parental guidance and supervision required.' },
+  { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'CRITICAL: Never stop medication without consulting your doctor.' },
+  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey is yours. Share safely within our professional code.' },
 ];
 
 export default function App() {
@@ -126,7 +118,6 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSOS, setShowSOS] = useState(false);
 
-  // Initialize Auth
   useEffect(() => {
     if (!isFirebaseInitialized) return;
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -136,22 +127,20 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Initialize User Profile
   useEffect(() => {
     if (!user || !isFirebaseInitialized) return;
-    const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-    return onSnapshot(userRef, (snap) => {
+    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+    return onSnapshot(ref, (snap) => {
       if (snap.exists()) setUserData(snap.data());
-      else setDoc(userRef, { uid: user.uid, isExpert: false, streak: 1, level: 'Member', lastActive: serverTimestamp() });
+      else setDoc(ref, { uid: user.uid, isExpert: false, streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
     });
   }, [user]);
 
-  const STICKY_WARNING = lang === 'en' 
+  const STICKY_TEXT = lang === 'en' 
     ? "Not a medical services. For emergencies consult nearest hospital, click sos" 
     : "వైద్య సేవలు కాదు. అత్యవసర పరిస్థితుల్లో సమీప ఆసుపత్రిని సంప్రదించండి, sos క్లిక్ చేయండి";
 
-  // Navigation: The Gate must be the first view
-  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} disclaimer={STICKY_WARNING} />;
+  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} disclaimer={STICKY_TEXT} />;
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-[#04120D] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
@@ -159,9 +148,9 @@ export default function App() {
 
       {/* TOP SAFETY BAR */}
       <div className="fixed top-0 left-0 right-0 z-[400] bg-[#FBDF3A] border-b-2 border-[#D97706] p-3 flex justify-between items-center shadow-xl">
-        <div className="flex items-center gap-2 text-yellow-950 font-black">
+        <div className="flex items-center gap-2 text-[#451A03] font-black">
           <Pin size={16} className="text-[#92400E]" />
-          <p className="text-[10px] md:text-xs uppercase tracking-tight leading-none">{STICKY_WARNING}</p>
+          <p className="text-[10px] md:text-xs uppercase tracking-tight leading-none">{STICKY_TEXT}</p>
         </div>
         <button onClick={() => setShowSOS(true)} className="px-5 py-2 bg-red-600 text-white text-[10px] font-black rounded-xl shadow-lg border-b-4 border-red-900 active:scale-95 transition-all">SOS</button>
       </div>
@@ -189,7 +178,7 @@ export default function App() {
 
       <main className="max-w-4xl mx-auto pt-[140px] px-5 pb-48 relative z-10 animate-in fade-in duration-1000">
         
-        {!activeHall && view !== 'admin' && (
+        {!activeHall && (
           <div className="mb-8 relative group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
             <input 
@@ -221,7 +210,7 @@ export default function App() {
   );
 }
 
-// --- SUB-VIEWS ---
+// --- GATE (The Main Entry Point) ---
 
 function GateView({ onAccept, lang, setLang, disclaimer }) {
   return (
@@ -233,18 +222,29 @@ function GateView({ onAccept, lang, setLang, disclaimer }) {
       <h1 className="text-6xl font-black tracking-tighter mb-4 leading-none text-white">AshokaManas<sup className="text-xl ml-1 font-bold italic">™</sup></h1>
       
       <div className="max-w-md w-full space-y-4 mb-14 text-left">
-        <GateCard icon={ShieldAlert} title="Medical Disclaimer" text="No doctor-patient relationship created. Content is for informational, educational, and peer support purposes only. Not an emergency service." />
-        <GateCard icon={EyeOff} title="Zero Tolerance" text="Absolute ban against abuse, harassment, or commercial solicitation. Banning is immediate and permanent." />
-        <GateCard icon={Users} title="Minor Protection" text="Independent use is for 18+. Minors must use ONLY under direct supervision of a parent or guardian." />
+        <GateSection icon={ShieldAlert} title="MEDICAL DISCLAIMER" text="No doctor-patient relationship created. Content is for informational and peer support purposes only. Not an emergency service." />
+        <GateSection icon={EyeOff} title="ZERO TOLERANCE" text="Absolute ban against abuse, harassment, promotion of violence, or privacy violations. Banning is immediate and permanent." />
+        <GateSection icon={Users} title="MINOR PROTECTION" text="Independent use is for 18+. Minors must use ONLY under direct supervision of a parent or guardian." />
       </div>
 
-      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-[#042116] rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all">AGREE & CONTINUE</button>
-      
+      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-emerald-950 rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all">
+          {lang === 'en' ? 'AGREE & CONTINUE' : 'అంగీకరిస్తున్నాను'}
+      </button>
+
       <div className="mt-10 flex gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400/40">
         <button onClick={() => setLang('en')} className={lang === 'en' ? 'text-white border-b-2 border-white' : ''}>English</button>
         <button onClick={() => setLang('te')} className={lang === 'te' ? 'text-white border-b-2 border-white' : ''}>తెలుగు</button>
       </div>
-      <p className="mt-20 text-[10px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
+      <p className="mt-20 text-[9px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed text-center">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
+    </div>
+  );
+}
+
+function GateSection({ icon: Icon, title, text }) {
+  return (
+    <div className="p-5 bg-white/5 rounded-[35px] border border-white/10 flex gap-5 backdrop-blur-xl">
+      <Icon size={24} className="shrink-0 text-emerald-400 mt-1" />
+      <div><h4 className="text-[10px] font-black uppercase text-emerald-500 mb-1 tracking-widest">{title}</h4><p className="text-[11px] font-bold leading-tight opacity-90">{text}</p></div>
     </div>
   );
 }
@@ -252,7 +252,7 @@ function GateView({ onAccept, lang, setLang, disclaimer }) {
 function HomeHub({ setHall, setView, lang, query }) {
   return (
     <div className="space-y-12 animate-in slide-in-from-bottom-10">
-      <div className="relative rounded-[70px] bg-gradient-to-br from-[#065F46] to-[#064E3B] p-12 text-center text-white shadow-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
+      <div className="relative rounded-[70px] bg-gradient-to-br from-[#065F46] to-[#064E3B] p-12 text-center text-white shadow-2xl overflow-hidden cursor-pointer active:scale-95 transition-all"
            onClick={() => { SoundEngine.init(); SoundEngine.playHeart(); }}>
         <div className="absolute inset-0 opacity-10">
            <svg width="100%" height="100%"><circle cx="50%" cy="50%" r="40%" fill="none" stroke="white" strokeWidth="1" className="animate-pulse" /></svg>
@@ -263,7 +263,7 @@ function HomeHub({ setHall, setView, lang, query }) {
           </div>
           <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Safe Interaction</h2>
           <div className="h-1.5 w-24 bg-emerald-400 mx-auto rounded-full"></div>
-          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Click the forest heart</p>
+          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Heart of the forest</p>
         </div>
       </div>
 
@@ -276,7 +276,7 @@ function HomeHub({ setHall, setView, lang, query }) {
         ))}
         <button onClick={() => setView('legal')} className="p-10 bg-slate-50 dark:bg-slate-900 rounded-[55px] flex items-center gap-6 text-left border border-slate-200 col-span-1 md:col-span-2 hover:bg-white transition-all">
           <div className="p-5 bg-white dark:bg-slate-800 rounded-[28px] text-slate-600 shadow-md"><Shield size={36}/></div>
-          <div><h3 className="font-black text-2xl uppercase tracking-tighter leading-none text-slate-900 dark:text-white">Legal Guide<sup className="text-xs ml-1 font-bold italic">™</sup></h3><p className="text-[10px] opacity-40 uppercase font-black mt-2 italic">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p></div>
+          <div><h3 className="font-black text-2xl uppercase tracking-tighter leading-none text-slate-900 dark:text-white">Legal Guide<sup className="text-xs ml-1 font-bold italic">™</sup></h3><p className="text-[10px] opacity-40 uppercase font-black mt-2 tracking-widest italic">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p></div>
         </button>
       </div>
     </div>
@@ -293,7 +293,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
     const qPosts = collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages');
     return onSnapshot(qPosts, (snap) => {
       setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
-    }, (err) => console.log("Hall offline."));
+    });
   }, [hall.id, hall.expertOnly, userData?.isExpert]);
 
   const send = async () => {
@@ -306,6 +306,8 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
 
   if (hall.expertOnly && !userData?.isExpert) return <ExpertGate setView={setView} onBack={onBack} />;
 
+  const filtered = posts.filter(p => !p.reported && p.text.toLowerCase().includes(query.toLowerCase()));
+
   return (
     <div className="space-y-8 animate-in slide-in-from-right-10 duration-500 pb-32">
       <button onClick={onBack} className="text-emerald-800 font-black uppercase text-xs flex items-center gap-2">← Back to Hub</button>
@@ -313,13 +315,13 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
         <div className="relative z-10 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className={`p-4 rounded-2xl bg-emerald-50 text-emerald-600`}><hall.icon size={28}/></div>
+              <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600"><hall.icon size={28}/></div>
               <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">{lang === 'en' ? hall.label : hall.te}</h2>
             </div>
             <Pin className="text-emerald-400" size={24} />
           </div>
-          <div className={`bg-emerald-50 dark:bg-emerald-950 p-6 rounded-[35px] border border-emerald-100 flex gap-4 items-start shadow-inner`}>
-            <AlertCircle className={`text-emerald-600 shrink-0 mt-1`} size={24} />
+          <div className="bg-emerald-50 dark:bg-emerald-950 p-6 rounded-[35px] border border-emerald-100 flex gap-4 items-start shadow-inner">
+            <AlertCircle className="text-emerald-600 shrink-0 mt-1" size={24} />
             <p className="text-sm font-bold leading-tight text-emerald-900 dark:text-emerald-100">{hall.sticky}</p>
           </div>
         </div>
@@ -331,7 +333,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
           <button onClick={send} className="self-end p-5 bg-emerald-800 text-white rounded-3xl shadow-xl active:scale-95"><Send size={24}/></button>
         </div>
         <div className="space-y-4">
-          {posts.filter(p => !p.reported && p.text.toLowerCase().includes(query.toLowerCase())).map(p => (
+          {filtered.map(p => (
             <div key={p.id} className={`p-8 bg-white dark:bg-emerald-950/20 rounded-[45px] shadow-sm border border-emerald-50 flex flex-col gap-4 group ${p.pinned ? 'border-l-[12px] border-l-emerald-500' : ''}`}>
               <div className="flex justify-between items-start">
                 <p className="text-base font-bold leading-relaxed">{p.text}</p>
@@ -343,7 +345,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
               </div>
               <div className="flex items-center justify-between pt-4 border-t border-black/5">
                 <div className="flex items-center gap-4">
-                   <button onClick={() => isFirebaseInitialized && updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { likes: (p.likes || 0) + 1 })} className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase"><ThumbsUp size={14}/> Support {p.likes || 0}</button>
+                   <button onClick={() => isFirebaseInitialized && updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { likes: (p.likes || 0) + 1 })} className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase transition-colors hover:text-emerald-400"><ThumbsUp size={14}/> Support {p.likes || 0}</button>
                    <span className="text-[9px] font-black opacity-30 uppercase">{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'}</span>
                 </div>
               </div>
@@ -355,7 +357,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
   );
 }
 
-// --- HEALING LAB ---
+// --- HEALING TOOLS ---
 
 function LabView({ lang, query }) {
   const [active, setActive] = useState(null);
@@ -409,7 +411,7 @@ function PranaBreath({ onBack }) {
   };
   return (
     <div className="bg-white dark:bg-[#064E3B] p-16 rounded-[80px] shadow-2xl text-center relative border border-emerald-50 dark:border-white/5">
-      <button onClick={onBack} className="absolute top-10 left-10 text-emerald-800 dark:text-emerald-400/40 font-black text-xs uppercase tracking-widest">Back</button>
+      <button onClick={onBack} className="absolute top-10 left-10 text-emerald-800 font-black text-xs uppercase tracking-widest">Back</button>
       <div className="flex justify-center py-20">
         <div className="bg-blue-100 dark:bg-emerald-950 rounded-full flex items-center justify-center transition-all duration-[4000ms] border-[12px] border-blue-50 dark:border-emerald-800 shadow-inner" style={{ width: `${220 * s}px`, height: `${220 * s}px` }}>
           <p className="text-8xl font-black text-blue-600 dark:text-emerald-300 drop-shadow-md">{c > 0 ? c : ''}</p>
@@ -448,7 +450,7 @@ function Panchabhoota({ onBack, lang }) {
   );
 }
 
-// --- GAMES (Titanium Rendering) ---
+// --- GAMES (Locked Z-Index) ---
 
 function GamesView({ lang }) {
   const [active, setActive] = useState(null);
@@ -459,7 +461,7 @@ function GamesView({ lang }) {
     <div className="grid grid-cols-1 gap-8 pb-32 animate-in fade-in">
       <div className="text-center mb-4"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Mind Games<sup className="text-lg italic font-bold">™</sup></h2></div>
       <GameBtn icon={Gamepad2} title="Nature Snake" desc="Classic nature-toned calm." color="bg-emerald-50 dark:bg-emerald-900/10" onClick={() => setActive('snake')} />
-      <GameBtn icon={Zap} title="Bubble Pop" desc="Stress relief tapping." color="bg-blue-50 dark:bg-blue-900/10" onClick={() => setActive('bubbles')} />
+      <GameBtn icon={Zap} title="Bubble Pop" desc="Tap to hear the pop." color="bg-blue-50 dark:bg-blue-900/10" onClick={() => setActive('bubbles')} />
       <GameBtn icon={Brush} title="Mandala Art" desc="Sacred geometry tracing." color="bg-purple-50 dark:bg-purple-900/10" onClick={() => setActive('mandala')} />
     </div>
   );
@@ -470,12 +472,12 @@ function SnakeGame({ onBack }) {
   const move = useCallback(() => {
     const head = { x: s[0].x+d.x, y: s[0].y+d.y };
     if (head.x<0 || head.x>=20 || head.y<0 || head.y>=20 || s.find(b=>b.x===head.x&&b.y===head.y)) { setGo(true); return; }
-    const ns = [head,...s]; if (head.x===f.x&&head.y===f.y) { setF({x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)}); SoundEngine.playPop(); } else ns.pop(); setS(ns);
+    const ns = [head,...s]; if (head.x===f.x&&head.y===f.y) { setF({x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)}); SoundEngine.playHeart(); } else ns.pop(); setS(ns);
   }, [s,d,f]);
   useEffect(() => { if (!go) { const i = setInterval(move, 200); return () => clearInterval(i); } }, [move,go]);
   return (
     <div className="bg-[#051510] p-10 rounded-[80px] text-center relative max-w-sm mx-auto shadow-2xl border-4 border-emerald-900">
-      <button onClick={onBack} className="absolute top-8 left-8 text-white/30 font-black text-xs uppercase tracking-widest z-50">Back</button>
+      <button onClick={onBack} className="absolute top-8 left-8 text-white/30 font-black text-xs uppercase z-50">Back</button>
       <div className="grid w-full aspect-square bg-[#062419] rounded-[40px] overflow-hidden" style={{ gridTemplateColumns: 'repeat(20, 1fr)', gridTemplateRows: 'repeat(20, 1fr)' }}>
         {Array.from({length:400}).map((_,i) => {
           const x=i%20; const y=Math.floor(i / 20); const isS=s.find(b=>b.x===x&&b.y===y); const isF=f.x===x&&f.y===y;
@@ -503,7 +505,6 @@ function BubblePop({ onBack }) {
   return (
     <div className="bg-blue-50/50 dark:bg-blue-900/10 p-12 rounded-[80px] h-[600px] relative overflow-hidden shadow-inner border-2 border-blue-100/50">
       <button onClick={onBack} className="absolute top-10 left-10 text-blue-400 font-black text-xs uppercase z-20">← Back</button>
-      <div className="mt-10 text-center font-black uppercase tracking-[0.3em] opacity-20 text-xs">Tap bubbles to clear mind</div>
       {b.map(x => (
         <button key={x.id} onClick={() => pop(x.id)} className="absolute w-28 h-28 bg-blue-400/20 rounded-full border-4 border-blue-400/40 flex items-center justify-center transition-all active:scale-0 shadow-lg cursor-pointer z-10" style={{left: `${x.x}%`, top: `${x.y}%`}}>
           <div className="w-8 h-8 bg-white/30 rounded-full"></div>
@@ -538,9 +539,9 @@ function LegalView({ lang, query }) {
     <div className="space-y-6 pb-40 animate-in fade-in">
        <div className="text-center mb-12">
           <h2 className="text-5xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-50">Legal Guide<sup className="text-lg italic font-bold">™</sup></h2>
-          <p className="text-[10px] font-black text-emerald-600/40 uppercase mt-2 tracking-widest italic">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p>
+          <p className="text-[10px] font-black text-emerald-600/40 uppercase mt-2 tracking-widest italic text-center leading-relaxed">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p>
        </div>
-       {LEGAL_CONTENT.filter(p => p.t.toLowerCase().includes(query.toLowerCase())).map((p, idx) => (
+       {LEGAL_DATA.filter(p => p.t.toLowerCase().includes(query.toLowerCase())).map((p, idx) => (
          <LegalTile key={idx} title={p.t} text={p.m} />
        ))}
     </div>
@@ -611,16 +612,7 @@ function AdminView() {
   );
 }
 
-// --- HELPERS ---
-
-function GateCard({ icon: Icon, title, text }) {
-  return (
-    <div className="p-6 bg-white/5 rounded-[45px] border border-white/10 text-left flex gap-6 backdrop-blur-2xl shadow-xl">
-      <Icon size={26} className="shrink-0 text-emerald-400" />
-      <div><h4 className="text-[10px] font-black uppercase text-emerald-500 mb-1 tracking-widest">{title}</h4><p className="text-[13px] font-bold leading-tight opacity-90">{text}</p></div>
-    </div>
-  );
-}
+// --- UI HELPERS ---
 
 function NavBtn({ icon: Icon, active, onClick }) {
   return (
@@ -652,7 +644,7 @@ function ExpertGate({ setView, onBack }) {
   return (
     <div className="bg-white dark:bg-emerald-950 p-12 rounded-[60px] text-center space-y-10 shadow-2xl animate-in zoom-in border border-emerald-100">
       <Lock size={80} className="mx-auto text-emerald-400 opacity-20" />
-      <h2 className="text-4xl font-black uppercase tracking-tighter">Verified Access Only</h2>
+      <h2 className="text-4xl font-black uppercase tracking-tighter">Expert Access Only</h2>
       <p className="text-sm font-bold opacity-60 leading-relaxed max-w-sm mx-auto">Please gain your blue badge in the profile station to enter the Clinical Hub.</p>
       <button onClick={() => { setView('profile'); onBack(); }} className="px-14 py-5 bg-emerald-800 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl">Verification Portal</button>
     </div>
@@ -667,7 +659,7 @@ const SOSModal = ({ onClose }) => (
       <a href="tel:108" className="block py-9 bg-red-600 rounded-[60px] font-black text-5xl shadow-2xl active:scale-95 border-b-[14px] border-red-900 uppercase tracking-tighter">CALL 108</a>
       <a href="tel:14416" className="block py-9 bg-blue-600 rounded-[60px] font-black text-2xl border-b-[12px] border-blue-900 uppercase">Tele-MANAS</a>
     </div>
-    <button onClick={onClose} className="mt-24 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-600 underline-offset-[20px] hover:text-white transition-colors">Return to Safety</button>
+    <button onClick={onClose} className="mt-24 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-600 underline-offset-[20px] hover:text-white transition-colors">Return to Platform</button>
   </div>
 );
 
