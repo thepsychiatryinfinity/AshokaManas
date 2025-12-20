@@ -26,7 +26,7 @@ try {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v56-stable';
+    appId = typeof __app_id !== 'undefined' ? __app_id : 'ashokamanas-v57-stable';
     isFirebaseInitialized = true;
   }
 } catch (e) { console.warn("Offline Mode Active."); }
@@ -34,7 +34,43 @@ try {
 const ADMIN_KEY = "ASHOKA-SUPER-ADMIN-99";
 const DOCTOR_KEY = "ASHOKA-DOC-VERIFY";
 
-// --- RE-ENGINEERED SOUND ENGINE (GLITCH-FREE) ---
+// --- WELCOME WISDOM DATA (EN & TE) ---
+const WELCOME_MESSAGES = {
+  General: {
+    en: "Welcome to the General Support Hall. This is a safe space for empathy. Share your daily struggles and find strength in others. We are here to listen, not to judge.",
+    te: "సాధారణ మద్దతు హాల్‌కు స్వాగతం. ఇది సానుభూతి కోసం ఒక సురక్షిత ప్రదేశం. మీ రోజువారీ పోరాటాలను పంచుకోండి మరియు ఇతరులలో బలాన్ని పొందండి. మేము వినడానికి ఇక్కడ ఉన్నాము."
+  },
+  Clinical: {
+    en: "Welcome to the Clinical Hub. This restricted space is for verified experts to share psycho-educational insights. Note: No clinical diagnosis or prescriptions are provided here.",
+    te: "క్లినికల్ హబ్‌కు స్వాగతం. ధృవీకరించబడిన నిపుణులు మనో-విద్యా అంతర్దృష్టులను పంచుకోవడానికి ఇది ఒక ప్రత్యేక ప్రదేశం. గమనిక: ఇక్కడ క్లినికల్ రోగ నిర్ధారణ లేదా మందులు ఇవ్వబడవు."
+  },
+  Caregiver: {
+    en: "Welcome to the Caregiver Hall. We recognize the heavy weight you carry. This space is for those supporting loved ones with mental health challenges. You are not alone.",
+    te: "సంరక్షకుల హాల్‌కు స్వాగతం. మీరు మోస్తున్న భారీ భారాన్ని మేము గుర్తిస్తున్నాము. మానసిక ఆరోగ్య సవాళ్లతో ఉన్న ప్రియమైన వారికి మద్దతు ఇచ్చే వారి కోసం ఈ ప్రదేశం."
+  },
+  Addiction: {
+    en: "Welcome to Addiction Support. We honor your courage. This hall is dedicated to recovery, one day at a time. Total anonymity is our foundation for your healing.",
+    te: "వ్యసన విముక్తి మద్దతుకు స్వాగతం. మీ ధైర్యాన్ని మేము గౌరవిస్తాము. ఈ హాల్ కోలుకోవడానికి అంకితం చేయబడింది. మీ స్వస్థత కోసం పూర్తి అజ్ఞాతం మా పునాది."
+  },
+  Child: {
+    en: "Welcome to the Child & Adolescent space. This area focuses on the well-being of young minds. Important: Minors must be accompanied by a parent or guardian at all times.",
+    te: "పిల్లలు & కౌమారదశ హాల్‌కు స్వాగతం. ఈ ప్రాంతం యువ మనస్సుల శ్రేయస్సుపై దృష్టి పెడుతుంది. ముఖ్యం: మైనర్లు ఎల్లప్పుడూ తల్లిదండ్రుల పర్యవేక్షణలో ఉండాలి."
+  },
+  SideEffects: {
+    en: "Welcome to the Side Effects Hall. Discuss your experiences with medications here. CRITICAL: Never stop or change your dosage without consulting your prescribing doctor.",
+    te: "దుష్ప్రభావాల హాల్‌కు స్వాగతం. మందులతో మీ అనుభవాలను ఇక్కడ చర్చించండి. ముఖ్యం: మీ వైద్యుడిని సంప్రదించకుండా మందులను ఎప్పుడూ ఆపకండి లేదా మార్చకండి."
+  },
+  Stories: {
+    en: "Welcome to My Story. Your narrative has the power to heal. Share your journey of resilience anonymously to inspire others in the AshokaManas forest.",
+    te: "నా కథ హాల్‌కు స్వాగతం. మీ అనుభవానికి నయం చేసే శక్తి ఉంది. అశోకమనస్ అడవిలో ఇతరులను ప్రేరేపించడానికి మీ ప్రయాణాన్ని అజ్ఞాతంగా పంచుకోండి."
+  },
+  Lab: {
+    en: "Welcome to the Wellness Lab. Here, we combine ancient wisdom with modern tranquility. Use these tools to release trauma, sync your breath, and align with the elements.",
+    te: "వెల్నెస్ ల్యాబ్‌కు స్వాగతం. ఇక్కడ, మేము పురాతన జ్ఞానాన్ని ఆధునిక ప్రశాంతతతో మిళితం చేస్తాము. మీ శ్వాసను సమన్వయం చేయడానికి మరియు మూలకాలతో అనుసంధానం కావడానికి ఈ సాధనాలను ఉపయోగించండి."
+  }
+};
+
+// --- RE-ENGINEERED SOUND ENGINE ---
 const SoundEngine = {
   ctx: null,
   riverNode: null,
@@ -45,10 +81,8 @@ const SoundEngine = {
   playFreq(f, type = 'sine', d = 1.0) {
     this.init();
     if (!this.ctx) return;
-    const o = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(f, this.ctx.currentTime);
+    const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, this.ctx.currentTime);
     g.gain.setValueAtTime(0.1, this.ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + d);
     o.connect(g); g.connect(this.ctx.destination);
@@ -83,26 +117,24 @@ const SoundEngine = {
   }
 };
 
-// --- DATA: 18-POINT LEGAL GUIDE (VERBATIM) ---
-const LEGAL_DATA = [
-  { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform (App or Website) does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any other verified expert on the platform. The content provided here is for Informational, Educational, and Peer Support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. We cannot provide immediate medical intervention.\n\nIf you are feeling suicidal, planning self-harm, or experiencing a medical emergency, STOP using this app immediately and:\nCall 108 (Ambulance/Emergency).\nCall 14416 (Tele-MANAS Government Helpline).\nGo to the nearest Emergency Room.\n\n3. No Prescriptions\nAshokaManas is a supportive community. Verified Experts on this platform provide guidance on coping strategies, lifestyle changes, and general medical facts. They will NOT provide official medical prescriptions, diagnosis, or treatment plans via public chats. Any mention of medication is for educational discussion only.\n\n4. User Responsibility\nYou agree that you are responsible for your own health decisions. Never disregard professional medical advice or delay seeking it because of something you have read on AshokaManas." },
-  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Nature of Platform (Intermediary Status)\nAshokaManas functions as an 'Intermediary' under the Information Technology Act, 2000. We provide the technical platform for users to communicate. We are not responsible for the content posted by users.\n\n2. Eligibility\nYou must be 18 years or older to use this platform independently. Users under 18 may use the 'Child & Adolescent' space only under the supervision of a parent or legal guardian.\n\n3. Zero Tolerance Policy\nWe enforce a strict policy against Abuse, Violence, Privacy Violations, and Impersonation.\n\n4. Termination\nAshokaManas reserves the right to suspend, ban, or delete any user account without prior notice if these terms are violated." },
-  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism\nWe follow a strict 'No-Knowledge' privacy architecture. We DO NOT collect: Real Names, Phone Numbers, Email Addresses, GPS Location, or Contacts.\n\n2. Anonymity\nYour interactions on the platform are anonymous to other users. Cooperation with Law Enforcement occurs ONLY via valid court orders.\n\n3. Data Storage\nYour data is securely stored on Google Firebase servers (Cloud Firestore)." },
-  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly about struggles.\n✅ DO support others with kind words.\n❌ DON'T share numbers/handles.\n❌ DON'T ask for money.\n\nFOR EXPERTS:\n✅ DO provide 'Psycho-Education'.\n✅ DO clarify myths.\n❌ DON'T prescribe (Rx) in public.\n❌ DON'T diagnose based on text messages." },
-  { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer:\nName: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: Within 24-48 Hours." },
-  { t: "GOVERNING LAW & JURISDICTION", m: "These Terms shall be governed by the laws of India. Any dispute arising out of or related to the use of AshokaManas shall be subject to the exclusive jurisdiction of the courts located in Nandyala District, Andhra Pradesh, India." },
-  { t: "INDEMNIFICATION", m: "You agree to indemnify and hold harmless Dr. Pydala Rama Krishna Reddy, AshokaManas, and its affiliates from any claims. If your actions cost us money, you agree to reimburse us 100% of legal fees (Loser Pays All)." },
-  { t: "USER BILL OF RIGHTS", m: "Right to Anonymity: We promise not to track you.\nRight to Safety: We promise to delete abuse.\nRight to Ownership: Your story belongs to you.\nRight to Forget: You can delete your account anytime." },
-  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital information intermediary and peer-support community. It is NOT a 'Clinical Establishment' under the Clinical Establishments Act, 2010. We do not admit patients or provide emergency care." },
-  { t: "GRATUITOUS SERVICE", m: "The basic services of AshokaManas are provided strictly on a Free and Voluntary basis. Users agree that they do not hold the rights of a 'Consumer' under the Consumer Protection Act, 2019." }
+// --- LEGAL DATA VERBATIM ---
+const LEGAL_CONTENT = [
+  { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any other verified expert. Content is for informational and peer support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. STOP using this app immediately and call 108 or 14416 if you are in crisis.\n\n3. No Prescriptions\nVerified Experts provide guidance on coping strategies only. They will NOT provide official medical prescriptions or treatment plans.\n\n4. User Responsibility\nYou are responsible for your own health decisions." },
+  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Intermediary Status: Functions under the IT Act, 2000.\n2. Eligibility: 18+ independently. Minors require parental supervision.\n3. Zero Tolerance: Immediate ban for abuse or solicitation.\n4. Termination: We reserve the right to ban accounts without notice." },
+  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism: No Names, Phones, or GPS collected.\n2. Anonymity: Cooperation with Law Enforcement ONLY via valid court orders.\n3. Data Storage: Secure Google Firebase (Cloud Firestore)." },
+  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly about struggles.\n✅ DO support others with kind words.\n❌ DON'T share numbers/handles.\n❌ DON'T ask for money or romantic solicitation." },
+  { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: Within 24-48 Hours." },
+  { t: "GOVERNING LAW", m: "Governed by the laws of India. Exclusive jurisdiction: Nandyala District, Andhra Pradesh. By using this app, you waive your right to sue in any other location." },
+  { t: "INDEMNIFICATION", m: "You agree to indemnify AshokaManas from any claims. Bad-faith litigation results in user being liable for 100% of legal fees (Loser Pays All)." },
+  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital sanctuary hub. NOT a registered 'Clinical Establishment' for admissions or surgeries." }
 ];
 
 const HALLS = [
   { id: 'General', label: 'General Support', te: 'సాధారణ మద్దతు', icon: Users, color: 'emerald', sticky: 'Identity Protected. Professional peer involvement only.' },
-  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్ హబ్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Restricted for Verified Experts. Psycho-educational insights only.' },
-  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital. You are not alone in this burden.' },
-  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'Total anonymity. One day at a time towards healing.' },
-  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Minor safety: Strict parental guidance and supervision required.' },
+  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్ హబ్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Expert Hub. Psycho-educational insights only.' },
+  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is a mandate. You are not alone.' },
+  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'Total anonymity. One day at a time towards recovery.' },
+  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Minor Safety: Use ONLY under parent/guardian supervision.' },
   { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'CRITICAL: Never stop medication without consulting your doctor.' },
   { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey is yours. Share safely within our professional code.' },
 ];
@@ -143,12 +175,12 @@ export default function App() {
   if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} disclaimer={STICKY_TEXT} />;
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#04120D] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
+    <div className={`min-h-screen ${darkMode ? 'bg-[#04110C] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
       <div className="fixed inset-0 pointer-events-none z-[1000] opacity-[0.02] bg-[radial-gradient(circle,black_1px,transparent_1px)] bg-[size:30px_30px]"></div>
 
-      {/* TOP SAFETY BAR */}
+      {/* FIXED TOP SAFETY BAR */}
       <div className="fixed top-0 left-0 right-0 z-[400] bg-[#FBDF3A] border-b-2 border-[#D97706] p-3 flex justify-between items-center shadow-xl">
-        <div className="flex items-center gap-2 text-[#451A03] font-black">
+        <div className="flex items-center gap-2 text-yellow-950 font-black">
           <Pin size={16} className="text-[#92400E]" />
           <p className="text-[10px] md:text-xs uppercase tracking-tight leading-none">{STICKY_TEXT}</p>
         </div>
@@ -157,7 +189,7 @@ export default function App() {
 
       <header className="fixed top-[52px] left-0 right-0 p-4 md:p-6 flex justify-between items-center bg-inherit/90 backdrop-blur-3xl z-[350] border-b border-black/5">
         <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
-          <div className="p-2 bg-[#065F46] rounded-xl shadow-lg">
+          <div className="p-2 bg-[#065F46] rounded-xl shadow-lg group-hover:rotate-6 transition-transform">
             <TreePine className="text-white" size={24} />
           </div>
           <div>
@@ -222,20 +254,18 @@ function GateView({ onAccept, lang, setLang, disclaimer }) {
       <h1 className="text-6xl font-black tracking-tighter mb-4 leading-none text-white">AshokaManas<sup className="text-xl ml-1 font-bold italic">™</sup></h1>
       
       <div className="max-w-md w-full space-y-4 mb-14 text-left">
-        <GateSection icon={ShieldAlert} title="MEDICAL DISCLAIMER" text="No doctor-patient relationship created. Content is for informational and peer support purposes only. Not an emergency service." />
-        <GateSection icon={EyeOff} title="ZERO TOLERANCE" text="Absolute ban against abuse, harassment, promotion of violence, or privacy violations. Banning is immediate and permanent." />
-        <GateSection icon={Users} title="MINOR PROTECTION" text="Independent use is for 18+. Minors must use ONLY under direct supervision of a parent or guardian." />
+        <GateSection icon={ShieldAlert} title="MEDICAL DISCLAIMER" text="Use of this platform does not create a doctor-patient relationship. Content is for informational, educational, and peer support purposes only. Not an emergency service." />
+        <GateSection icon={EyeOff} title="ZERO TOLERANCE" text="Absolute ban against abuse, harassment, promotion of violence, or privacy violations. Banning is immediate and permanent for violators." />
+        <GateSection icon={Users} title="MINOR PROTECTION" text="Independent use is for 18+. Minors must use ONLY under direct supervision of a parent or legal guardian." />
       </div>
 
-      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-emerald-950 rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all">
-          {lang === 'en' ? 'AGREE & CONTINUE' : 'అంగీకరిస్తున్నాను'}
-      </button>
-
+      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-[#042116] rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter hover:bg-emerald-50">AGREE & CONTINUE</button>
+      
       <div className="mt-10 flex gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400/40">
         <button onClick={() => setLang('en')} className={lang === 'en' ? 'text-white border-b-2 border-white' : ''}>English</button>
         <button onClick={() => setLang('te')} className={lang === 'te' ? 'text-white border-b-2 border-white' : ''}>తెలుగు</button>
       </div>
-      <p className="mt-20 text-[9px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed text-center">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
+      <p className="mt-20 text-[10px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed text-center">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
     </div>
   );
 }
@@ -252,7 +282,7 @@ function GateSection({ icon: Icon, title, text }) {
 function HomeHub({ setHall, setView, lang, query }) {
   return (
     <div className="space-y-12 animate-in slide-in-from-bottom-10">
-      <div className="relative rounded-[70px] bg-gradient-to-br from-[#065F46] to-[#064E3B] p-12 text-center text-white shadow-2xl overflow-hidden cursor-pointer active:scale-95 transition-all"
+      <div className="relative rounded-[70px] bg-gradient-to-br from-[#065F46] to-[#064E3B] p-12 text-center text-white shadow-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
            onClick={() => { SoundEngine.init(); SoundEngine.playHeart(); }}>
         <div className="absolute inset-0 opacity-10">
            <svg width="100%" height="100%"><circle cx="50%" cy="50%" r="40%" fill="none" stroke="white" strokeWidth="1" className="animate-pulse" /></svg>
@@ -263,7 +293,7 @@ function HomeHub({ setHall, setView, lang, query }) {
           </div>
           <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Safe Interaction</h2>
           <div className="h-1.5 w-24 bg-emerald-400 mx-auto rounded-full"></div>
-          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Heart of the forest</p>
+          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Click the forest heart</p>
         </div>
       </div>
 
@@ -304,23 +334,33 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
     setMsg(""); SoundEngine.playHeart();
   };
 
-  if (hall.expertOnly && !userData?.isExpert) return <ExpertGate setView={setView} onBack={onBack} />;
+  const welcome = WELCOME_MESSAGES[hall.id] || { en: "", te: "" };
 
-  const filtered = posts.filter(p => !p.reported && p.text.toLowerCase().includes(query.toLowerCase()));
+  if (hall.expertOnly && !userData?.isExpert) return <ExpertGate setView={setView} onBack={onBack} />;
 
   return (
     <div className="space-y-8 animate-in slide-in-from-right-10 duration-500 pb-32">
       <button onClick={onBack} className="text-emerald-800 font-black uppercase text-xs flex items-center gap-2">← Back to Hub</button>
-      <div className="p-10 bg-white dark:bg-[#064E3B] rounded-[60px] border-b-[16px] border-emerald-500 shadow-2xl relative overflow-hidden">
+      
+      {/* WELCOME CARD */}
+      <div className="p-8 bg-emerald-900 text-white rounded-[60px] shadow-2xl relative overflow-hidden border-4 border-white/5 animate-in zoom-in duration-700">
+         <div className="relative z-10">
+            <h3 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-50 flex items-center gap-2"><Sparkles size={14}/> Welcome Guidance</h3>
+            <p className="font-bold text-lg md:text-xl leading-relaxed italic">"{lang === 'en' ? welcome.en : welcome.te}"</p>
+         </div>
+         <hall.icon className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 rotate-12" />
+      </div>
+
+      <div className="p-10 bg-white dark:bg-[#064E3B] rounded-[60px] border-b-[16px] border-emerald-500 shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-600"><hall.icon size={28}/></div>
-              <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">{lang === 'en' ? hall.label : hall.te}</h2>
+              <div className={`p-4 rounded-2xl bg-emerald-50 text-emerald-600`}><hall.icon size={28}/></div>
+              <h2 className="text-3xl font-black uppercase tracking-tighter">{lang === 'en' ? hall.label : hall.te}</h2>
             </div>
             <Pin className="text-emerald-400" size={24} />
           </div>
-          <div className="bg-emerald-50 dark:bg-emerald-950 p-6 rounded-[35px] border border-emerald-100 flex gap-4 items-start shadow-inner">
+          <div className={`bg-emerald-50 dark:bg-emerald-950 p-6 rounded-[35px] border border-emerald-100 flex gap-4 items-start shadow-inner`}>
             <AlertCircle className="text-emerald-600 shrink-0 mt-1" size={24} />
             <p className="text-sm font-bold leading-tight text-emerald-900 dark:text-emerald-100">{hall.sticky}</p>
           </div>
@@ -333,7 +373,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
           <button onClick={send} className="self-end p-5 bg-emerald-800 text-white rounded-3xl shadow-xl active:scale-95"><Send size={24}/></button>
         </div>
         <div className="space-y-4">
-          {filtered.map(p => (
+          {posts.filter(p => !p.reported && p.text.toLowerCase().includes(query.toLowerCase())).map(p => (
             <div key={p.id} className={`p-8 bg-white dark:bg-emerald-950/20 rounded-[45px] shadow-sm border border-emerald-50 flex flex-col gap-4 group ${p.pinned ? 'border-l-[12px] border-l-emerald-500' : ''}`}>
               <div className="flex justify-between items-start">
                 <p className="text-base font-bold leading-relaxed">{p.text}</p>
@@ -357,19 +397,32 @@ function HallView({ hall, onBack, userData, user, lang, query, setView }) {
   );
 }
 
-// --- HEALING TOOLS ---
+// --- HEALING LAB ---
 
 function LabView({ lang, query }) {
   const [active, setActive] = useState(null);
+  const welcome = WELCOME_MESSAGES.Lab;
+
   if (active === 'burn') return <BurnVault onBack={() => setActive(null)} />;
   if (active === 'breath') return <PranaBreath onBack={() => setActive(null)} />;
   if (active === 'pancha') return <Panchabhoota onBack={() => setActive(null)} lang={lang} />;
+  
   return (
-    <div className="grid grid-cols-1 gap-6 pb-32 animate-in fade-in">
+    <div className="space-y-10 pb-32 animate-in fade-in">
        <div className="text-center mb-6"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Healing Lab<sup className="text-lg italic font-bold">™</sup></h2></div>
-       <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={() => setActive('burn')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
-       <StationCard icon={Wind} title="Prana Breath" te="ప్రాణ శ్వాస" onClick={() => setActive('breath')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
-       <StationCard icon={Sparkles} title="Panchabhoota" te="పంచభూతాలు" onClick={() => setActive('pancha')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
+       
+       <div className="p-10 bg-emerald-900 text-white rounded-[70px] shadow-2xl relative overflow-hidden border-4 border-white/5">
+         <div className="relative z-10">
+            <h3 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-50 flex items-center gap-2"><Sparkles size={14}/> Laboratory Guidance</h3>
+            <p className="font-bold text-lg md:text-xl leading-relaxed italic">"{lang === 'en' ? welcome.en : welcome.te}"</p>
+         </div>
+       </div>
+
+       <div className="grid grid-cols-1 gap-6">
+         <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={() => setActive('burn')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
+         <StationCard icon={Wind} title="Prana Breath" te="ప్రాణ శ్వాస" onClick={() => setActive('breath')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
+         <StationCard icon={Sparkles} title="Panchabhoota" te="పంచభూతాలు" onClick={() => setActive('pancha')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
+       </div>
     </div>
   );
 }
@@ -450,7 +503,7 @@ function Panchabhoota({ onBack, lang }) {
   );
 }
 
-// --- GAMES (Locked Z-Index) ---
+// --- GAMES ---
 
 function GamesView({ lang }) {
   const [active, setActive] = useState(null);
@@ -541,7 +594,7 @@ function LegalView({ lang, query }) {
           <h2 className="text-5xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-50">Legal Guide<sup className="text-lg italic font-bold">™</sup></h2>
           <p className="text-[10px] font-black text-emerald-600/40 uppercase mt-2 tracking-widest italic text-center leading-relaxed">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p>
        </div>
-       {LEGAL_DATA.filter(p => p.t.toLowerCase().includes(query.toLowerCase())).map((p, idx) => (
+       {LEGAL_CONTENT.filter(p => p.t.toLowerCase().includes(query.toLowerCase())).map((p, idx) => (
          <LegalTile key={idx} title={p.t} text={p.m} />
        ))}
     </div>
@@ -576,7 +629,7 @@ function ProfileView({ userData, setView, user }) {
        <div className="bg-[#064E3B] text-white p-16 rounded-[100px] text-center shadow-2xl relative overflow-hidden">
           <div className="relative z-10 space-y-8">
             <div className="w-28 h-28 bg-white/10 rounded-[45px] mx-auto flex items-center justify-center border border-white/20 shadow-inner"><User size={56} /></div>
-            <h2 className="text-6xl font-black uppercase tracking-tighter leading-none">Status Rank</h2>
+            <h2 className="text-6xl font-black uppercase tracking-tighter leading-none">Profile Status</h2>
             <div className="grid grid-cols-2 gap-4 mt-8">
               <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-4xl font-black leading-none">{userData?.streak || 0}</p><p className="text-[10px] uppercase font-black opacity-30 mt-2">Streak</p></div>
               <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-3xl font-black leading-none">{userData?.isExpert ? 'Expert' : 'Member'}</p><p className="text-[10px] uppercase font-black opacity-30 mt-2">Rank</p></div>
@@ -585,7 +638,7 @@ function ProfileView({ userData, setView, user }) {
        </div>
        <div className="bg-white dark:bg-emerald-950/20 p-12 rounded-[70px] shadow-xl border border-emerald-50">
           <h3 className="text-3xl font-black uppercase flex items-center gap-3 text-emerald-950 dark:text-emerald-50"><ShieldCheck size={36} className="text-blue-500"/> Expert Verification</h3>
-          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-6">Enter key for Clinical Hub access.</p>
+          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-6">Enter key for private Clinical Hub access.</p>
           <div className="mt-8 flex gap-4">
              <input type="password" value={vCode} onChange={e => setVCode(e.target.value)} className="flex-1 p-6 bg-emerald-50 dark:bg-emerald-950 rounded-[35px] outline-none font-black text-center text-2xl border-none shadow-inner" placeholder="••••••••" />
              <button onClick={verify} className="px-12 bg-emerald-800 text-white rounded-full font-black uppercase text-xs shadow-lg">Verify</button>
@@ -607,12 +660,12 @@ function AdminView() {
     <div className="p-16 bg-[#051510] text-white rounded-[100px] text-center animate-in fade-in shadow-2xl border border-white/5">
        <Settings size={100} className="mx-auto text-emerald-400 animate-spin-slow" />
        <h2 className="text-6xl font-black uppercase tracking-tighter mt-10">Control Hub</h2>
-       <p className="opacity-40 uppercase tracking-[0.5em] text-[11px] font-black italic mt-4">Security Monitoring Active</p>
+       <p className="opacity-40 uppercase tracking-[0.5em] text-[11px] font-black italic mt-4">Surveillance Active</p>
     </div>
   );
 }
 
-// --- UI HELPERS ---
+// --- HELPERS ---
 
 function NavBtn({ icon: Icon, active, onClick }) {
   return (
@@ -644,8 +697,7 @@ function ExpertGate({ setView, onBack }) {
   return (
     <div className="bg-white dark:bg-emerald-950 p-12 rounded-[60px] text-center space-y-10 shadow-2xl animate-in zoom-in border border-emerald-100">
       <Lock size={80} className="mx-auto text-emerald-400 opacity-20" />
-      <h2 className="text-4xl font-black uppercase tracking-tighter">Expert Access Only</h2>
-      <p className="text-sm font-bold opacity-60 leading-relaxed max-w-sm mx-auto">Please gain your blue badge in the profile station to enter the Clinical Hub.</p>
+      <h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Expert Restricted Area</h2>
       <button onClick={() => { setView('profile'); onBack(); }} className="px-14 py-5 bg-emerald-800 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl">Verification Portal</button>
     </div>
   );
@@ -654,12 +706,12 @@ function ExpertGate({ setView, onBack }) {
 const SOSModal = ({ onClose }) => (
   <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500">
     <div className="w-56 h-56 bg-red-600 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_120px_rgba(220,38,38,1)] mb-12"><Siren size={120} className="text-white" /></div>
-    <h2 className="text-8xl font-black uppercase mb-8 tracking-tighter leading-none text-white drop-shadow-2xl">Emergency SOS</h2>
+    <h2 className="text-8xl font-black uppercase mb-8 tracking-tighter leading-none">Emergency SOS</h2>
     <div className="w-full max-w-sm space-y-6">
       <a href="tel:108" className="block py-9 bg-red-600 rounded-[60px] font-black text-5xl shadow-2xl active:scale-95 border-b-[14px] border-red-900 uppercase tracking-tighter">CALL 108</a>
       <a href="tel:14416" className="block py-9 bg-blue-600 rounded-[60px] font-black text-2xl border-b-[12px] border-blue-900 uppercase">Tele-MANAS</a>
     </div>
-    <button onClick={onClose} className="mt-24 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-600 underline-offset-[20px] hover:text-white transition-colors">Return to Platform</button>
+    <button onClick={onClose} className="mt-24 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-600 underline-offset-[20px] hover:text-white">Return to Platform</button>
   </div>
 );
 
