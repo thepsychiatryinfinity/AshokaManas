@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Heart, Users, Shield, AlertTriangle, TreePine, Flame, Activity, 
-  Zap, Moon, Sun, ChevronDown, Siren, Clock, Wind, Waves, 
-  CheckCircle2, Globe, Gamepad2, Trophy, Volume2, VolumeX,
-  Lock, ArrowRight, User, Settings, Sparkles, AlertCircle, Brush,
-  MessageSquare, LayoutDashboard, ShieldAlert, EyeOff, Search,
-  Send, Flag, Stethoscope, Pill, Baby, HeartHandshake, ScrollText,
-  Mail, ShieldCheck, Pin, Trash2, ThumbsUp, Droplets, Mountain, Fan
+  Heart, Users, Shield, AlertTriangle, Flame, Activity, 
+  Zap, Siren, Wind, Volume2, VolumeX,
+  Lock, User, Sparkles, AlertCircle, Brush,
+  Search, Send, Flag, Stethoscope, Pill, Baby, HeartHandshake, ScrollText,
+  Pin, Trash2, Droplets, Mountain, Fan,
+  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, Smartphone
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { 
   getFirestore, doc, onSnapshot, setDoc, serverTimestamp, 
-  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit 
+  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit
 } from 'firebase/firestore';
 
-// --- TITANIUM CONFIGURATION GUARD ---
+// --- CONFIGURATION GUARD ---
 let db, auth, appId;
 let isFirebaseInitialized = false;
 
@@ -31,466 +30,281 @@ try {
   }
 } catch (e) { console.warn("Offline Mode Active."); }
 
+// --- KEYS ---
 const ADMIN_KEY = "ASHOKA-SUPER-ADMIN-99";
 const DOCTOR_KEY = "ASHOKA-DOC-VERIFY";
 
-// --- WELCOME WISDOM DATA (EN & TE) ---
-const WELCOME_MESSAGES = {
-  General: {
-    en: "Welcome to the General Support Hall. This is a safe space for empathy. Share your daily struggles and find strength in others. We are here to listen, not to judge.",
-    te: "సాధారణ మద్దతు హాల్‌కు స్వాగతం. ఇది సానుభూతి కోసం ఒక సురక్షిత ప్రదేశం. మీ రోజువారీ పోరాటాలను పంచుకోండి మరియు ఇతరులలో బలాన్ని పొందండి. మేము వినడానికి ఇక్కడ ఉన్నాము."
-  },
-  Clinical: {
-    en: "Welcome to the Clinical Hub. This restricted space is for verified experts to share psycho-educational insights. Note: No clinical diagnosis or prescriptions are provided here.",
-    te: "క్లినికల్ హబ్‌కు స్వాగతం. ధృవీకరించబడిన నిపుణులు మనో-విద్యా అంతర్దృష్టులను పంచుకోవడానికి ఇది ఒక ప్రత్యేక ప్రదేశం. గమనిక: ఇక్కడ క్లినికల్ రోగ నిర్ధారణ లేదా మందులు ఇవ్వబడవు."
-  },
-  Caregiver: {
-    en: "Welcome to the Caregiver Hall. We recognize the heavy weight you carry. This space is for those supporting loved ones with mental health challenges. You are not alone.",
-    te: "సంరక్షకుల హాల్‌కు స్వాగతం. మీరు మోస్తున్న భారీ భారాన్ని మేము గుర్తిస్తున్నాము. మానసిక ఆరోగ్య సవాళ్లతో ఉన్న ప్రియమైన వారికి మద్దతు ఇచ్చే వారి కోసం ఈ ప్రదేశం."
-  },
-  Addiction: {
-    en: "Welcome to Addiction Support. We honor your courage. This hall is dedicated to recovery, one day at a time. Total anonymity is our foundation for your healing.",
-    te: "వ్యసన విముక్తి మద్దతుకు స్వాగతం. మీ ధైర్యాన్ని మేము గౌరవిస్తాము. ఈ హాల్ కోలుకోవడానికి అంకితం చేయబడింది. మీ స్వస్థత కోసం పూర్తి అజ్ఞాతం మా పునాది."
-  },
-  Child: {
-    en: "Welcome to the Child & Adolescent space. This area focuses on the well-being of young minds. Important: Minors must be accompanied by a parent or guardian at all times.",
-    te: "పిల్లలు & కౌమారదశ హాల్‌కు స్వాగతం. ఈ ప్రాంతం యువ మనస్సుల శ్రేయస్సుపై దృష్టి పెడుతుంది. ముఖ్యం: మైనర్లు ఎల్లప్పుడూ తల్లిదండ్రుల పర్యవేక్షణలో ఉండాలి."
-  },
-  SideEffects: {
-    en: "Welcome to the Side Effects Hall. Discuss your experiences with medications here. CRITICAL: Never stop or change your dosage without consulting your prescribing doctor.",
-    te: "దుష్ప్రభావాల హాల్‌కు స్వాగతం. మందులతో మీ అనుభవాలను ఇక్కడ చర్చించండి. ముఖ్యం: మీ వైద్యుడిని సంప్రదించకుండా మందులను ఎప్పుడూ ఆపకండి లేదా మార్చకండి."
-  },
-  Stories: {
-    en: "Welcome to My Story. Your narrative has the power to heal. Share your journey of resilience anonymously to inspire others in the AshokaManas forest.",
-    te: "నా కథ హాల్‌కు స్వాగతం. మీ అనుభవానికి నయం చేసే శక్తి ఉంది. అశోకమనస్ అడవిలో ఇతరులను ప్రేరేపించడానికి మీ ప్రయాణాన్ని అజ్ఞాతంగా పంచుకోండి."
-  },
-  Lab: {
-    en: "Welcome to the Wellness Lab. Here, we combine ancient wisdom with modern tranquility. Use these tools to release trauma, sync your breath, and align with the elements.",
-    te: "వెల్నెస్ ల్యాబ్‌కు స్వాగతం. ఇక్కడ, మేము పురాతన జ్ఞానాన్ని ఆధునిక ప్రశాంతతతో మిళితం చేస్తాము. మీ శ్వాసను సమన్వయం చేయడానికి మరియు మూలకాలతో అనుసంధానం కావడానికి ఈ సాధనాలను ఉపయోగించండి."
-  }
-};
-
-// --- RE-ENGINEERED SOUND ENGINE ---
+// --- SOUND ENGINE ---
 const SoundEngine = {
   ctx: null,
-  riverNode: null,
   init() { 
-    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    try {
+      if (!this.ctx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) this.ctx = new AudioContext();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    } catch (e) {}
   },
-  playFreq(f, type = 'sine', d = 1.0) {
+  playFreq(f, type = 'sine', duration = 0.1) {
     this.init();
     if (!this.ctx) return;
-    const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, this.ctx.currentTime);
-    g.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + d);
-    o.connect(g); g.connect(this.ctx.destination);
-    o.start(); o.stop(this.ctx.currentTime + d);
+    try {
+      const o = this.ctx.createOscillator(); 
+      const g = this.ctx.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(this.ctx.currentTime + duration);
+    } catch(e) {}
   },
-  playHeart() { this.playFreq(60, 'sine', 0.6); },
-  playPop() { this.playFreq(1100, 'sine', 0.1); },
-  playBurn() { this.playFreq(85, 'sawtooth', 1.8); },
-  toggleRiver(active) {
-    this.init();
-    if (active && this.ctx) {
-      const bufferSize = 2 * this.ctx.sampleRate;
-      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      let lastOut = 0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        data[i] = (lastOut + (0.02 * white)) / 1.02;
-        lastOut = data[i];
-        data[i] *= 3.5;
-      }
-      this.riverNode = this.ctx.createBufferSource();
-      this.riverNode.buffer = buffer; this.riverNode.loop = true;
-      const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
-      const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.2;
-      const lfoG = this.ctx.createGain(); lfoG.gain.value = 150;
-      lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-      const g = this.ctx.createGain(); g.gain.value = 0.03;
-      this.riverNode.connect(f); f.connect(g); g.connect(this.ctx.destination);
-      this.riverNode.start();
-    } else if (this.riverNode) { this.riverNode.stop(); this.riverNode = null; }
-  }
+  playClick() { this.playFreq(400, 'triangle', 0.05); },
+  playPop() { this.playFreq(600, 'sine', 0.1); },
+  playBurn() { this.playFreq(100, 'sawtooth', 1.5); },
+  playAncient(f) { this.playFreq(f, 'sine', 3.0); }
 };
 
-// --- LEGAL DATA VERBATIM ---
-const LEGAL_CONTENT = [
-  { t: "MEDICAL DISCLAIMER", m: "ASHOKAMANAS: MEDICAL DISCLAIMER\n\n1. No Doctor-Patient Relationship\nUse of the AshokaManas platform does not create a doctor-patient relationship between you and Dr. Pydala Rama Krishna Reddy, or any other verified expert. Content is for informational and peer support purposes only.\n\n2. Not for Emergencies\nThis platform is NOT an emergency service. STOP using this app immediately and call 108 or 14416 if you are in crisis.\n\n3. No Prescriptions\nVerified Experts provide guidance on coping strategies only. They will NOT provide official medical prescriptions or treatment plans.\n\n4. User Responsibility\nYou are responsible for your own health decisions." },
-  { t: "TERMS OF SERVICE", m: "ASHOKAMANAS: TERMS OF USE\n\n1. Intermediary Status: Functions under the IT Act, 2000.\n2. Eligibility: 18+ independently. Minors require parental supervision.\n3. Zero Tolerance: Immediate ban for abuse or solicitation.\n4. Termination: We reserve the right to ban accounts without notice." },
-  { t: "PRIVACY POLICY", m: "ASHOKAMANAS: PRIVACY POLICY\n\n1. Data Minimalism: No Names, Phones, or GPS collected.\n2. Anonymity: Cooperation with Law Enforcement ONLY via valid court orders.\n3. Data Storage: Secure Google Firebase (Cloud Firestore)." },
-  { t: "CODE OF CONDUCT", m: "FOR USERS:\n✅ DO speak openly about struggles.\n✅ DO support others with kind words.\n❌ DON'T share numbers/handles.\n❌ DON'T ask for money or romantic solicitation." },
-  { t: "GRIEVANCE REDRESSAL", m: "Grievance Officer: Dr. Pydala Rama Krishna Reddy\nEmail: ashokamanas11@gmail.com\nResponse Time: Within 24-48 Hours." },
-  { t: "GOVERNING LAW", m: "Governed by the laws of India. Exclusive jurisdiction: Nandyala District, Andhra Pradesh. By using this app, you waive your right to sue in any other location." },
-  { t: "INDEMNIFICATION", m: "You agree to indemnify AshokaManas from any claims. Bad-faith litigation results in user being liable for 100% of legal fees (Loser Pays All)." },
-  { t: "NOT A CLINICAL ESTABLISHMENT", m: "AshokaManas is a digital sanctuary hub. NOT a registered 'Clinical Establishment' for admissions or surgeries." }
+// --- DATA ---
+const WELCOME_MESSAGES = {
+  General: { en: "Welcome to Peer Support.", te: "సాధారణ మద్దతు హాల్‌కు స్వాగతం." },
+  Clinical: { en: "Welcome to Clinical Hub.", te: "క్లినికల్ హబ్." },
+  Caregiver: { en: "Caregiver Support.", te: "సంరక్షకులు." },
+  Addiction: { en: "Addiction Recovery.", te: "వ్యసన విముక్తి." },
+  Child: { en: "Child & Teen Space.", te: "పిల్లల హాల్." },
+  SideEffects: { en: "Medication Support.", te: "మందుల సమాచారం." },
+  Stories: { en: "My Story.", te: "నా కథ." },
+  Lab: { en: "Wellness Lab.", te: "వెల్నెస్ ల్యాబ్." }
+};
+
+const DEFAULT_LEGAL = [
+  { t: "MEDICAL DISCLAIMER", m: "Not a replacement for professional medical advice. Call 108 for emergencies." },
+  { t: "COMMUNITY GUIDELINES", m: "Zero tolerance for abuse or hate speech." },
+  { t: "PRIVACY POLICY", m: "No personal identifiers collected." }
+];
+
+const DEFAULT_CARDS = [
+  { id: 1, title: "The Void | శూన్యం", hurdle: "Purpose", ancestralRoot: "Purpose was survival.", awarenessLogic: "Create meaning.", action: "Help someone today." }
 ];
 
 const HALLS = [
-  { id: 'General', label: 'General Support', te: 'సాధారణ మద్దతు', icon: Users, color: 'emerald', sticky: 'Identity Protected. Professional peer involvement only.' },
-  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్ హబ్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Expert Hub. Psycho-educational insights only.' },
-  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల భారం', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is a mandate. You are not alone.' },
-  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'Total anonymity. One day at a time towards recovery.' },
-  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు & కౌమారదశ', icon: Baby, color: 'pink', sticky: 'Minor Safety: Use ONLY under parent/guardian supervision.' },
-  { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'CRITICAL: Never stop medication without consulting your doctor.' },
-  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey is yours. Share safely within our professional code.' },
+  { id: 'General', label: 'General Support', te: 'సాధారణ', icon: Users, color: 'emerald', sticky: 'Identity Protected.' },
+  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Experts Only.' },
+  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital.' },
+  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'One day at a time.' },
+  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు', icon: Baby, color: 'pink', sticky: 'Supervision Required.' },
+  { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'Consult your doctor.' },
+  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey matters.' },
 ];
 
+// --- MAIN APP ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState({ isExpert: false, streak: 0, level: 'Leaf' });
+  // ROLE: 'guest', 'patron' (Paid), 'doctor' (Verified Key)
+  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf' });
   const [view, setView] = useState('gate'); 
   const [activeHall, setActiveHall] = useState(null);
   const [lang, setLang] = useState('en');
-  const [darkMode, setDarkMode] = useState(false);
-  const [riverActive, setRiverActive] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSOS, setShowSOS] = useState(false);
+  const [showMitra, setShowMitra] = useState(false);
+  const [notification, setNotification] = useState(null);
+  
+  // LIVE GLOBAL STATE
+  const [masterCards, setMasterCards] = useState(() => {
+    const saved = localStorage.getItem('ashoka_cards');
+    return saved ? JSON.parse(saved) : DEFAULT_CARDS;
+  });
+  const [legalDocs, setLegalDocs] = useState(DEFAULT_LEGAL);
+  const [mitraConfig, setMitraConfig] = useState({ persona: "You are Mitra, a wise friend.", key: "" });
+  const [globalAlert, setGlobalAlert] = useState(""); 
+  
+  // SENTINEL STATE
+  const [userList, setUserList] = useState([{uid:"u1", status:"active"}]);
+  const [whispers, setWhispers] = useState([]); // Wired to Admin
 
   useEffect(() => {
     if (!isFirebaseInitialized) return;
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) setUser(u);
-      else {
-          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              await signInWithCustomToken(auth, __initial_auth_token);
-          } else {
-              await signInAnonymously(auth);
-          }
+    onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        setUser(u);
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid);
+        onSnapshot(ref, (snap) => {
+          if (snap.exists()) setUserData(snap.data());
+          else setDoc(ref, { uid: u.uid, role: 'guest', streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
+        });
+      } else {
+        await signInAnonymously(auth);
       }
     });
     return () => unsubscribe();
   }, []);
 
+  // CLOUD SYNC
   useEffect(() => {
-    if (!user || !isFirebaseInitialized) return;
-    const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-    return onSnapshot(ref, (snap) => {
-      if (snap.exists()) setUserData(snap.data());
-      else setDoc(ref, { uid: user.uid, isExpert: false, streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
+    if (!isFirebaseInitialized) return;
+    const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global_settings');
+    const unsubConfig = onSnapshot(configRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            if (data.legal) { setLegalDocs(data.legal); localStorage.setItem('ashoka_legal', JSON.stringify(data.legal)); }
+            if (data.persona) setMitraConfig(prev => ({...prev, persona: data.persona}));
+            if (data.alert) setGlobalAlert(data.alert);
+        }
     });
-  }, [user]);
+    return () => unsubConfig();
+  }, []);
 
-  const STICKY_TEXT = lang === 'en' 
-    ? "Not a medical services. For emergencies consult nearest hospital, click sos" 
-    : "వైద్య సేవలు కాదు. అత్యవసర పరిస్థితుల్లో సమీప ఆసుపత్రిని సంప్రదించండి, sos క్లిక్ చేయండి";
+  const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
+  const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." : "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు.";
 
-  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} disclaimer={STICKY_TEXT} />;
+  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} />;
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#04110C] text-[#D1FAE5]' : 'bg-[#F9FBF9] text-[#064E3B]'} font-sans transition-all duration-1000 select-none overflow-x-hidden`}>
-      <div className="fixed inset-0 pointer-events-none z-[1000] opacity-[0.02] bg-[radial-gradient(circle,black_1px,transparent_1px)] bg-[size:30px_30px]"></div>
-
-      {/* FIXED TOP SAFETY BAR */}
-      <div className="fixed top-0 left-0 right-0 z-[400] bg-[#FBDF3A] border-b-2 border-[#D97706] p-3 flex justify-between items-center shadow-xl">
-        <div className="flex items-center gap-2 text-yellow-950 font-black">
-          <Pin size={16} className="text-[#92400E]" />
-          <p className="text-[10px] md:text-xs uppercase tracking-tight leading-none">{STICKY_TEXT}</p>
-        </div>
-        <button onClick={() => setShowSOS(true)} className="px-5 py-2 bg-red-600 text-white text-[10px] font-black rounded-xl shadow-lg border-b-4 border-red-900 active:scale-95 transition-all">SOS</button>
+    <div className={`min-h-screen font-sans bg-[#020b08] text-[#E0F2F1] transition-all duration-700 select-none overflow-x-hidden relative`}>
+      
+      {/* AMBIENCE */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+         <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse"></div>
+         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5"></div>
       </div>
 
-      <header className="fixed top-[52px] left-0 right-0 p-4 md:p-6 flex justify-between items-center bg-inherit/90 backdrop-blur-3xl z-[350] border-b border-black/5">
-        <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
-          <div className="p-2 bg-[#065F46] rounded-xl shadow-lg group-hover:rotate-6 transition-transform">
-            <TreePine className="text-white" size={24} />
+      {/* GLOBAL ALERT */}
+      {globalAlert && (
+        <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">
+          🚨 {globalAlert}
+        </div>
+      )}
+
+      {/* NOTIFICATION */}
+      {notification && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50">
+          <ShieldCheck size={14} /> {notification}
+        </div>
+      )}
+
+      {/* TOP BAR */}
+      <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
+        <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
+        <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
+      </div>
+
+      {/* HEADER */}
+      <header className="fixed top-[48px] left-0 right-0 p-4 flex justify-between items-center z-[350]">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
+          <div className="p-2.5 bg-[#065F46] rounded-2xl shadow-[0_0_20px_rgba(6,95,70,0.5)] border border-white/10 group-hover:rotate-6 transition-transform duration-500 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20"></div>
+            <Shield className="text-white relative z-10" size={22} />
           </div>
-          <div>
-            <h1 className="font-black text-xl tracking-tighter uppercase leading-none">AshokaManas<sup className="text-[10px] ml-0.5 font-bold italic">™</sup></h1>
-            <p className="text-[8px] font-bold text-emerald-600/50 uppercase tracking-[0.4em] mt-1 italic">Copyright ©️ Ashokanmanas ™️</p>
-          </div>
+          <div><h1 className="font-black text-xl tracking-tighter uppercase leading-none bg-gradient-to-r from-emerald-100 via-white to-emerald-200 bg-clip-text text-transparent drop-shadow-sm">ASHOKAMANAS<sup className="text-[8px] ml-0.5 text-emerald-500">TM</sup></h1></div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { SoundEngine.toggleRiver(!riverActive); setRiverActive(!riverActive); }} className={`p-3 rounded-2xl transition-all shadow-sm ${riverActive ? 'bg-blue-600 text-white animate-pulse' : 'bg-white dark:bg-emerald-950/20 text-blue-600'}`}>
-            {riverActive ? <Volume2 size={20} /> : <VolumeX size={20} />}
-          </button>
-          <button onClick={() => setDarkMode(!darkMode)} className="p-3 bg-white dark:bg-emerald-950/40 rounded-2xl shadow-sm border border-emerald-100">
-            {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
-          </button>
-          <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="px-3 py-1.5 bg-[#064E3B] text-white rounded-lg text-[10px] font-black uppercase shadow-lg">{lang === 'en' ? 'తెలుగు' : 'EN'}</button>
+          <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="px-3 py-1.5 border border-white/10 text-emerald-200 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-sm bg-white/5 hover:bg-white/10">{lang === 'en' ? 'తెలుగు' : 'EN'}</button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto pt-[140px] px-5 pb-48 relative z-10 animate-in fade-in duration-1000">
-        
+      {/* MAIN CONTENT AREA */}
+      <main className={`max-w-4xl mx-auto px-5 pb-40 relative z-10 animate-in fade-in duration-700 ${globalAlert ? 'pt-[160px]' : 'pt-[130px]'}`}>
         {!activeHall && (
           <div className="mb-8 relative group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
-            <input 
-              type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={lang === 'en' ? "Search wisdom or tools..." : "శోధించండి..."}
-              className="w-full p-5 pl-14 bg-white/50 dark:bg-emerald-900/10 backdrop-blur-xl rounded-[40px] border border-black/5 outline-none focus:ring-2 focus:ring-emerald-400 font-bold text-sm shadow-sm"
-            />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 size={16} text-emerald-500/50" />
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={lang === 'en' ? "Search..." : "వెతకండి..."} className="w-full p-4 pl-12 backdrop-blur-xl rounded-[30px] border outline-none font-medium text-sm transition-all shadow-inner bg-white/5 border-white/10 text-emerald-100 focus:border-emerald-500/50"/>
           </div>
         )}
 
-        {view === 'home' && !activeHall && <HomeHub setHall={setActiveHall} setView={setView} lang={lang} query={searchQuery} />}
-        {activeHall && <HallView hall={activeHall} onBack={() => setActiveHall(null)} userData={userData} user={user} lang={lang} query={searchQuery} setView={setView} />}
-        {view === 'lab' && <LabView lang={lang} query={searchQuery} />}
-        {view === 'games' && <GamesView lang={lang} />}
-        {view === 'legal' && <LegalView lang={lang} query={searchQuery} />}
-        {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} />}
-        {view === 'admin' && <AdminView />}
+        {view === 'home' && !activeHall && <HomeHub setHall={setActiveHall} setView={setView} lang={lang} query={searchQuery} openMitra={() => setShowMitra(true)} userData={userData} notify={showNotify} />}
+        {activeHall && <HallView hall={activeHall} onBack={() => setActiveHall(null)} userData={userData} user={user} lang={lang} query={searchQuery} setView={setView} setUserData={setUserData} notify={showNotify} />}
+        {view === 'lab' && <LabView />}
+        {view === 'games' && <GamesView />}
+        {view === 'legal' && <LegalView lang={lang} docs={legalDocs} />}
+        {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} notify={showNotify} setWhispers={setWhispers} />}
+        {view === 'admin' && <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} />}
+        {view === 'master-deck' && <WisdomDeck onBack={() => setView('home')} lang={lang} cards={masterCards} userData={userData} setView={setView} notify={showNotify} />}
       </main>
 
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-lg bg-white/80 dark:bg-emerald-950/80 backdrop-blur-3xl border border-emerald-100 p-4 flex justify-around rounded-[45px] z-[500] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)]">
-        <NavBtn icon={LayoutDashboard} active={view === 'home'} onClick={() => { setView('home'); setActiveHall(null); }} />
+      {/* GLASS NAV */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md backdrop-blur-xl border p-2 flex justify-around rounded-[40px] z-[500] shadow-2xl bg-[#020604]/80 border-white/10">
+        <NavBtn icon={Home} active={view === 'home'} onClick={() => { setView('home'); setActiveHall(null); }} />
         <NavBtn icon={Flame} active={view === 'lab'} onClick={() => { setView('lab'); setActiveHall(null); }} />
-        <NavBtn icon={Gamepad2} active={view === 'games'} onClick={() => { setView('games'); setActiveHall(null); }} />
+        <NavBtn icon={Zap} active={view === 'games'} onClick={() => { setView('games'); setActiveHall(null); }} />
         <NavBtn icon={User} active={view === 'profile'} onClick={() => { setView('profile'); setActiveHall(null); }} />
       </nav>
 
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
+      {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} apiKey={mitraConfig.key} userData={userData} setView={setView} notify={showNotify} />}
     </div>
   );
 }
 
-// --- GATE (The Main Entry Point) ---
-function GateView({ onAccept, lang, setLang, disclaimer }) {
+// --- GATEVIEW ---
+function GateView({ onAccept, lang, setLang }) {
+  const [agreed, setAgreed] = useState(false);
   return (
-    <div className="min-h-screen bg-[#042116] flex flex-col items-center justify-center p-8 text-white text-center relative overflow-hidden">
-      <div className="relative mb-12 animate-in zoom-in duration-1000">
-        <div className="absolute inset-0 bg-emerald-500/20 blur-3xl scale-150 rounded-full"></div>
-        <div className="relative p-6 bg-white/5 rounded-[45px] border border-white/10 shadow-2xl"><TreePine size={80} className="text-emerald-400" /></div>
-      </div>
-      <h1 className="text-6xl font-black tracking-tighter mb-4 leading-none text-white">AshokaManas<sup className="text-xl ml-1 font-bold italic">™</sup></h1>
+    <div className="min-h-screen bg-[#020b08] flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-1000 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[100px]"></div>
       
-      <div className="max-w-md w-full space-y-4 mb-14 text-left">
-        <GateSection icon={ShieldAlert} title="MEDICAL DISCLAIMER" text="Use of this platform does not create a doctor-patient relationship. Content is for informational, educational, and peer support purposes only. Not an emergency service." />
-        <GateSection icon={EyeOff} title="ZERO TOLERANCE" text="Absolute ban against abuse, harassment, promotion of violence, or privacy violations. Banning is immediate and permanent for violators." />
-        <GateSection icon={Users} title="MINOR PROTECTION" text="Independent use is for 18+. Minors must use ONLY under direct supervision of a parent or legal guardian." />
-      </div>
-
-      <button onClick={() => { SoundEngine.init(); onAccept(); }} className="w-full max-w-sm py-6 bg-white text-[#042116] rounded-[40px] font-black text-2xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter hover:bg-emerald-50">AGREE & CONTINUE</button>
-      
-      <div className="mt-10 flex gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400/40">
-        <button onClick={() => setLang('en')} className={lang === 'en' ? 'text-white border-b-2 border-white' : ''}>English</button>
-        <button onClick={() => setLang('te')} className={lang === 'te' ? 'text-white border-b-2 border-white' : ''}>తెలుగు</button>
-      </div>
-      <p className="mt-20 text-[10px] font-black uppercase tracking-widest opacity-30 italic leading-relaxed text-center">Copyright ©️ Ashokanmanas ™️ all rights are reserved</p>
-    </div>
-  );
-}
-
-function GateSection({ icon: Icon, title, text }) {
-  return (
-    <div className="p-5 bg-white/5 rounded-[35px] border border-white/10 flex gap-5 backdrop-blur-xl">
-      <Icon size={24} className="shrink-0 text-emerald-400 mt-1" />
-      <div><h4 className="text-[10px] font-black uppercase text-emerald-500 mb-1 tracking-widest">{title}</h4><p className="text-[11px] font-bold leading-tight opacity-90">{text}</p></div>
-    </div>
-  );
-}
-
-function HomeHub({ setHall, setView, lang, query }) {
-  return (
-    <div className="space-y-12 animate-in slide-in-from-bottom-10">
-      <div className="relative rounded-[70px] bg-gradient-to-br from-[#065F46] to-[#064E3B] p-12 text-center text-white shadow-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all"
-           onClick={() => { SoundEngine.init(); SoundEngine.playHeart(); }}>
-        <div className="absolute inset-0 opacity-10">
-           <svg width="100%" height="100%"><circle cx="50%" cy="50%" r="40%" fill="none" stroke="white" strokeWidth="1" className="animate-pulse" /></svg>
-        </div>
-        <div className="relative z-10 space-y-6">
-          <div className="w-32 h-32 bg-white/5 backdrop-blur-xl rounded-[45px] mx-auto flex items-center justify-center border border-white/10 shadow-2xl animate-pulse">
-            <Heart size={64} className="text-emerald-300 drop-shadow-[0_0_15px_rgba(110,231,183,0.5)]" fill="currentColor" />
+      <div className="relative z-10 w-full max-w-md">
+        <h1 className="text-5xl font-black tracking-tighter mb-8 text-white">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1>
+        
+        <div className="bg-black/30 backdrop-blur-xl border border-white/10 rounded-[30px] p-6 text-left space-y-6 mb-8 max-h-[40vh] overflow-y-auto shadow-inner">
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-red-400">Disclaimer</h3>
+            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p>
           </div>
-          <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">Safe Interaction</h2>
-          <div className="h-1.5 w-24 bg-emerald-400 mx-auto rounded-full"></div>
-          <p className="text-[10px] text-emerald-200/40 font-black uppercase tracking-[0.5em] italic">Click the forest heart</p>
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400">Zero Tolerance</h3>
+            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Minor Guidance</h3>
+            <p className="text-[11px] text-gray-400 leading-relaxed font-medium">Intended for users 18+. Minors must access this platform strictly under Parental Guidance.</p>
+          </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {HALLS.filter(h => (lang === 'en' ? h.label : h.te).toLowerCase().includes(query.toLowerCase())).map(h => (
-          <button key={h.id} onClick={() => setHall(h)} className="p-8 bg-white dark:bg-[#064E3B]/20 rounded-[50px] shadow-sm hover:shadow-2xl transition-all text-left flex items-center gap-6 border border-emerald-50 dark:border-emerald-900 group">
-            <div className={`p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-900 text-emerald-600 shadow-sm group-hover:scale-110 transition-transform`}><h.icon size={32} /></div>
-            <h3 className="font-black text-xl uppercase tracking-tighter leading-none text-emerald-950 dark:text-emerald-50">{lang === 'en' ? h.label : h.te}</h3>
-          </button>
-        ))}
-        <button onClick={() => setView('legal')} className="p-10 bg-slate-50 dark:bg-slate-900 rounded-[55px] flex items-center gap-6 text-left border border-slate-200 col-span-1 md:col-span-2 hover:bg-white transition-all">
-          <div className="p-5 bg-white dark:bg-slate-800 rounded-[28px] text-slate-600 shadow-md"><Shield size={36}/></div>
-          <div><h3 className="font-black text-2xl uppercase tracking-tighter leading-none text-slate-900 dark:text-white">Legal Guide<sup className="text-xs ml-1 font-bold italic">™</sup></h3><p className="text-[10px] opacity-40 uppercase font-black mt-2 tracking-widest italic">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p></div>
+        <div className="space-y-4">
+          <label className="flex items-center justify-center gap-3 p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-emerald-500/20 group"><div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${agreed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600'}`}>{agreed && <CheckSquare size={12} className="text-black"/>}</div><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-emerald-200">I have read and accept the Protocol</span><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="hidden" /></label>
+          <button onClick={() => { SoundEngine.playClick(); onAccept(); }} disabled={!agreed} className={`w-full py-5 rounded-[35px] font-black text-lg shadow-2xl transition-all uppercase tracking-widest ${agreed ? 'bg-emerald-500 text-[#042116] hover:bg-emerald-400 hover:scale-[1.02]' : 'bg-white/5 text-gray-700 cursor-not-allowed'}`}>AGREE & ENTER</button>
+        </div>
+        
+        <p className="text-[9px] text-white/20 uppercase tracking-widest mt-10">Copyright © AshokaManas™. All rights reserved.</p>
+      </div>
+    </div>
+  );
+}
+
+// --- HOME HUB ---
+function HomeHub({ setHall, setView, openMitra, userData, notify }) {
+  const isPaid = userData?.role === 'patron' || userData?.role === 'doctor';
+  const lockedClick = (feature) => { notify(`${feature} requires Contribution.`); setView('profile'); };
+
+  return (
+    <div className="space-y-8 pb-32">
+      <div onClick={() => { SoundEngine.playHeart(); }} className="relative rounded-[60px] bg-gradient-to-br from-[#064E3B] to-[#022c22] p-10 text-center text-white shadow-2xl overflow-hidden cursor-pointer group border border-emerald-500/20 active:scale-95 transition-all duration-500">
+        <Heart size={48} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.6)] animate-pulse mx-auto mb-6" fill="currentColor" />
+        <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Sanctuary</h2>
+        <p className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[0.4em] mt-4">Tap to Breathe</p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => {SoundEngine.playClick(); isPaid ? openMitra() : lockedClick("Deep Mitra");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#1e1b4b]/40 border-indigo-500/20 hover:border-indigo-500/50">
+            {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center"><Lock className="text-white opacity-80"/></div>}
+            <div className="absolute top-4 right-4 p-2 rounded-full bg-indigo-500/20 text-indigo-300"><Sparkles size={14}/></div>
+            <h3 className="text-lg font-black uppercase tracking-tight mt-6 text-indigo-100">Trusted Companion</h3>
+            <p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-indigo-400">AI Friend</p>
+        </button>
+        <button onClick={() => {SoundEngine.playClick(); isPaid ? setView('master-deck') : lockedClick("Wisdom Deck");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#451a03]/40 border-amber-500/20 hover:border-amber-500/50">
+            {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center"><Lock className="text-white opacity-80"/></div>}
+            <div className="absolute top-4 right-4 p-2 rounded-full bg-amber-500/20 text-amber-300"><Crown size={14}/></div>
+            <h3 className="text-lg font-black uppercase tracking-tight mt-6 text-amber-100">Master Deck</h3>
+            <p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-amber-500">Ancient Wisdom</p>
         </button>
       </div>
-    </div>
-  );
-}
-
-function HallView({ hall, onBack, userData, user, lang, query, setView }) {
-  const [posts, setPosts] = useState([]);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    if (hall.expertOnly && !userData?.isExpert) return;
-    if (!isFirebaseInitialized) return;
-    const qPosts = collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages');
-    return onSnapshot(qPosts, (snap) => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
-    }, (err) => console.error(err));
-  }, [hall.id, hall.expertOnly, userData?.isExpert]);
-
-  const send = async () => {
-    if (!msg.trim() || !isFirebaseInitialized || !user) return;
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), {
-      uid: user.uid, text: msg, createdAt: serverTimestamp(), reported: false, likes: 0, pinned: false
-    });
-    setMsg(""); SoundEngine.playHeart();
-  };
-
-  const welcome = WELCOME_MESSAGES[hall.id] || { en: "", te: "" };
-
-  if (hall.expertOnly && !userData?.isExpert) return <ExpertGate setView={setView} onBack={onBack} />;
-
-  return (
-    <div className="space-y-8 animate-in slide-in-from-right-10 duration-500 pb-32">
-      <button onClick={onBack} className="text-emerald-800 font-black uppercase text-xs flex items-center gap-2">← Back to Hub</button>
-      <div className="p-8 bg-emerald-900 text-white rounded-[60px] shadow-2xl relative overflow-hidden border-4 border-white/5 animate-in zoom-in duration-700">
-         <div className="relative z-10">
-            <h3 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-50 flex items-center gap-2"><Sparkles size={14}/> Welcome Guidance</h3>
-            <p className="font-bold text-lg md:text-xl leading-relaxed italic">"{lang === 'en' ? welcome.en : welcome.te}"</p>
-         </div>
-         <hall.icon className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 rotate-12" />
-      </div>
-      <div className="p-10 bg-white dark:bg-[#064E3B] rounded-[60px] border-b-[16px] border-emerald-500 shadow-xl relative overflow-hidden">
-        <div className="relative z-10 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`p-4 rounded-2xl bg-emerald-50 text-emerald-600`}><hall.icon size={28}/></div>
-              <h2 className="text-3xl font-black uppercase tracking-tighter">{lang === 'en' ? hall.label : hall.te}</h2>
-            </div>
-            <Pin className="text-emerald-400" size={24} />
-          </div>
-          <div className={`bg-emerald-50 dark:bg-emerald-950 p-6 rounded-[35px] border border-emerald-100 flex gap-4 items-start shadow-inner`}>
-            <AlertCircle className="text-emerald-600 shrink-0 mt-1" size={24} />
-            <p className="text-sm font-bold leading-tight text-emerald-900 dark:text-emerald-100">{hall.sticky}</p>
-          </div>
-        </div>
-      </div>
-      <div className="space-y-6">
-        <div className="flex gap-4 p-6 bg-white dark:bg-emerald-900/30 rounded-[45px] shadow-sm border border-emerald-100">
-          <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share anonymously..." className="flex-1 bg-transparent border-none outline-none resize-none h-20 text-sm font-bold" />
-          <button onClick={send} className="self-end p-5 bg-emerald-800 text-white rounded-3xl shadow-xl active:scale-95"><Send size={24}/></button>
-        </div>
-        <div className="space-y-4">
-          {posts.filter(p => !p.reported && p.text.toLowerCase().includes(query.toLowerCase())).map(p => (
-            <div key={p.id} className={`p-8 bg-white dark:bg-emerald-950/20 rounded-[45px] shadow-sm border border-emerald-50 flex flex-col gap-4 group ${p.pinned ? 'border-l-[12px] border-l-emerald-500' : ''}`}>
-              <div className="flex justify-between items-start">
-                <p className="text-base font-bold leading-relaxed">{p.text}</p>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {userData?.isExpert && <button onClick={() => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { pinned: !p.pinned })} className="p-2 text-emerald-500"><Pin size={18}/></button>}
-                  {p.uid === user?.uid && <button onClick={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id))} className="p-2 text-red-400"><Trash2 size={18}/></button>}
-                  <button onClick={() => updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { reported: true })} className="p-2 text-red-300"><Flag size={18}/></button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between pt-4 border-t border-black/5">
-                <div className="flex items-center gap-4">
-                   <button onClick={() => isFirebaseInitialized && updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', p.id), { likes: (p.likes || 0) + 1 })} className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase transition-colors hover:text-emerald-400"><ThumbsUp size={14}/> Support {p.likes || 0}</button>
-                   <span className="text-[9px] font-black opacity-30 uppercase">{p.createdAt ? new Date(p.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'now'}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LabView({ lang, query }) {
-  const [active, setActive] = useState(null);
-  const welcome = WELCOME_MESSAGES.Lab;
-  if (active === 'burn') return <BurnVault onBack={() => setActive(null)} />;
-  if (active === 'breath') return <PranaBreath onBack={() => setActive(null)} />;
-  if (active === 'pancha') return <Panchabhoota onBack={() => setActive(null)} lang={lang} />;
-  return (
-    <div className="space-y-10 pb-32 animate-in fade-in">
-       <div className="text-center mb-6"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Healing Lab<sup className="text-lg italic font-bold">™</sup></h2></div>
-       <div className="p-10 bg-emerald-900 text-white rounded-[70px] shadow-2xl relative overflow-hidden border-4 border-white/5">
-         <div className="relative z-10">
-            <h3 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-50 flex items-center gap-2"><Sparkles size={14}/> Laboratory Guidance</h3>
-            <p className="font-bold text-lg md:text-xl leading-relaxed italic">"{lang === 'en' ? welcome.en : welcome.te}"</p>
-         </div>
-       </div>
-       <div className="grid grid-cols-1 gap-6">
-         <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={() => setActive('burn')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
-         <StationCard icon={Wind} title="Prana Breath" te="ప్రాణ శ్వాస" onClick={() => setActive('breath')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
-         <StationCard icon={Sparkles} title="Panchabhoota" te="పంచభూతాలు" onClick={() => setActive('pancha')} color="bg-emerald-50/50 dark:bg-emerald-900/10" />
-       </div>
-    </div>
-  );
-}
-
-function BurnVault({ onBack }) {
-  const [t, setT] = useState(""); const [burn, setB] = useState(false);
-  const handle = () => { if(!t.trim()) return; SoundEngine.init(); SoundEngine.playBurn(); setB(true); setTimeout(()=>{setT("");setB(false);},3000); };
-  return (
-    <div className="bg-[#04110C] p-12 rounded-[70px] text-center min-h-[500px] flex flex-col justify-center relative overflow-hidden shadow-2xl border-4 border-white/5">
-      <button onClick={onBack} className="absolute top-10 left-10 text-white/30 font-black text-xs uppercase tracking-widest z-50">Back</button>
-      <div className={`transition-all duration-1000 ${burn ? 'opacity-0 scale-150 blur-3xl' : 'opacity-100'}`}>
-        <Flame className="mx-auto text-orange-500 mb-10 animate-pulse" size={100} />
-        <h3 className="text-white font-black text-3xl uppercase mb-10 tracking-tighter leading-none">The Burn Vault</h3>
-        <textarea value={t} onChange={e=>setT(e.target.value)} className="w-full p-10 bg-white/5 text-white rounded-[60px] outline-none border border-white/10 resize-none h-48 font-bold text-xl" placeholder="Release trauma here..." />
-        <button onClick={handle} className="w-full py-8 bg-orange-600 text-white rounded-[50px] font-black text-2xl mt-12 shadow-2xl active:scale-95 transition-all">RELEASE</button>
-      </div>
-      {burn && <div className="absolute inset-0 flex items-center justify-center text-[180px] animate-bounce z-40">🔥</div>}
-    </div>
-  );
-}
-
-function PranaBreath({ onBack }) {
-  const [ph, setPh] = useState("Ready"); const [c, setC] = useState(0); const [s, setS] = useState(1);
-  const start = () => {
-    setPh("Inhale"); setS(1.8); let count = 1; setC(count);
-    const i = setInterval(() => { 
-      count++; if(count <= 4) setC(count); 
-      else { 
-        clearInterval(i); setPh("Hold"); let h=1; setC(h); 
-        const hi = setInterval(()=>{ 
-          h++; if(h<=7) setC(h); 
-          else { 
-            clearInterval(hi); setPh("Exhale"); setS(1); let e=1; setC(e); 
-            const ei=setInterval(()=>{ e++; if(e<=8) setC(e); else { clearInterval(ei); setPh("Ready"); setC(0); } }, 1000); 
-          } 
-        }, 1000); 
-      } 
-    }, 1000);
-  };
-  return (
-    <div className="bg-white dark:bg-[#064E3B] p-16 rounded-[80px] shadow-2xl text-center relative border border-emerald-50 dark:border-white/5">
-      <button onClick={onBack} className="absolute top-10 left-10 text-emerald-800 font-black text-xs uppercase tracking-widest">Back</button>
-      <div className="flex justify-center py-20">
-        <div className="bg-blue-100 dark:bg-emerald-950 rounded-full flex items-center justify-center transition-all duration-[4000ms] border-[12px] border-blue-50 dark:border-emerald-800 shadow-inner" style={{ width: `${220 * s}px`, height: `${220 * s}px` }}>
-          <p className="text-8xl font-black text-blue-600 dark:text-emerald-300 drop-shadow-md">{c > 0 ? c : ''}</p>
-        </div>
-      </div>
-      <h3 className="text-6xl font-black text-blue-950 dark:text-emerald-50 uppercase tracking-tighter leading-none">{ph}</h3>
-      {ph === "Ready" && <button onClick={start} className="px-20 py-8 bg-blue-600 text-white rounded-full font-black text-2xl mt-16 shadow-2xl active:scale-95">START 4-7-8</button>}
-    </div>
-  );
-}
-
-function Panchabhoota({ onBack, lang }) {
-  const els = [
-    { id: 'earth', icon: Mountain, name: 'Earth (Prithvi)', te: 'భూమి', f: 128, d: "Stability." },
-    { id: 'water', icon: Droplets, name: 'Water (Jala)', te: 'జలం', f: 396, d: "Fluidity." },
-    { id: 'fire', icon: Sun, name: 'Fire (Agni)', te: 'అగ్ని', f: 639, d: "Transformation." },
-    { id: 'air', icon: Fan, name: 'Air (Vayu)', te: 'వాయువు', f: 852, d: "Movement." },
-    { id: 'space', icon: Sparkles, name: 'Space (Akasha)', te: 'ఆకాశం', f: 963, d: "Consciousness." }
-  ];
-  return (
-    <div className="space-y-6 pb-24 animate-in zoom-in">
-      <button onClick={onBack} className="text-emerald-800 font-black uppercase text-xs">← Back</button>
-      <div className="grid grid-cols-1 gap-4">
-        {els.map(el => (
-          <button key={el.id} onClick={() => { SoundEngine.init(); SoundEngine.playFreq(el.f, 'triangle', 1.5); }} 
-                  className="p-10 bg-emerald-50 dark:bg-emerald-950 rounded-[60px] flex items-center gap-10 shadow-sm hover:scale-105 active:scale-95 transition-all text-left border border-emerald-100 group">
-            <div className="p-6 bg-white rounded-[35px] shadow-lg group-hover:rotate-6 transition-transform"><el.icon size={36} className="text-emerald-600" /></div>
-            <div>
-              <h3 className="font-black uppercase text-2xl leading-none text-emerald-950 dark:text-emerald-100">{lang === 'en' ? el.name : el.te}</h3>
-              <p className={`text-[10px] font-bold mt-2 text-emerald-600 opacity-40 uppercase tracking-widest`}>{el.d}</p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {HALLS.map(h => (
+          <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
+            <div className="p-4 rounded-2xl shadow-inner bg-white/10 text-emerald-400"><h.icon size={24} /></div>
+            <div><h3 className="font-black text-lg uppercase tracking-tight leading-none text-emerald-50">{h.label}</h3></div>
           </button>
         ))}
       </div>
@@ -498,210 +312,340 @@ function Panchabhoota({ onBack, lang }) {
   );
 }
 
-function GamesView({ lang }) {
-  const [active, setActive] = useState(null);
-  if (active === 'snake') return <SnakeGame onBack={() => setActive(null)} />;
-  if (active === 'bubbles') return <BubblePop onBack={() => setActive(null)} />;
-  if (active === 'mandala') return <MandalaArt onBack={() => setActive(null)} lang={lang} />;
+// --- ADMIN / FOUNDER STUDIO (BROADCAST + WHISPER WIRED) ---
+function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers }) {
+  const [tab, setTab] = useState('seed');
+  const [jsonInput, setJsonInput] = useState("");
+  const [newCard, setNewCard] = useState({ title: "", hurdle: "", ancestralRoot: "", awarenessLogic: "", action: "" });
+  
+  const saveToCloud = async (collectionName, docName, data) => {
+      if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; }
+      try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); }
+  };
+  const depositSeeds = () => { try { const data = JSON.parse(jsonInput); if(Array.isArray(data)) { setCards(prev => [...prev, ...data]); saveToCloud('config', 'master_deck', { cards: [...cards, ...data] }); notify("Seeds Planted."); setJsonInput(""); } } catch(e) { notify("Invalid JSON"); } };
+  const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
+  const exileUser = (uid) => { setUsers(users.map(u => u.uid === uid ? {...u, status:'banned'} : u)); notify("User Exiled"); };
+  const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs });
+  const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona });
+  const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
+
   return (
-    <div className="grid grid-cols-1 gap-8 pb-32 animate-in fade-in">
-      <div className="text-center mb-4"><h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Mind Games<sup className="text-lg italic font-bold">™</sup></h2></div>
-      <GameBtn icon={Gamepad2} title="Nature Snake" desc="Classic nature-toned calm." color="bg-emerald-50 dark:bg-emerald-900/10" onClick={() => setActive('snake')} />
-      <GameBtn icon={Zap} title="Bubble Pop" desc="Tap to hear the pop." color="bg-blue-50 dark:bg-blue-900/10" onClick={() => setActive('bubbles')} />
-      <GameBtn icon={Brush} title="Mandala Art" desc="Sacred geometry tracing." color="bg-purple-50 dark:bg-purple-900/10" onClick={() => setActive('mandala')} />
+    <div className="pb-20">
+      <h2 className="text-xl font-black uppercase mb-6 text-white">Founder Studio</h2>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {['seed', 'law', 'brain', 'sentinel', 'editor'].map(t => (
+          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>
+        ))}
+      </div>
+      {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
+      {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
+      {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
+      {tab === 'sentinel' && ( 
+        <div className="space-y-4">
+          <h3 className="text-xs uppercase font-bold text-red-500">Global Alert</h3>
+          <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/>
+          <button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
+          
+          <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
+          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+             {(whispers||[]).map((w,i)=><div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400">{w.text}</div>)}
+             {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
+          </div>
+
+          <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
+          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+            {users.map((u, i) => (
+              <div key={i} className="p-4 rounded-xl border flex justify-between items-center bg-[#111] border-white/10">
+                <span className="text-xs font-mono text-white">{u.uid} <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.status})</span></span>
+                {u.status === 'active' && <button onClick={() => exileUser(u.uid)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Exile</button>}
+              </div>
+            ))}
+          </div>
+        </div> 
+      )}
+      {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.hurdle} onChange={e=>setNewCard({...newCard, hurdle:e.target.value})} placeholder="Hurdle" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.ancestralRoot} onChange={e=>setNewCard({...newCard, ancestralRoot:e.target.value})} placeholder="Root" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
     </div>
   );
 }
 
-function SnakeGame({ onBack }) {
-  const [s, setS] = useState([{x:10,y:10}]); const [f, setF] = useState({x:5,y:5}); const [d, setD] = useState({x:0,y:-1}); const [go, setGo] = useState(false);
-  const move = useCallback(() => {
-    const head = { x: s[0].x+d.x, y: s[0].y+d.y };
-    if (head.x<0 || head.x>=20 || head.y<0 || head.y>=20 || s.find(b=>b.x===head.x&&b.y===head.y)) { setGo(true); return; }
-    const ns = [head,...s]; if (head.x===f.x&&head.y===f.y) { setF({x:Math.floor(Math.random()*20),y:Math.floor(Math.random()*20)}); SoundEngine.playHeart(); } else ns.pop(); setS(ns);
-  }, [s,d,f]);
-  useEffect(() => { if (!go) { const i = setInterval(move, 200); return () => clearInterval(i); } }, [move,go]);
+// --- PROFILE & SUSTENANCE ---
+function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify }) {
+  const [agreed, setAgreed] = useState(false);
+  const [showPay, setShowPay] = useState(false);
+  const [key, setKey] = useState("");
+  const [whisper, setWhisper] = useState("");
+
+  const verify = () => { if (key === DOCTOR_KEY) { setUserData(p => ({...p, role: 'doctor'})); localStorage.setItem('ashoka_role', 'doctor'); notify("Verified."); setKey(""); } else { notify("Invalid"); } };
+  const handleAdmin = () => { if (key === ADMIN_KEY) { setView('admin'); setKey(""); } else { notify("Invalid Admin Key"); } };
+  const sendWhisper = () => { notify("Sent to Founder"); setWhisper(""); };
+  const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
+  const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
+  
+  // PLAY STORE SIMULATION
+  const buyAccess = () => {
+      notify("Play Store: Connecting...");
+      setTimeout(() => {
+          setUserData(p => ({...p, role: 'patron'}));
+          localStorage.setItem('ashoka_role', 'patron');
+          notify("Purchase Successful! (Simulated)");
+          setShowPay(false);
+      }, 1500);
+  };
+
+  const sustText = {
+    en: "We are a community-supported space designed for clarity and peace. AshokaManas was built to help you navigate daily stress through self-awareness and proven techniques. We focus on education and peer support.\n\nWhat This Unlocks:\n1. Master Wisdom Deck\n2. Trusted Companion AI\n3. Wellness Tools\n\nYour Contribution:\nThis platform is ad-free and privacy-focused. Your one-time contribution supports the ongoing maintenance, research, and technical costs to keep this space open and secure for years to come.",
+    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక. రోజువారీ ఒత్తిడిని అర్థం చేసుకోవడానికి మరియు వాటిని దాటడానికి అవసరమైన 'అవగాహన' (Awareness) కల్పించడమే మా లక్ష్యం.\n\nమీకు లభించేవి:\n1. మాస్టర్ విస్డమ్ డెక్\n2. విశ్వసనీయ మిత్ర (AI)\n3. వెల్నెస్ టూల్స్\n\nమీ సహకారం:\nఈ వేదికలో ఎలాంటి ప్రకటనలు (Ads) ఉండవు. మీ ఈ సహకారం, రాబోయే సంవత్సరాల్లో ఈ ప్లాట్‌ఫామ్‌ను నడపడానికి ఉపయోగపడుతుంది."
+  };
+  
+  const refundText = {
+    en: "A Note on Refunds:\nBecause AshokaManas is a digital sanctuary, we unlock our entire library of Wisdom, Tools, and AI support for you the moment you join. Since these resources are digital and cannot be 'returned' once seen, this contribution is final and non-refundable.",
+    te: "రీఫండ్ పాలసీ (ముఖ్య గమనిక):\nఅశోకమనస్ ఒక డిజిటల్ వేదిక. మీరు చేరగానే మా విజ్ఞానం, టూల్స్ మరియు AI సేవలు అన్నీ మీకు వెంటనే అందుబాటులోకి వస్తాయి. ఒకసారి చూసిన సమాచారాన్ని వెనక్కి ఇవ్వలేము కాబట్టి, ఈ రుసుము వెనక్కి ఇవ్వబడదు (Non-Refundable)."
+  };
+
   return (
-    <div className="bg-[#051510] p-10 rounded-[80px] text-center relative max-w-sm mx-auto shadow-2xl border-4 border-emerald-900">
-      <button onClick={onBack} className="absolute top-8 left-8 text-white/30 font-black text-xs uppercase z-50">Back</button>
-      <div className="grid w-full aspect-square bg-[#062419] rounded-[40px] overflow-hidden" style={{ gridTemplateColumns: 'repeat(20, 1fr)', gridTemplateRows: 'repeat(20, 1fr)' }}>
-        {Array.from({length:400}).map((_,i) => {
-          const x=i%20; const y=Math.floor(i / 20); const isS=s.find(b=>b.x===x&&b.y===y); const isF=f.x===x&&f.y===y;
-          return <div key={i} className={`w-full h-full ${isS?'bg-emerald-400':isF?'bg-red-500 rounded-full scale-75 animate-pulse':''}`} />;
+    <div className="pb-24 space-y-8">
+      <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white">
+        <User size={48} className="mx-auto mb-2"/>
+        <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
+        <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
+      </div>
+
+      <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
+        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Support Mission":"మద్దతు ఇవ్వండి"}</h3></div>
+        {!showPay ? (
+          <button onClick={() => setShowPay(true)} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Open Contribution</button>
+        ) : (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl h-40 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap bg-black/20 text-amber-100/80">
+               {lang==='en' ? sustText.en : sustText.te}
+               <br/><br/>
+               <span className="text-red-300 font-bold">{lang==='en' ? refundText.en : refundText.te}</span>
+            </div>
+            <label className="flex gap-2 items-center text-xs font-bold text-amber-200"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}/> I Accept Non-Refundable Policy</label>
+            <button onClick={buyAccess} disabled={!agreed} className={`w-full py-4 rounded-xl font-black uppercase text-sm ${agreed ? 'bg-amber-600 text-black shadow-lg hover:bg-amber-500' : 'bg-white/5 text-gray-500 cursor-not-allowed'}`}>
+                Get Lifetime Access (₹999 / $49)
+            </button>
+            <button className="text-[10px] text-amber-500/50 uppercase w-full mt-2">Restore Purchase</button>
+          </div>
+        )}
+      </div>
+
+      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
+        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Restore / Admin</h3>
+        <div className="flex gap-2 mb-4">
+          <input value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="flex-1 p-3 rounded-xl text-center font-bold text-xs outline-none bg-black/30 text-white" />
+          <button onClick={verify} className="px-4 bg-emerald-800 text-white rounded-xl text-xs font-bold">Verify</button>
+        </div>
+        <p className="text-[9px] mb-4 text-center text-gray-500">Lost your device? Enter Access Key to Restore.</p>
+        <button onClick={() => { if(key === ADMIN_KEY) setView('admin'); else notify("Admin Key Required"); }} className="w-full py-3 bg-indigo-900 text-white rounded-xl font-bold text-xs uppercase">Founder Console</button>
+      </div>
+      
+      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
+        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Whisper to Founder</h3>
+        <div className="flex gap-2">
+          <input value={whisper} onChange={e => setWhisper(e.target.value)} placeholder="Private Feedback..." className="flex-1 p-3 rounded-xl text-xs outline-none bg-black/30 text-white" />
+          <button onClick={sendWhisper} className="px-4 bg-white/10 text-white rounded-xl"><Send size={14}/></button>
+        </div>
+      </div>
+
+      <div className="text-center">
+         <button onClick={deleteAccount} className="text-red-500 text-xs font-bold uppercase underline">Delete Identity</button>
+      </div>
+    </div>
+  );
+}
+
+// --- DEEP MITRA AI ---
+function DeepMitra({ onBack, persona, apiKey, userData, setView, notify }) {
+  const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
+  const [txt, setTxt] = useState("");
+  
+  if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
+
+  const reply = async () => {
+    if(!txt.trim()) return;
+    setMsgs(p => [...p, {role: 'user', text: txt}]);
+    
+    // MEDICAL FILTER
+    const t = txt.toLowerCase();
+    let response = "I hear you. Tell me more.";
+    if (t.includes("diagnos") || t.includes("medic") || t.includes("prescrip")) response = "I am a wise friend, not a doctor. I cannot provide medical diagnosis or prescriptions. Please consult a professional.";
+    else if(t.includes("sad")) response = "Sadness is a cloud. It passes. What triggered this?";
+    else if(t.includes("anxious")) response = "Take one breath. Come back to now.";
+    else if(t.includes("suicide") || t.includes("die")) response = "Please call 108 immediately. You are valuable.";
+    
+    setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: response}]), 500);
+    setTxt("");
+  };
+
+  return (
+    <div className="fixed inset-0 z-[600] backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom-10 bg-[#020617]/95">
+      <div className="p-4 border-b flex justify-between items-center bg-black/20 border-white/10">
+        <div className="flex items-center gap-3"><div className="p-2 bg-indigo-600 rounded-lg"><BrainCircuit size={18} className="text-white"/></div><div><h3 className="text-sm font-black uppercase tracking-wider text-white">Trusted Companion</h3><p className="text-[9px] text-indigo-400">Safe Space AI</p></div></div>
+        <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10"><X size={18} className="text-gray-400"/></button>
+      </div>
+      <div className="flex-1 overflow-y-auto space-y-4 p-4">
+        {msgs.map((m, i) => (
+          <div key={i} className={`p-4 rounded-2xl max-w-[80%] text-sm font-medium ${m.role === 'user' ? 'ml-auto bg-indigo-600 text-white' : 'bg-white/10 text-gray-200'}`}>{m.text}</div>
+        ))}
+      </div>
+      <div className="p-4 border-t flex gap-2 bg-black/40 border-white/10">
+        <input value={txt} onChange={e => setTxt(e.target.value)} className="flex-1 p-3 rounded-xl outline-none bg-white/10 text-white border-white/5" placeholder="Type..." />
+        <button onClick={reply} className="p-3 bg-indigo-600 text-white rounded-xl"><Send size={18}/></button>
+      </div>
+    </div>
+  );
+}
+
+function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
+  const [exp, setExp] = useState(null);
+  // UNLOCK FOR PATRON OR DOCTOR
+  const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
+  if (!isUnlocked) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-amber-500"/><h2 className="text-xl font-bold">Ancient Wisdom</h2><p className="text-xs opacity-60">Master Deck requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-amber-600 rounded-full text-xs font-bold text-black">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
+
+  return (
+    <div className="min-h-screen p-4 bg-black text-amber-50">
+      <div className="flex justify-between items-center mb-8"><h2 className="text-xl font-black uppercase">Master Deck</h2><button onClick={onBack}><X/></button></div>
+      <div className="space-y-6">
+        {(cards || []).map(c => {
+           let titleEn = c.title || "Unknown"; if (titleEn.includes("|")) { titleEn = titleEn.split("|")[0]; }
+           return (
+             <div key={c.id} className="p-6 rounded-[30px] border bg-[#1c1204] border-amber-900/30">
+               <h3 className="text-lg font-black uppercase mb-2">{titleEn}</h3>
+               <p className="text-xs opacity-60 mb-4 uppercase tracking-widest">{c.hurdle}</p>
+               {exp === c.id ? (
+                 <div className="space-y-4 pt-4 border-t border-amber-500/20 text-sm leading-relaxed animate-in fade-in">
+                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Root</strong> {c.ancestralRoot}</p>
+                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Logic</strong> {c.awarenessLogic}</p>
+                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Action</strong> {c.action}</p>
+                   <button onClick={() => setExp(null)} className="text-xs opacity-50 uppercase">Close</button>
+                 </div>
+               ) : ( <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl">Read</button> )}
+             </div>
+           );
         })}
       </div>
-      <div className="mt-10 grid grid-cols-3 gap-4 w-48 mx-auto pb-4">
-        <div/><button onClick={()=>setD({x:0,y:-1})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">↑</button><div/>
-        <button onClick={()=>setD({x:-1,y:0})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">←</button>
-        <button onClick={()=>setD({x:0,y:1})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">↓</button>
-        <button onClick={()=>setD({x:1,y:0})} className="p-5 bg-emerald-800 rounded-3xl text-white shadow-xl active:scale-90 transition-transform text-2xl font-black">→</button>
-      </div>
-      {go && <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center rounded-[80px] z-[60]"><p className="text-white font-black uppercase text-3xl mb-10">Game Over</p><button onClick={()=>{setS([{x:10,y:10}]);setGo(false);}} className="px-16 py-5 bg-emerald-600 text-white rounded-full font-black text-xl shadow-2xl">RESTART</button></div>}
     </div>
   );
 }
 
-function BubblePop({ onBack }) {
-  const [b, setB] = useState(Array.from({length:12},(_,i)=>({id:i,x:Math.random()*80,y:Math.random()*80})));
-  const pop = (id) => { 
-    SoundEngine.init(); SoundEngine.playPop(); 
-    setB(p => p.filter(x => x.id !== id)); 
-    setTimeout(() => setB(p => [...p, {id: Date.now(), x: Math.random()*80, y: Math.random()*80}]), 1200); 
-  };
-  return (
-    <div className="bg-blue-50/50 dark:bg-blue-900/10 p-12 rounded-[80px] h-[600px] relative overflow-hidden shadow-inner border-2 border-blue-100/50">
-      <button onClick={onBack} className="absolute top-10 left-10 text-blue-400 font-black text-xs uppercase z-20">← Back</button>
-      {b.map(x => (
-        <button key={x.id} onClick={() => pop(x.id)} className="absolute w-28 h-28 bg-blue-400/20 rounded-full border-4 border-blue-400/40 flex items-center justify-center transition-all active:scale-0 shadow-lg cursor-pointer z-10" style={{left: `${x.x}%`, top: `${x.y}%`}}>
-          <div className="w-8 h-8 bg-white/30 rounded-full"></div>
-        </button>
-      ))}
-    </div>
-  );
-}
+// --- RESTORED TOOLS & GAMES (Persistent Chat Logic + Actions) ---
+function HallView({ hall, onBack, userData, user, lang, query, setView, setUserData, notify }) {
+  const [posts, setPosts] = useState(() => {
+     const saved = localStorage.getItem(`chat_${hall.id}`);
+     return saved ? JSON.parse(saved) : [];
+  }); 
+  const [msg, setMsg] = useState(""); const [replyTo, setReplyTo] = useState(null);
+  
+  useEffect(() => { 
+    if (hall.expertOnly && userData?.role !== 'doctor') return; 
+    if (!isFirebaseInitialized) return; 
+    const qPosts = collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'); 
+    return onSnapshot(qPosts, (snap) => {
+        const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt);
+        setPosts(fetched);
+        localStorage.setItem(`chat_${hall.id}`, JSON.stringify(fetched));
+    }); 
+  }, [hall, userData]);
 
-function MandalaArt({ onBack, lang }) {
-  const ref = useRef(null); const [d, setD] = useState(false);
-  const draw = (e) => {
-    if(!d) return; const c=ref.current; const ctx=c.getContext('2d'); const r=c.getBoundingClientRect();
-    const x = (e.clientX||(e.touches&&e.touches[0].clientX)) - r.left - c.width/2;
-    const y = (e.clientY||(e.touches&&e.touches[0].clientY)) - r.top - c.height/2;
-    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    for(let i=0;i<8;i++){ ctx.rotate(Math.PI/4); ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.stroke(); }
-  };
-  return (
-    <div className="bg-emerald-50 dark:bg-emerald-950/20 p-12 rounded-[80px] text-center relative shadow-inner border border-emerald-100">
-      <button onClick={onBack} className="absolute top-10 left-10 text-emerald-400 font-black text-xs uppercase tracking-widest z-20">Back</button>
-      <canvas ref={ref} width={340} height={340} onMouseDown={()=>setD(true)} onMouseUp={()=>setD(false)} onMouseMove={draw} onTouchStart={()=>setD(true)} onTouchEnd={()=>setD(false)} onTouchMove={draw} className="mx-auto bg-white rounded-full shadow-2xl border-[16px] border-emerald-50 cursor-crosshair mt-10 z-10" />
-      <button onClick={()=>ref.current.getContext('2d').clearRect(0,0,340,340)} className="mt-12 px-16 py-5 bg-emerald-900 text-white rounded-full font-black text-xs uppercase shadow-xl hover:bg-emerald-800 transition-all">Clear Canvas</button>
-    </div>
-  );
-}
-
-function LegalView({ lang, query }) {
-  return (
-    <div className="space-y-6 pb-40 animate-in fade-in">
-       <div className="text-center mb-12">
-          <h2 className="text-5xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-50">Legal Guide<sup className="text-lg italic font-bold">™</sup></h2>
-          <p className="text-[10px] font-black text-emerald-600/40 uppercase mt-2 tracking-widest italic text-center leading-relaxed">ashokamanas ™️ Copyright ©️ at ashokamanas ™️ all the rights reserved</p>
-       </div>
-       {LEGAL_CONTENT.filter(p => p.t.toLowerCase().includes(query.toLowerCase())).map((p, idx) => (
-         <LegalTile key={idx} title={p.t} text={p.m} />
-       ))}
-    </div>
-  );
-}
-
-function LegalTile({ title, text }) {
-  const [o, setO] = useState(false);
-  return (
-    <div className="bg-white dark:bg-emerald-950/30 rounded-[45px] border border-black/5 overflow-hidden shadow-sm hover:shadow-md transition-all">
-      <button onClick={()=>setO(!o)} className="w-full p-8 flex justify-between font-black uppercase text-sm tracking-widest text-emerald-950 dark:text-emerald-100 text-left items-center group">
-        <span>{title}</span>
-        <ChevronDown className={`transition-transform duration-500 ${o ? 'rotate-180' : ''}`} />
-      </button>
-      {o && <div className="p-10 border-t border-emerald-50 dark:border-emerald-900 text-[15px] text-gray-500 dark:text-emerald-400 leading-relaxed font-bold animate-in slide-in-from-top-4 whitespace-pre-wrap">{text}</div>}
-    </div>
-  );
-}
-
-function ProfileView({ userData, setView, user }) {
-  const [vCode, setVCode] = useState("");
-  const [adminCode, setAdminCode] = useState("");
-  const verify = async () => {
-    if (!isFirebaseInitialized || !user) return;
-    if (vCode === DOCTOR_KEY) {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { isExpert: true, level: 'Verified Expert' });
-      alert("Verified Expert badge granted.");
+  const send = async () => { 
+    if (!msg.trim()) return; 
+    const textToSend = replyTo ? `[Replying to: "${replyTo.text.substring(0, 20)}..."]\n${msg}` : msg; 
+    const currentUid = user?.uid || "guest_" + Date.now();
+    // Use Real Timestamp for local to prevent key errors
+    const tempId = "temp_" + Date.now();
+    const tempPost = { id: tempId, text: textToSend, uid: currentUid, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
+    
+    setPosts(prev => [tempPost, ...prev]);
+    localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
+    
+    setMsg(""); setReplyTo(null); SoundEngine.playClick();
+    if (isFirebaseInitialized && user) {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { uid: user.uid, text: textToSend, createdAt: serverTimestamp(), reported: false, likes: 0, pinned: false }); 
     }
   };
+  
+  const handleLike = (id, currentLikes) => { 
+    // Immediate Visual Feedback
+    setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p));
+    if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); 
+    SoundEngine.playClick(); 
+  };
+
+  const handleFlag = (id) => { if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { reported: true }); notify("Reported"); };
+  const handleDelete = (id) => { 
+      setPosts(posts.filter(p => p.id !== id));
+      notify("Deleted");
+      if(isFirebaseInitialized && !id.startsWith("temp")) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id)); 
+  };
+  const handlePin = (id, currentPin) => {
+     setPosts(posts.map(p => p.id === id ? {...p, pinned: !p.pinned} : p));
+     if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin });
+     notify(currentPin ? "Unpinned" : "Pinned");
+  };
+  
+  if (hall.expertOnly && userData?.role !== 'doctor') return <ExpertGate setView={setView} onBack={onBack} setUserData={setUserData} />;
+  
   return (
-    <div className="space-y-12 animate-in slide-in-from-bottom-10 pb-40">
-       <div className="bg-[#064E3B] text-white p-16 rounded-[100px] text-center shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 space-y-8">
-            <div className="w-28 h-28 bg-white/10 rounded-[45px] mx-auto flex items-center justify-center border border-white/20 shadow-inner"><User size={56} /></div>
-            <h2 className="text-6xl font-black uppercase tracking-tighter leading-none">Profile Status</h2>
-            <div className="grid grid-cols-2 gap-4 mt-8">
-              <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-4xl font-black leading-none">{userData?.streak || 0}</p><p className="text-[10px] uppercase font-black opacity-30 mt-2">Streak</p></div>
-              <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 shadow-sm"><p className="text-3xl font-black leading-none">{userData?.isExpert ? 'Expert' : 'Member'}</p><p className="text-[10px] uppercase font-black opacity-30 mt-2">Rank</p></div>
+    <div className="pb-24 space-y-4">
+      <button onClick={onBack} className="opacity-50 text-xs font-bold uppercase flex gap-2 text-white"><ArrowLeft size={14}/> Back</button>
+      <div className="p-8 bg-emerald-900 rounded-[40px] text-white">
+        <h2 className="text-2xl font-black uppercase mb-2">{hall.label}</h2>
+        <p className="text-sm opacity-80">{WELCOME_MESSAGES[hall.id]?.en}</p>
+      </div>
+      
+      <div className="p-4 rounded-[30px] border bg-white/5 border-white/5">
+        {replyTo && <div className="flex justify-between items-center bg-emerald-500/10 p-2 rounded mb-2"><span className="text-[10px] opacity-70">Replying to: {replyTo.text.substring(0,15)}...</span><button onClick={()=>setReplyTo(null)}><X size={12}/></button></div>}
+        <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share..." className="w-full bg-transparent border-none outline-none resize-none h-20 text-sm font-medium text-white" />
+        <div className="flex justify-end mt-2"><button onClick={send} className="p-3 bg-emerald-600 rounded-full text-white"><Send size={18}/></button></div>
+      </div>
+      
+      <div className="space-y-3">
+        {posts.map(p => (
+          <div key={p.id} className={`p-6 rounded-[35px] border bg-white/5 border-white/5 ${p.pinned ? 'border-l-4 border-l-emerald-500' : ''}`}>
+            <p className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{p.text}</p>
+            <div className="flex gap-4 mt-4 opacity-50 text-white items-center">
+              <button onClick={()=>handleLike(p.id, p.likes)} className="flex items-center gap-1 text-[10px] hover:text-emerald-400"><Heart size={12} className={p.likes > 0 ? "fill-white" : ""}/> {p.likes||0}</button>
+              <button onClick={()=>{setReplyTo(p); window.scrollTo({top:0, behavior:'smooth'});}} className="text-[10px] hover:text-blue-400"><Reply size={12}/></button>
+              <button onClick={()=>handleFlag(p.id)} className="text-[10px] hover:text-red-400"><Flag size={12}/></button>
+              {/* Show delete for owner OR Doctor (Expert) */}
+              {(p.uid === user?.uid || p.uid.startsWith("guest") || userData?.role === 'doctor') && <button onClick={()=>handleDelete(p.id)} className="text-[10px] hover:text-red-500"><Trash2 size={12}/></button>}
+              {userData?.role === 'doctor' && <button onClick={()=>handlePin(p.id, p.pinned)} className="text-[10px] hover:text-amber-400"><Pin size={12}/></button>}
             </div>
           </div>
-       </div>
-       <div className="bg-white dark:bg-emerald-950/20 p-12 rounded-[70px] shadow-xl border border-emerald-50">
-          <h3 className="text-3xl font-black uppercase flex items-center gap-3 text-emerald-950 dark:text-emerald-100"><ShieldCheck size={36} className="text-blue-500"/> Expert Verification</h3>
-          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-6">Enter key for private Clinical Hub access.</p>
-          <div className="mt-8 flex gap-4">
-             <input type="password" value={vCode} onChange={e => setVCode(e.target.value)} className="flex-1 p-6 bg-emerald-50 dark:bg-emerald-950 rounded-[35px] outline-none font-black text-center text-2xl border-none shadow-inner" placeholder="••••••••" />
-             <button onClick={verify} className="px-12 bg-emerald-800 text-white rounded-full font-black uppercase text-xs shadow-lg">Verify</button>
-          </div>
-       </div>
-       <div className="bg-white dark:bg-emerald-950/20 p-12 rounded-[70px] shadow-xl border border-emerald-50">
-          <h3 className="text-3xl font-black uppercase flex items-center gap-3 text-emerald-950 dark:text-emerald-50"><Settings size={36} className="text-emerald-500"/> Administrative</h3>
-          <div className="mt-8 flex gap-4">
-             <input type="password" value={adminCode} onChange={e => setAdminCode(e.target.value)} className="flex-1 p-6 bg-emerald-50 dark:bg-emerald-950 rounded-[35px] outline-none font-black text-center text-2xl" placeholder="••••" />
-             <button onClick={() => adminCode === ADMIN_KEY && setView('admin')} className="px-12 bg-emerald-900 text-white rounded-full font-black uppercase text-xs">Access</button>
-          </div>
-       </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function AdminView() {
+function LegalView({ docs }) { return <div className="space-y-4 pb-20"><h2 className="text-2xl font-black uppercase text-center text-white">Legal</h2>{docs.map((d,i)=><div key={i} className="p-6 rounded-[30px] border bg-white/5 border-white/10"><h3 className="font-bold text-xs mb-2 opacity-70 text-white">{d.t}</h3><p className="text-xs opacity-60 leading-relaxed text-white">{d.m}</p></div>)}</div>; }
+function LabView() { const [a, s] = useState(null); if(a==='b')return <BurnVault onBack={()=>s(null)}/>; if(a==='p')return <PranaBreath onBack={()=>s(null)}/>; if(a==='pa')return <Panchabhoota onBack={()=>s(null)}/>; return <div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-black text-center text-emerald-100 uppercase tracking-tight mb-8">Healing Lab</h2><StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/><StationCard icon={Wind} title="Breath" te="ప్రాణ" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/><StationCard icon={Sparkles} title="Pancha" te="పంచ" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/></div>; }
+function GamesView() { const [a, s] = useState(null); if(a==='s')return <SnakeGame onBack={()=>s(null)}/>; if(a==='m')return <MandalaArt onBack={()=>s(null)}/>; if(a==='b')return <BubblePop onBack={()=>s(null)}/>; return <div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-black text-center text-emerald-100 uppercase tracking-tight mb-8">Mind Games</h2><GameBtn icon={Flame} title="Snake" desc="Nature" onClick={()=>s('s')} color="bg-emerald-900/20 border-emerald-500/30"/><GameBtn icon={Brush} title="Mandala" desc="Art" onClick={()=>s('m')} color="bg-purple-900/20 border-purple-500/30"/><GameBtn icon={Zap} title="Bubbles" desc="Pop" onClick={()=>s('b')} color="bg-blue-900/20 border-blue-500/30"/></div>; }
+function NavBtn({ icon: Icon, active, onClick }) { return <button onClick={onClick} className={`p-4 rounded-[30px] transition-all duration-500 ${active ? 'bg-emerald-500 text-[#022c22] shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : 'text-emerald-500/30 hover:bg-white/5 hover:text-emerald-400'}`}><Icon size={24} /></button>; }
+function StationCard({ icon: Icon, title, te, onClick, color }) { return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te}</p></div></button>; }
+function GameBtn({ icon: Icon, title, desc, onClick, color }) { return <button onClick={onClick} className={`p-8 ${color} border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{desc}</p></div></button>; }
+function BurnVault({ onBack }) { const [t,T]=useState(""); const [b,B]=useState(false); return <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30"><button onClick={onBack} className="text-gray-500 mb-10 text-[10px] uppercase font-bold tracking-widest">Back</button>{!b ? ( <><div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div><textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." /><button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button></> ) : <div className="text-8xl animate-bounce">🔥</div>}</div>; }
+function PranaBreath({ onBack }) { const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); const start = () => { T("Inhale"); S(1.5); let i = 1; const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); } }, 1000); } }, 1000); } }, 1000); }; return <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20"><button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button><div className="flex justify-center py-20"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div><button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button></div>; }
+function Panchabhoota({ onBack }) { return <div className="space-y-4 pb-20"><button onClick={onBack} className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 block">Back</button>{[{t:'Earth (396Hz)',i:Mountain,f:396},{t:'Water (417Hz)',i:Droplets,f:417},{t:'Fire (528Hz)',i:Flame,f:528},{t:'Air (639Hz)',i:Wind,f:639},{t:'Space (963Hz)',i:Sparkles,f:963}].map(e=>(<div key={e.t} onClick={()=>SoundEngine.playAncient(e.f)} className="p-8 border rounded-[40px] flex items-center gap-6 active:scale-95 transition-all cursor-pointer bg-white/5 border-white/5 hover:bg-emerald-900/20"><e.i size={24} className="text-emerald-400"/><div><h3 className="font-black uppercase text-lg text-emerald-100">{e.t}</h3></div></div>))}</div>; }
+function SnakeGame({ onBack }) { const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); useEffect(() => { const i = setInterval(() => { const h = {x:s[0].x+d.x, y:s[0].y+d.y}; if(h.x<0||h.x>19||h.y<0||h.y>19) return; const n = [h, ...s]; if(h.x===f.x && h.y===f.y) { SF({x:Math.floor(Math.random()*20), y:Math.floor(Math.random()*20)}); SoundEngine.playFreq(600,'sine',0.1); } else n.pop(); SS(n); }, 150); return () => clearInterval(i); }, [s, d, f]); return <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50"><button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button><div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div><div className="flex justify-center gap-4 mt-6"><button onClick={()=>SD({x:-1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16}/></button><button onClick={()=>SD({x:0,y:-1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16}/></button><button onClick={()=>SD({x:0,y:1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16} className="rotate-180"/></button><button onClick={()=>SD({x:1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16} className="rotate-180"/></button></div></div>; }
+function MandalaArt({ onBack }) { const r = useRef(); const d = e => { if (!r.current) return; const c = r.current.getContext('2d'); const b = r.current.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; const x = clientX - b.left - 150, y = clientY - b.top - 150; c.translate(150, 150); c.strokeStyle = '#10b981'; c.lineWidth = 2; for (let i = 0; i < 8; i++) { c.rotate(Math.PI / 4); c.beginPath(); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.save(); c.scale(1, -1); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.restore(); } c.setTransform(1, 0, 0, 1, 0, 0); }; return <div className="p-8 rounded-[50px] text-center border-4 bg-black border-purple-900/50"><button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-6">Exit</button><canvas ref={r} width={300} height={300} className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" onMouseMove={e => e.buttons === 1 && d(e)} onTouchMove={d} /><button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="mt-6 px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase">Clear</button></div>; }
+function BubblePop({ onBack }) { const [b, setB] = useState(Array.from({length:15},(_,i)=>({id:i,x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}))); const pop = (id) => { SoundEngine.playPop(); setB(p=>p.filter(i=>i.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}]), 500); }; return <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30"><button onClick={onBack} className="absolute top-6 left-6 text-blue-400 font-black text-[10px] uppercase z-20">Back</button>{b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}</div>; }
+function ExpertGate({ setView, onBack, setUserData }) { 
+  const [key, setKey] = useState("");
+  const verify = () => { if(key===DOCTOR_KEY){setUserData(p=>({...p,role:'doctor'})); localStorage.setItem('ashoka_role','doctor'); alert("Verified");} else alert("Invalid"); };
   return (
-    <div className="p-16 bg-[#051510] text-white rounded-[100px] text-center animate-in fade-in shadow-2xl border border-white/5">
-       <Settings size={100} className="mx-auto text-emerald-400" />
-       <h2 className="text-6xl font-black uppercase tracking-tighter mt-10">Control Hub</h2>
-       <p className="opacity-40 uppercase tracking-[0.5em] text-[11px] font-black italic mt-4">Surveillance Active</p>
+    <div className="p-12 rounded-[60px] text-center space-y-8 shadow-2xl animate-in zoom-in border bg-[#022c22] border-emerald-500/20">
+      <Lock size={60} className="mx-auto opacity-20 text-emerald-400" />
+      <h2 className="text-3xl font-black uppercase tracking-tighter text-emerald-100">Expert Only</h2>
+      <div className="space-y-4">
+        <input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="Enter Key" className="w-full p-4 rounded-[30px] text-center font-black outline-none border bg-black/40 text-white border-emerald-500/30"/>
+        <button onClick={verify} className="w-full py-4 bg-emerald-700 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl border border-emerald-500/50">Unlock Hub</button>
+      </div>
+      <button onClick={onBack} className="text-[10px] uppercase font-bold text-emerald-500/50">Return</button>
     </div>
-  );
+  ); 
 }
+const SOSModal = ({ onClose }) => ( <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500"><div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div><h2 className="text-6xl font-black uppercase mb-8 tracking-tighter">Emergency</h2><a href="tel:108" className="block w-full py-6 bg-red-600 rounded-[40px] font-black text-3xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL 108</a><a href="tel:14416" className="block w-full py-6 bg-blue-600 rounded-[40px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">Tele-MANAS</a><button onClick={onClose} className="mt-20 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button></div> );
 
-// --- HELPERS ---
-function NavBtn({ icon: Icon, active, onClick }) {
-  return (
-    <button onClick={onClick} className={`p-5 rounded-[38px] transition-all duration-500 ${active ? 'bg-[#064E3B] dark:bg-emerald-400 text-white dark:text-[#064E3B] shadow-2xl scale-125' : 'text-emerald-800/30 hover:bg-emerald-50 dark:hover:bg-emerald-900/40'}`}>
-      <Icon size={28} />
-    </button>
-  );
-}
-
-function StationCard({ icon: Icon, title, te, onClick, color }) {
-  return (
-    <button onClick={onClick} className={`p-12 ${color} rounded-[80px] flex items-center gap-10 text-left group border border-black/5 shadow-sm active:scale-95 transition-all`}>
-       <div className={`p-6 rounded-[35px] bg-white shadow-xl`}><Icon size={44} className="text-emerald-900" /></div>
-       <div><h3 className="text-4xl font-black uppercase tracking-tighter leading-none text-emerald-950 dark:text-emerald-50">{title}</h3><p className="text-[11px] font-black opacity-30 uppercase mt-3 italic">{te}</p></div>
-    </button>
-  );
-}
-
-function GameBtn({ icon: Icon, title, desc, onClick, color }) {
-  return (
-    <button onClick={onClick} className={`p-12 ${color} rounded-[80px] flex items-center gap-10 text-left shadow-lg border border-black/5 active:scale-95 transition-all group`}>
-      <div className="p-6 bg-white dark:bg-emerald-950 rounded-[35px] shadow-md group-hover:scale-110 transition-transform"><Icon size={40} className="text-emerald-900 dark:text-emerald-400" /></div>
-      <div><h3 className="text-3xl font-black uppercase tracking-tighter leading-none text-emerald-950 dark:text-emerald-50">{title}</h3><p className="text-[11px] opacity-40 font-bold uppercase mt-2 tracking-widest leading-relaxed italic">{desc}</p></div>
-    </button>
-  );
-}
-
-function ExpertGate({ setView, onBack }) {
-  return (
-    <div className="bg-white dark:bg-emerald-950 p-12 rounded-[60px] text-center space-y-10 shadow-2xl animate-in zoom-in border border-emerald-100">
-      <Lock size={80} className="mx-auto text-emerald-400 opacity-20" />
-      <h2 className="text-4xl font-black uppercase tracking-tighter text-emerald-950 dark:text-emerald-100">Expert Restricted Area</h2>
-      <button onClick={() => { setView('profile'); onBack(); }} className="px-14 py-5 bg-emerald-800 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl">Verification Portal</button>
-    </div>
-  );
-}
-
-const SOSModal = ({ onClose }) => (
-  <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500">
-    <div className="w-56 h-56 bg-red-600 rounded-full flex items-center justify-center animate-pulse shadow-[0_0_120px_rgba(220,38,38,1)] mb-12"><Siren size={120} className="text-white" /></div>
-    <h2 className="text-8xl font-black uppercase mb-8 tracking-tighter leading-none">Emergency SOS</h2>
-    <div className="w-full max-w-sm space-y-6">
-      <a href="tel:108" className="block py-9 bg-red-600 rounded-[60px] font-black text-5xl shadow-2xl active:scale-95 border-b-[14px] border-red-900 uppercase tracking-tighter">CALL 108</a>
-      <a href="tel:14416" className="block py-9 bg-blue-600 rounded-[60px] font-black text-2xl border-b-[12px] border-blue-900 uppercase">Tele-MANAS</a>
-    </div>
-    <button onClick={onClose} className="mt-24 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-600 underline-offset-[20px] hover:text-white">Return to Platform</button>
-  </div>
-);
 
