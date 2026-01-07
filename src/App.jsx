@@ -430,7 +430,7 @@ function DeepMitra({ onBack, persona, apiKey, userData, setView, notify }) {
 
       // 2. GOOGLE API CALL (Hidden in final build unless key provided)
       try {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${AIzaSyCug6drD_J8ezqpSOokRXgv3Q7N3h7j6a4}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${AIzaSyCug6drD_J8ezqpSOokRXgv3Q7N3h7j6a4}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ contents: [{ parts: [{ text: persona + "\nUser: " + input }] }] })
