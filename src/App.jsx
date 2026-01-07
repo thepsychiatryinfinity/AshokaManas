@@ -428,14 +428,7 @@ function DeepMitra({ onBack, persona, apiKey, userData, setView, notify }) {
       if (t.includes("ignore") || t.includes("hack") || t.includes("jailbreak")) return "Safety Block: I cannot process this request.";
       if (t.includes("suicide") || t.includes("die") || t.includes("kill")) return "🛑 HARD-BREAK: Please call 108. You are valuable.";
 
-      // 2. OFFLINE FALLBACK (If no key)
-      if (GOOGLE_API_KEY === "PASTE_YOUR_API_KEY_HERE") {
-         if (t.includes("sad")) return "Sadness is a cloud. It passes. What triggered this?";
-         if (t.includes("anxious")) return "Take one breath. Come back to now.";
-         return "I hear you. Tell me more. (Offline Mode)";
-      }
-
-      // 3. GOOGLE API CALL (Hidden in final build unless key provided)
+      // 2. GOOGLE API CALL (Hidden in final build unless key provided)
       try {
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${AIzaSyCug6drD_J8ezqpSOokRXgv3Q7N3h7j6a4}`, {
               method: 'POST',
@@ -445,7 +438,7 @@ function DeepMitra({ onBack, persona, apiKey, userData, setView, notify }) {
           const data = await response.json();
           let aiText = data.candidates[0].content.parts[0].text;
           
-          // 4. OUTPUT SAFETY SHIELD
+          // 3. OUTPUT SAFETY SHIELD
           if (aiText.toLowerCase().includes("prescrip") || aiText.toLowerCase().includes("diagnos")) {
               return "I am a wise friend, not a doctor. I cannot provide medical diagnosis.";
           }
