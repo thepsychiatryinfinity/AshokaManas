@@ -14,7 +14,7 @@ import {
   collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit
 } from 'firebase/firestore';
 
-// --- CONFIGURATION GUARD ---
+// --- CONFIGURATION GUARD (HARD-CODED KEYS) ---
 const firebaseConfig = {
   apiKey: "AIzaSyDyipE8alZJTB7diAmBkgR4AaPeS7x0JrQ",
   authDomain: "ashokamanas.firebaseapp.com",
@@ -127,7 +127,7 @@ export default function App() {
   const [policyLink, setPolicyLink] = useState("");
   const [manualLink, setManualLink] = useState("");
   
-  // SENTINEL STATE (Correctly Initialized)
+  // SENTINEL STATE (Lifted Up to Prevent Crash)
   const [userList, setUserList] = useState([{uid:"u1", status:"active"}]);
   const [whispers, setWhispers] = useState([]); 
 
@@ -145,7 +145,7 @@ export default function App() {
         await signInAnonymously(auth);
       }
     });
-    return () => unsubscribe();
+    return () => {};
   }, []);
 
   // CLOUD SYNC
@@ -162,18 +162,23 @@ export default function App() {
             if (data.policy) setPolicyLink(data.policy);
             if (data.manual) setManualLink(data.manual);
         }
-    });
+    }, (e)=>console.log(e));
+    
+    // Cards Sync
     const cardsRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'master_deck');
     const unsubCards = onSnapshot(cardsRef, (doc) => {
         if (doc.exists() && doc.data().cards) {
             setMasterCards(doc.data().cards);
             localStorage.setItem('ashoka_cards', JSON.stringify(doc.data().cards));
         }
-    });
+    }, (e)=>console.log(e));
+
+    // Whispers Sync (For Sentinel)
     const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
        setWhispers(snap.docs.map(d => d.data()));
-    });
+    }, (e)=>console.log(e));
+
     return () => { unsubConfig(); unsubCards(); unsubWhispers(); };
   }, []);
 
@@ -187,20 +192,20 @@ export default function App() {
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
          <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse"></div>
          <div className="absolute top-[20%] right-[30%] w-1 h-1 bg-emerald-400 rounded-full blur-[1px] animate-[ping_4s_infinite]"></div>
-         <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 bg-yellow-100 rounded-full blur-[1px] animate-[ping_6s_infinite]"></div>
          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5"></div>
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
+      
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
         <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
       </div>
+
       <header className="fixed top-[48px] left-0 right-0 p-4 flex justify-between items-center z-[350]">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
           <div className="p-2.5 bg-[#065F46] rounded-2xl shadow-[0_0_20px_rgba(6,95,70,0.5)] border border-white/10 group-hover:rotate-6 transition-transform duration-500 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20"></div>
-            <Shield className="text-white relative z-10" size={22} />
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20"></div><Shield className="text-white relative z-10" size={22} />
           </div>
           <div><h1 className="font-black text-xl tracking-tighter uppercase leading-none bg-gradient-to-r from-emerald-100 via-white to-emerald-200 bg-clip-text text-transparent drop-shadow-sm">ASHOKAMANAS<sup className="text-[8px] ml-0.5 text-emerald-500">TM</sup></h1></div>
         </div>
@@ -208,6 +213,7 @@ export default function App() {
           <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="px-3 py-1.5 border border-white/10 text-emerald-200 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-sm bg-white/5 hover:bg-white/10">{lang === 'en' ? 'తెలుగు' : 'EN'}</button>
         </div>
       </header>
+
       <main className={`max-w-4xl mx-auto px-5 pb-40 relative z-10 animate-in fade-in duration-700 ${globalAlert ? 'pt-[160px]' : 'pt-[130px]'}`}>
         {!activeHall && (<div className="mb-8 relative group"><Search className="absolute left-6 top-1/2 -translate-y-1/2 size={16} text-emerald-500/50" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={lang === 'en' ? "Search..." : "వెతకండి..."} className="w-full p-4 pl-12 backdrop-blur-xl rounded-[30px] border outline-none font-medium text-sm transition-all shadow-inner bg-white/5 border-white/10 text-emerald-100 focus:border-emerald-500/50"/></div>)}
         {view === 'home' && !activeHall && <HomeHub setHall={setActiveHall} setView={setView} lang={lang} query={searchQuery} openMitra={() => setShowMitra(true)} userData={userData} notify={showNotify} />}
@@ -216,9 +222,11 @@ export default function App() {
         {view === 'games' && <GamesView />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
         {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} />}
+        {/* Pass all state to AdminView to prevent white screen */}
         {view === 'admin' && <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} />}
         {view === 'master-deck' && <WisdomDeck onBack={() => setView('home')} lang={lang} cards={masterCards} userData={userData} setView={setView} notify={showNotify} />}
       </main>
+      
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md backdrop-blur-xl border p-2 flex justify-around rounded-[40px] z-[500] shadow-2xl bg-[#020604]/80 border-white/10">
         <NavBtn icon={Home} active={view === 'home'} onClick={() => { setView('home'); setActiveHall(null); }} />
         <NavBtn icon={Flame} active={view === 'lab'} onClick={() => { setView('lab'); setActiveHall(null); }} />
@@ -242,7 +250,7 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink }) {
         <div className="relative mb-8 group cursor-pointer"><div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div><h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1><p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p></div>
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[35px] p-8 text-left space-y-6 mb-8 max-h-[45vh] overflow-y-auto shadow-2xl relative">
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 border-b border-red-500/20 pb-1">Disclaimer</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p></div>
-          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p></div>
+          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation.</p></div>
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400 border-b border-blue-500/20 pb-1">Minor Guidance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">Intended for users 18+. Minors must access under Parental Guidance.</p></div>
           <div className="flex gap-4 mt-4">
              {policyLink && <a href={policyLink} target="_blank" className="text-[10px] text-emerald-400 underline">Privacy Policy</a>}
@@ -285,7 +293,7 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
   );
 }
 
-// --- ADMIN / FOUNDER STUDIO (FIXED PROPS) ---
+// --- ADMIN / FOUNDER STUDIO ---
 function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView }) {
   const [tab, setTab] = useState('seed');
   const [jsonInput, setJsonInput] = useState("");
@@ -310,9 +318,9 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
       {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
       {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
       {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
-      {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
+      {tab === 'treasury' && ( <div className="space-y-6"><div className="p-4 bg-gray-800 rounded text-xs text-gray-400">Treasury Links are currently hidden in Profile for Play Store readiness.</div><button className="w-full py-3 bg-gray-600 text-black rounded-xl font-bold uppercase text-xs cursor-not-allowed">Save Treasury (Disabled)</button></div> )}
       {tab === 'sentinel' && ( <div className="space-y-4"><h3 className="text-xs uppercase font-bold text-red-500">Global Alert</h3><input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button><h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3><div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{(whispers||[]).map((w,i)=><div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400">{w.text}</div>)}{(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}</div><h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3><div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{users.map((u, i) => (<div key={i} className="p-4 rounded-xl border flex justify-between items-center bg-[#111] border-white/10"><span className="text-xs font-mono text-white">{u.uid} <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.status})</span></span>{u.status === 'active' && <button onClick={() => exileUser(u.uid)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Exile</button>}</div>))}</div></div> )}
-      {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
+      {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
     </div>
   );
 }
@@ -406,25 +414,51 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
 
 // --- DEEP MITRA AI ---
 function DeepMitra({ onBack, persona, apiKey, userData, setView, notify }) {
+  // HARD CODED API KEY SLOT (Safety)
+  const GOOGLE_API_KEY = "PASTE_YOUR_API_KEY_HERE"; 
+  
   const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
   const [txt, setTxt] = useState("");
   
   if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
 
+  const generateResponse = async (input) => {
+      // 1. INPUT SAFETY SHIELD
+      const t = input.toLowerCase();
+      if (t.includes("ignore") || t.includes("hack") || t.includes("jailbreak")) return "Safety Block: I cannot process this request.";
+      if (t.includes("suicide") || t.includes("die") || t.includes("kill")) return "🛑 HARD-BREAK: Please call 108. You are valuable.";
+
+      // 2. OFFLINE FALLBACK (If no key)
+      if (GOOGLE_API_KEY === "PASTE_YOUR_API_KEY_HERE") {
+         if (t.includes("sad")) return "Sadness is a cloud. It passes. What triggered this?";
+         if (t.includes("anxious")) return "Take one breath. Come back to now.";
+         return "I hear you. Tell me more. (Offline Mode)";
+      }
+
+      // 3. GOOGLE API CALL (Hidden in final build unless key provided)
+      try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${AIzaSyCug6drD_J8ezqpSOokRXgv3Q7N3h7j6a4}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: persona + "\nUser: " + input }] }] })
+          });
+          const data = await response.json();
+          let aiText = data.candidates[0].content.parts[0].text;
+          
+          // 4. OUTPUT SAFETY SHIELD
+          if (aiText.toLowerCase().includes("prescrip") || aiText.toLowerCase().includes("diagnos")) {
+              return "I am a wise friend, not a doctor. I cannot provide medical diagnosis.";
+          }
+          return aiText;
+      } catch (e) { return "Connection weak. I am here with you."; }
+  };
+
   const reply = async () => {
     if(!txt.trim()) return;
     setMsgs(p => [...p, {role: 'user', text: txt}]);
-    
-    // MEDICAL FILTER & SMART LOGIC
-    const t = txt.toLowerCase();
-    let response = "I hear you. Tell me more.";
-    if (t.includes("diagnos") || t.includes("medic") || t.includes("prescrip")) response = "I am a wise friend, not a doctor. I cannot provide medical diagnosis or prescriptions. Please consult a professional.";
-    else if(t.includes("sad")) response = "Sadness is a cloud. It passes. What triggered this?";
-    else if(t.includes("anxious")) response = "Take one breath. Come back to now.";
-    else if(t.includes("suicide") || t.includes("die")) response = "Please call 108 immediately. You are valuable.";
-    
-    setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: response}]), 500);
     setTxt("");
+    const response = await generateResponse(txt);
+    setMsgs(p => [...p, {role: 'bot', text: response}]);
   };
 
   return (
@@ -478,7 +512,7 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   );
 }
 
-// --- RESTORED TOOLS & GAMES (Zombie Killer Fix) ---
+// --- RESTORED TOOLS & GAMES (Zombie Killer Fix + Actions) ---
 function HallView({ hall, onBack, userData, user, lang, query, setView, setUserData, notify }) {
   const [posts, setPosts] = useState(() => {
      const saved = localStorage.getItem(`chat_${hall.id}`);
@@ -510,8 +544,10 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
     const tempId = "temp_" + Date.now();
     const tempPost = { id: tempId, text: textToSend, uid: currentUid, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
     
-    setPosts(prev => [tempPost, ...prev]);
-    localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
+    // Optimistic Update & Save
+    const newPosts = [tempPost, ...posts];
+    setPosts(newPosts);
+    localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts)); 
     
     setMsg(""); setReplyTo(null); SoundEngine.playClick();
     if (isFirebaseInitialized && user) {
@@ -527,7 +563,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
 
   const handleFlag = (id) => { if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { reported: true }); notify("Reported"); };
   const handleDelete = (id) => { 
-      // KILL ZOMBIE: Remove from State AND LocalStorage immediately
+      // ZOMBIE KILLER LOGIC: Remove from State AND LocalStorage immediately
       const newPosts = posts.filter(p => p.id !== id);
       setPosts(newPosts);
       localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts));
