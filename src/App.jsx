@@ -5,13 +5,13 @@ import {
   Lock, User, Sparkles, AlertCircle, Brush,
   Search, Send, Flag, Stethoscope, Pill, Baby, HeartHandshake, ScrollText,
   Pin, Trash2, Droplets, Mountain, Fan,
-  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint
+  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 import { 
   getFirestore, doc, onSnapshot, setDoc, serverTimestamp, 
-  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit
+  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs
 } from 'firebase/firestore';
 
 // --- CONFIGURATION GUARD ---
@@ -89,7 +89,7 @@ const DEFAULT_LEGAL = [
 ];
 
 const DEFAULT_CARDS = [
-  { id: 1, title: "The Void | శూన్యం", hurdle: "Purpose", ancestralRoot: "Purpose was survival.", awarenessLogic: "Create meaning.", action: "Help someone today." }
+  { id: 1, category: "Self", title: "The Void | శూన్యం", question: "Why do I feel empty?", answer: "Because you are a tool waiting to be used.", ancestralRoot: "Purpose was survival.", awarenessLogic: "Create meaning.", action: "Help someone today." }
 ];
 
 const HALLS = [
@@ -115,6 +115,7 @@ export default function App() {
   const [showMitra, setShowMitra] = useState(false);
   const [notification, setNotification] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showMood, setShowMood] = useState(false);
   
   // LIVE GLOBAL STATE
   const [masterCards, setMasterCards] = useState(() => {
@@ -130,24 +131,39 @@ export default function App() {
   
   const [userList, setUserList] = useState([{uid:"u1", status:"active"}]);
   const [whispers, setWhispers] = useState([]); 
+  const [paymentRequests, setPaymentRequests] = useState([]); 
 
   useEffect(() => {
     if (!isFirebaseInitialized) { setLoading(false); return; }
-    const unsubAuth = onAuthStateChanged(auth, async (u) => {
+    
+    // FIX: Properly capture the unsubscribe function
+    const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
         const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid);
         onSnapshot(ref, (snap) => {
           if (snap.exists()) setUserData(snap.data());
           else setDoc(ref, { uid: u.uid, role: 'guest', streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
+          
+          const lastMood = localStorage.getItem('ashoka_last_mood_date');
+          const today = new Date().toDateString();
+          if (lastMood !== today) setShowMood(true);
+
           setLoading(false);
         });
       } else {
-        await signInAnonymously(auth);
+        try {
+          await signInAnonymously(auth);
+        } catch(e) {
+          console.log("Auth failed, possibly due to iframe restrictions. Continuing as offline guest.");
+          setLoading(false);
+        }
         setLoading(false);
       }
     });
-    return () => unsubAuth();
+    
+    // FIX: Return the unsubscribe function correctly
+    return () => unsubscribeAuth();
   }, []);
 
   // CLOUD SYNC
@@ -160,6 +176,7 @@ export default function App() {
             if (data.legal) { setLegalDocs(data.legal); localStorage.setItem('ashoka_legal', JSON.stringify(data.legal)); }
             if (data.treasury) setTreasury(data.treasury);
             if (data.persona) setMitraConfig(prev => ({...prev, persona: data.persona}));
+            if (data.ai_key) setMitraConfig(prev => ({...prev, key: data.ai_key}));
             if (data.alert) setGlobalAlert(data.alert);
             if (data.policy) setPolicyLink(data.policy);
             if (data.manual) setManualLink(data.manual);
@@ -176,7 +193,12 @@ export default function App() {
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
        setWhispers(snap.docs.map(d => d.data()));
     });
-    return () => { unsubConfig(); unsubCards(); unsubWhispers(); };
+    const paymentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests');
+    const unsubPayments = onSnapshot(query(paymentsRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
+       setPaymentRequests(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    });
+
+    return () => { unsubConfig(); unsubCards(); unsubWhispers(); unsubPayments(); };
   }, []);
 
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
@@ -196,6 +218,7 @@ export default function App() {
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
+      
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
         <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
@@ -219,7 +242,7 @@ export default function App() {
         {view === 'games' && <GamesView />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
         {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} />}
-        {view === 'admin' && <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} />}
+        {view === 'admin' && <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} paymentRequests={paymentRequests} />}
         {view === 'master-deck' && <WisdomDeck onBack={() => setView('home')} lang={lang} cards={masterCards} userData={userData} setView={setView} notify={showNotify} />}
       </main>
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md backdrop-blur-xl border p-2 flex justify-around rounded-[40px] z-[500] shadow-2xl bg-[#020604]/80 border-white/10">
@@ -230,9 +253,72 @@ export default function App() {
       </nav>
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
       {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} userData={userData} setView={setView} notify={showNotify} />}
+      {showMood && <MoodModal onClose={() => setShowMood(false)} notify={showNotify} />}
     </div>
   );
 }
+
+// --- NEW COMPONENTS (MOOD & SOS) ---
+function MoodModal({ onClose, notify }) {
+  const saveMood = (mood) => {
+    localStorage.setItem('ashoka_last_mood_date', new Date().toDateString());
+    notify(`Mood Logged: ${mood}`);
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-[900] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 text-center animate-in zoom-in">
+       <div>
+         <h2 className="text-2xl font-black text-emerald-400 mb-6 uppercase">How is your spirit today?</h2>
+         <div className="grid grid-cols-1 gap-3 justify-center">
+            <button onClick={()=>saveMood('Sunny')} className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center gap-4 hover:bg-yellow-500/20">
+                <SunIcon className="text-yellow-400" size={24}/> 
+                <div className="text-left"><h3 className="font-bold text-yellow-400">Sunny</h3><p className="text-[10px] text-gray-400">I feel bright, energetic, and hopeful.</p></div>
+            </button>
+            <button onClick={()=>saveMood('Cloudy')} className="p-4 bg-gray-500/10 border border-gray-500/30 rounded-2xl flex items-center gap-4 hover:bg-gray-500/20">
+                <Cloud className="text-gray-400" size={24}/> 
+                <div className="text-left"><h3 className="font-bold text-gray-400">Cloudy</h3><p className="text-[10px] text-gray-400">I feel okay, but a bit heavy or neutral.</p></div>
+            </button>
+            <button onClick={()=>saveMood('Rainy')} className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center gap-4 hover:bg-blue-500/20">
+                <CloudRain className="text-blue-400" size={24}/> 
+                <div className="text-left"><h3 className="font-bold text-blue-400">Rainy</h3><p className="text-[10px] text-gray-400">I feel sad, heavy, or tearful.</p></div>
+            </button>
+         </div>
+         <button onClick={onClose} className="mt-8 text-xs text-gray-500 underline">Skip for now</button>
+       </div>
+    </div>
+  );
+}
+
+const SOSModal = ({ onClose }) => {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const isIndia = tz.includes("Calcutta") || tz.includes("Asia/Kolkata");
+  const isUS = tz.includes("America");
+  const isUK = tz.includes("London");
+
+  const numbers = isIndia ? {police:"100", amb:"108", help:"14416"} 
+                : isUS ? {police:"911", amb:"911", help:"988"}
+                : isUK ? {police:"999", amb:"999", help:"111"}
+                : {police:"112", amb:"112", help:"112"}; 
+
+  const silentSOS = () => {
+      const msg = encodeURIComponent("I need help. I am using AshokaManas SOS. Please check on me.");
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500">
+      <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div>
+      <h2 className="text-6xl font-black uppercase mb-2 tracking-tighter">Emergency</h2>
+      <p className="text-xs uppercase tracking-widest text-red-400 mb-8 font-bold">Detected Region: {isIndia ? "India" : "Global"}</p>
+      
+      <a href={`tel:${numbers.amb}`} className="block w-full py-5 bg-red-600 rounded-[30px] font-black text-2xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL AMBULANCE ({numbers.amb})</a>
+      <a href={`tel:${numbers.help}`} className="block w-full py-5 bg-blue-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">MENTAL HELPLINE ({numbers.help})</a>
+      <button onClick={silentSOS} className="block w-full py-5 bg-emerald-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-emerald-800 active:scale-95 transition-all mt-4">SILENT SOS (WHATSAPP)</button>
+      
+      <button onClick={onClose} className="mt-10 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button>
+    </div>
+  );
+};
 
 // --- GATEVIEW ---
 function GateView({ onAccept, lang, setLang, policyLink, manualLink }) {
@@ -245,7 +331,7 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink }) {
         <div className="relative mb-8 group cursor-pointer"><div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div><h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1><p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p></div>
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[35px] p-8 text-left space-y-6 mb-8 max-h-[45vh] overflow-y-auto shadow-2xl relative">
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 border-b border-red-500/20 pb-1">Disclaimer</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p></div>
-          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation.</p></div>
+          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p></div>
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400 border-b border-blue-500/20 pb-1">Minor Guidance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">Intended for users 18+. Minors must access under Parental Guidance.</p></div>
           <div className="flex gap-4 mt-4">
              {policyLink && <a href={policyLink} target="_blank" className="text-[10px] text-emerald-400 underline">Privacy Policy</a>}
@@ -289,31 +375,57 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
 }
 
 // --- ADMIN / FOUNDER STUDIO ---
-function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView }) {
+function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests }) {
   const [tab, setTab] = useState('seed');
   const [jsonInput, setJsonInput] = useState("");
   const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
   
-  const saveToCloud = async (collectionName, docName, data) => {
-      if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; }
-      try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); }
-  };
+  const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
   const depositSeeds = () => { try { const data = JSON.parse(jsonInput); if(Array.isArray(data)) { setCards(prev => [...prev, ...data]); saveToCloud('config', 'master_deck', { cards: [...cards, ...data] }); notify("Seeds Planted."); setJsonInput(""); } } catch(e) { notify("Invalid JSON"); } };
   const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
   const exileUser = (uid) => { setUsers(users.map(u => u.uid === uid ? {...u, status:'banned'} : u)); notify("User Exiled"); };
   const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs, policy: policyLink, manual: manualLink });
-  const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona });
+  const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona, ai_key: config.key });
   const saveTreasury = () => saveToCloud('config', 'global_settings', { treasury: treasury });
   const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
+  
+  // BANK ACTIONS
+  const approvePayment = async (req) => {
+      if(isFirebaseInitialized) {
+          // 1. Upgrade User
+          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', req.uid), { role: 'patron' });
+          // 2. Mark Request Done
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', req.id));
+          notify("User Upgraded to Patron");
+      }
+  };
 
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['seed', 'law', 'brain', 'treasury', 'sentinel', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['seed', 'law', 'brain', 'treasury', 'bank', 'sentinel', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
       {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
       {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
-      {tab === 'brain' && ( <div className="space-y-4"><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
+      {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
       {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
+      
+      {/* THE BANK */}
+      {tab === 'bank' && (
+         <div className="space-y-4">
+             <h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3>
+             {(!paymentRequests || paymentRequests.length === 0) && <p className="text-center text-xs opacity-50">No pending requests.</p>}
+             {paymentRequests?.map((req) => (
+                 <div key={req.id} className="p-4 rounded-xl border border-amber-500/30 bg-[#1a1400] flex justify-between items-center">
+                     <div>
+                         <p className="text-xs font-mono text-amber-200">ID: {req.paymentId}</p>
+                         <p className="text-[9px] text-gray-500">User: {req.uid.substring(0,8)}...</p>
+                     </div>
+                     <button onClick={()=>approvePayment(req)} className="px-3 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold uppercase">Approve</button>
+                 </div>
+             ))}
+         </div>
+      )}
+      
       {tab === 'sentinel' && ( <div className="space-y-4"><h3 className="text-xs uppercase font-bold text-red-500">Global Alert</h3><input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button><h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3><div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{(whispers||[]).map((w,i)=><div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400">{w.text}</div>)}{(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}</div><h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3><div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{users.map((u, i) => (<div key={i} className="p-4 rounded-xl border flex justify-between items-center bg-[#111] border-white/10"><span className="text-xs font-mono text-white">{u.uid} <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.status})</span></span>{u.status === 'active' && <button onClick={() => exileUser(u.uid)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Exile</button>}</div>))}</div></div> )}
       {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
     </div>
@@ -326,6 +438,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
   const [showPay, setShowPay] = useState(false);
   const [key, setKey] = useState("");
   const [whisper, setWhisper] = useState("");
+  const [paymentId, setPaymentId] = useState("");
 
   const verify = () => { if (key === DOCTOR_KEY) { setUserData(p => ({...p, role: 'doctor'})); localStorage.setItem('ashoka_role', 'doctor'); notify("Verified."); setKey(""); } else { notify("Invalid"); } };
   const handleAdmin = () => { if (key === ADMIN_KEY) { setView('admin'); setKey(""); } else { notify("Invalid Admin Key"); } };
@@ -333,15 +446,21 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
   const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
   const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
   
-  // PLAY STORE SIMULATION
-  const buyAccess = () => {
-      notify("Play Store: Connecting...");
-      setTimeout(() => {
-          setUserData(p => ({...p, role: 'patron'}));
-          localStorage.setItem('ashoka_role', 'patron');
-          notify("Purchase Successful! (Simulated)");
+  // MANUAL MAGIC: Send Request to Founder
+  const submitPaymentRequest = async () => {
+      if(paymentId.length < 5) { notify("Invalid ID"); return; }
+      notify("Verifying with Founder...");
+      if(isFirebaseInitialized) {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), {
+              uid: user.uid,
+              paymentId: paymentId,
+              createdAt: serverTimestamp()
+          });
+          notify("Request Sent! Wait for Approval.");
           setShowPay(false);
-      }, 1500);
+      } else {
+          notify("Offline: Cannot Verify.");
+      }
   };
 
   const sustText = {
@@ -359,7 +478,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
       <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white">
         <User size={48} className="mx-auto mb-2"/>
         <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
-        <div className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Fingerprint size={12}/> ID: {user?.uid?.substring(0,8)}... <button onClick={copyID}><Copy size={12} /></button></div>
+        <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
       </div>
 
       <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
@@ -377,6 +496,14 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
             <div className="grid gap-2">
               <a href={treasury.india || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-amber-600 text-black' : 'opacity-50 cursor-not-allowed border-white/10'}`}>India (Google Pay / Razorpay)</a>
               <a href={treasury.global || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-transparent text-amber-500 border-amber-500' : 'opacity-50 cursor-not-allowed border-white/10'}`}>Global (PayPal/Stripe)</a>
+            </div>
+            {/* MANUAL MAGIC BOX */}
+            <div className="pt-4 border-t border-white/10 mt-4">
+                <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
+                <div className="flex gap-2">
+                    <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
+                    <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
+                </div>
             </div>
           </div>
         )}
@@ -407,7 +534,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
   );
 }
 
-// --- DEEP MITRA AI ---
+// --- DEEP MITRA AI (REPLACED AS REQUESTED) ---
 function DeepMitra({ onBack, persona, userData, setView, notify }) {
   const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
   const [txt, setTxt] = useState("");
@@ -417,6 +544,7 @@ function DeepMitra({ onBack, persona, userData, setView, notify }) {
   const reply = async () => {
     if(!txt.trim()) return;
     setMsgs(p => [...p, {role: 'user', text: txt}]);
+    setTxt(""); // Added for UI cleanup
     
     // MEDICAL FILTER
     if (txt.toLowerCase().includes("diagnos") || txt.toLowerCase().includes("medic")) {
@@ -469,6 +597,7 @@ function DeepMitra({ onBack, persona, userData, setView, notify }) {
 
 function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   const [exp, setExp] = useState(null);
+  // UNLOCK FOR PATRON OR DOCTOR
   const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
   if (!isUnlocked) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-amber-500"/><h2 className="text-xl font-bold">Ancient Wisdom</h2><p className="text-xs opacity-60">Master Deck requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-amber-600 rounded-full text-xs font-bold text-black">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
 
@@ -519,7 +648,9 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
 
   const send = async () => { 
     if (!msg.trim()) return; 
+    // Phone/Email Regex Block
     if (/[0-9]{10}/.test(msg) || /\S+@\S+\.\S+/.test(msg)) { notify("Safety Block: Personal Contacts not allowed."); return; }
+    // Abuse Dictionary
     const forbidden = ["kill", "die", "suicide", "hate", "stupid", "idiot", "abuse", "scam"];
     if (forbidden.some(w => msg.toLowerCase().includes(w))) { notify("Safety Block: Harmful language detected."); return; }
 
@@ -538,6 +669,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
   };
   
   const handleLike = (id, currentLikes) => { 
+    // Immediate Visual Feedback
     setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p));
     if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); 
     SoundEngine.playClick(); 
@@ -545,6 +677,7 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
 
   const handleFlag = (id) => { if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { reported: true }); notify("Reported"); };
   const handleDelete = (id) => { 
+      // ZOMBIE KILLER LOGIC: Remove from State AND LocalStorage immediately
       const newPosts = posts.filter(p => p.id !== id);
       setPosts(newPosts);
       localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts));
@@ -552,9 +685,9 @@ function HallView({ hall, onBack, userData, user, lang, query, setView, setUserD
       if(isFirebaseInitialized && !id.startsWith("temp")) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id)); 
   };
   const handlePin = (id, currentPin) => {
-     setPosts(posts.map(p => p.id === id ? {...p, pinned: !p.pinned} : p));
-     if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin });
-     notify(currentPin ? "Unpinned" : "Pinned");
+      setPosts(posts.map(p => p.id === id ? {...p, pinned: !p.pinned} : p));
+      if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin });
+      notify(currentPin ? "Unpinned" : "Pinned");
   };
   
   if (hall.expertOnly && userData?.role !== 'doctor') return <ExpertGate setView={setView} onBack={onBack} setUserData={setUserData} />;
@@ -619,4 +752,3 @@ function ExpertGate({ setView, onBack, setUserData }) {
     </div>
   ); 
 }
-const SOSModal = ({ onClose }) => ( <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500"><div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div><h2 className="text-6xl font-black uppercase mb-8 tracking-tighter">Emergency</h2><a href="tel:108" className="block w-full py-6 bg-red-600 rounded-[40px] font-black text-3xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL 108</a><a href="tel:14416" className="block w-full py-6 bg-blue-600 rounded-[40px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">Tele-MANAS</a><button onClick={onClose} className="mt-20 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button></div> );
