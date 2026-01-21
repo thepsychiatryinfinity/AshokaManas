@@ -595,33 +595,87 @@ function DeepMitra({ onBack, persona, userData, setView, notify }) {
   );
 }
 
+// --- UPDATED WISDOM DECK (Q&A + CATEGORIES) ---
 function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   const [exp, setExp] = useState(null);
+  const [filter, setFilter] = useState("All");
+
   // UNLOCK FOR PATRON OR DOCTOR
   const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
-  if (!isUnlocked) { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-amber-500"/><h2 className="text-xl font-bold">Ancient Wisdom</h2><p className="text-xs opacity-60">Master Deck requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-amber-600 rounded-full text-xs font-bold text-black">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
+  
+  if (!isUnlocked) { 
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center">
+        <div className="space-y-4">
+          <Lock size={40} className="mx-auto text-amber-500"/>
+          <h2 className="text-xl font-bold">Ancient Wisdom</h2>
+          <p className="text-xs opacity-60">Master Deck requires support contribution.</p>
+          <button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-amber-600 rounded-full text-xs font-bold text-black">Unlock</button>
+          <button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button>
+        </div>
+      </div>
+    ); 
+  }
 
+  // Filter Logic (Safely handles missing categories)
+  const filteredCards = filter === 'All' 
+    ? cards 
+    : cards.filter(c => c.category === filter);
+  
   return (
     <div className="min-h-screen p-4 bg-black text-amber-50">
-      <div className="flex justify-between items-center mb-8"><h2 className="text-xl font-black uppercase">Master Deck</h2><button onClick={onBack}><X/></button></div>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-xl font-black uppercase">Master Deck</h2>
+        <button onClick={onBack}><X/></button>
+      </div>
+
+      {/* Category Filter Bar */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+         {['All', 'Self', 'Mind', 'Life', 'Crisis', 'Relationships'].map(f => (
+           <button key={f} onClick={()=>setFilter(f)} className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase border transition-all ${filter===f ? 'bg-amber-500 text-black border-amber-500' : 'border-amber-900 text-amber-700 bg-transparent'}`}>
+             {f}
+           </button>
+         ))}
+      </div>
+
       <div className="space-y-6">
-        {(cards || []).map(c => {
-           let titleEn = c.title || "Unknown"; if (titleEn.includes("|")) { titleEn = titleEn.split("|")[0]; }
-           return (
-             <div key={c.id} className="p-6 rounded-[30px] border bg-[#1c1204] border-amber-900/30">
-               <h3 className="text-lg font-black uppercase mb-2">{titleEn}</h3>
-               <p className="text-xs opacity-60 mb-4 uppercase tracking-widest">{c.hurdle}</p>
-               {exp === c.id ? (
-                 <div className="space-y-4 pt-4 border-t border-amber-500/20 text-sm leading-relaxed animate-in fade-in">
-                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Root</strong> {c.ancestralRoot}</p>
-                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Logic</strong> {c.awarenessLogic}</p>
-                   <p><strong className="text-amber-500 text-xs uppercase block mb-1">Action</strong> {c.action}</p>
-                   <button onClick={() => setExp(null)} className="text-xs opacity-50 uppercase">Close</button>
+        {filteredCards.map(c => (
+           <div key={c.id} className="p-6 rounded-[30px] border bg-[#1c1204] border-amber-900/30 transition-all hover:border-amber-500/30">
+             {/* Title */}
+             <h3 className="text-lg font-black uppercase mb-4 text-amber-100 tracking-tight">{c.title}</h3>
+             
+             {/* Question / Hurdle (Bold) */}
+             <p className="text-sm font-bold text-amber-50 mb-2 leading-relaxed">
+               {c.question || c.hurdle}
+             </p>
+
+             {/* Expanded Content */}
+             {exp === c.id ? (
+               <div className="space-y-4 pt-4 border-t border-amber-500/20 text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
+                 
+                 {/* The Answer */}
+                 {c.answer && <p className="text-amber-200/90 italic mb-4 border-l-2 border-amber-500/50 pl-3">{c.answer}</p>}
+                 
+                 {/* Details */}
+                 {c.ancestralRoot && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Ancestral Root</strong> {c.ancestralRoot}</p>}
+                 {c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Forensic Logic</strong> {c.awarenessLogic}</p>}
+                 
+                 {/* Action Box */}
+                 <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-500/10 mt-4">
+                     <strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest flex items-center gap-2"><Flame size={12}/> Action</strong> 
+                     {c.action}
                  </div>
-               ) : ( <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl">Read</button> )}
-             </div>
-           );
-        })}
+
+                 <button onClick={() => setExp(null)} className="text-xs opacity-50 uppercase w-full text-center mt-6 py-2">Close Card</button>
+               </div>
+             ) : ( 
+               <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl mt-4 hover:bg-amber-700/30 transition-colors">
+                 Read Answer
+               </button> 
+             )}
+           </div>
+        ))}
+        {filteredCards.length === 0 && <p className="text-center text-xs opacity-50 mt-10">No wisdom found in this category yet.</p>}
       </div>
     </div>
   );
