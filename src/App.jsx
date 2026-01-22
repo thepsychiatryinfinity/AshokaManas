@@ -5,13 +5,13 @@ import {
   Lock, User, Sparkles, AlertCircle, Brush,
   Search, Send, Flag, Stethoscope, Pill, Baby, HeartHandshake, ScrollText,
   Pin, Trash2, Droplets, Mountain, Fan,
-  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check
+  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check, BatteryLow
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 import { 
   getFirestore, doc, onSnapshot, setDoc, serverTimestamp, 
-  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs
+  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs, getDoc 
 } from 'firebase/firestore';
 
 // --- CONFIGURATION GUARD ---
@@ -35,14 +35,18 @@ try {
   isFirebaseInitialized = true;
 } catch (e) { console.warn("Offline Mode Active."); }
 
-// --- KEYS ---
-const ADMIN_KEY = "ASHOKA-SUPER-ADMIN-99";
-const DOCTOR_KEY = "ASHOKA-DOC-VERIFY";
+// --- KEYS & ASSETS ---
+// Secure Keys are now managed via Firestore 'secure_gates' collection.
+
+// ⬇️ YOUR LOGO IS NOW INTEGRATED HERE ⬇️
+const APP_LOGO = "https://firebasestorage.googleapis.com/v0/b/ashokamanas.firebasestorage.app/o/assets%2Flogo.png?alt=media&token=5355e65d-33b4-4698-95b6-dcc09469d78c"; 
 
 // --- SOUND ENGINE ---
 const SoundEngine = {
   ctx: null,
+  enabled: true, // Lite Mode Flag
   init() { 
+    if(!this.enabled) return;
     try {
       if (!this.ctx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -52,6 +56,7 @@ const SoundEngine = {
     } catch (e) {}
   },
   playFreq(f, type = 'sine', duration = 0.1) {
+    if(!this.enabled) return;
     this.init();
     if (!this.ctx) return;
     try {
@@ -117,6 +122,19 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [showMood, setShowMood] = useState(false);
   
+  // LITE MODE STATE (For Accessibility & Low-End Devices)
+  const [liteMode, setLiteMode] = useState(() => {
+      return localStorage.getItem('ashoka_lite') === 'true';
+  });
+
+  // Toggle Logic
+  const toggleLiteMode = () => {
+      const newVal = !liteMode;
+      setLiteMode(newVal);
+      SoundEngine.enabled = !newVal; // Disable sound engine in Lite Mode
+      localStorage.setItem('ashoka_lite', newVal);
+  };
+  
   // LIVE GLOBAL STATE
   const [masterCards, setMasterCards] = useState(() => {
     const saved = localStorage.getItem('ashoka_cards');
@@ -134,6 +152,9 @@ export default function App() {
   const [paymentRequests, setPaymentRequests] = useState([]); 
 
   useEffect(() => {
+    // Sync Sound Engine with initial State
+    SoundEngine.enabled = !liteMode;
+
     if (!isFirebaseInitialized) { setLoading(false); return; }
     
     // FIX: Properly capture the unsubscribe function
@@ -194,7 +215,7 @@ export default function App() {
        setWhispers(snap.docs.map(d => d.data()));
     });
     const paymentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests');
-    const unsubPayments = onSnapshot(query(paymentsRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
+    const unsubPayments = onSnapshot(query(paymentsRef, orderBy('createdAt', 'desc'), limit(50)), (snap) => {
        setPaymentRequests(snap.docs.map(d => ({id: d.id, ...d.data()})));
     });
 
@@ -206,15 +227,20 @@ export default function App() {
 
   if (loading) return <div className="min-h-screen bg-[#020b08] flex items-center justify-center text-emerald-500"><Loader className="animate-spin" size={32}/></div>;
 
-  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} policyLink={policyLink} manualLink={manualLink} />;
+  if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} policyLink={policyLink} manualLink={manualLink} logo={APP_LOGO} liteMode={liteMode} />;
 
   return (
     <div className={`min-h-screen font-sans bg-[#020b08] text-[#E0F2F1] transition-all duration-700 select-none overflow-x-hidden relative`}>
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-         <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse"></div>
-         <div className="absolute top-[20%] right-[30%] w-1 h-1 bg-emerald-400 rounded-full blur-[1px] animate-[ping_4s_infinite]"></div>
-         <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 bg-yellow-100 rounded-full blur-[1px] animate-[ping_6s_infinite]"></div>
-         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5"></div>
+         {/* LITE MODE: If active, HIDE the heavy particles */}
+         {!liteMode && (
+           <>
+             <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse"></div>
+             <div className="absolute top-[20%] right-[30%] w-1 h-1 bg-emerald-400 rounded-full blur-[1px] animate-[ping_4s_infinite]"></div>
+             <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 bg-yellow-100 rounded-full blur-[1px] animate-[ping_6s_infinite]"></div>
+             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5"></div>
+           </>
+         )}
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
@@ -225,8 +251,17 @@ export default function App() {
       </div>
       <header className="fixed top-[48px] left-0 right-0 p-4 flex justify-between items-center z-[350]">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
-          <div className="p-2.5 bg-[#065F46] rounded-2xl shadow-[0_0_20px_rgba(6,95,70,0.5)] border border-white/10 group-hover:rotate-6 transition-transform duration-500 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20"></div><Shield className="text-white relative z-10" size={22} />
+          {/* LOGO IMPLEMENTATION */}
+          <div className="relative">
+             {APP_LOGO ? (
+                 <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">
+                    <img src={APP_LOGO} className="w-full h-full object-cover" alt="AshokaManas Logo"/>
+                 </div>
+             ) : (
+                 <div className="p-2.5 bg-[#065F46] rounded-2xl shadow-[0_0_20px_rgba(6,95,70,0.5)] border border-white/10 group-hover:rotate-6 transition-transform duration-500 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent to-white/20"></div><Shield className="text-white relative z-10" size={22} />
+                 </div>
+             )}
           </div>
           <div><h1 className="font-black text-xl tracking-tighter uppercase leading-none bg-gradient-to-r from-emerald-100 via-white to-emerald-200 bg-clip-text text-transparent drop-shadow-sm">ASHOKAMANAS<sup className="text-[8px] ml-0.5 text-emerald-500">TM</sup></h1></div>
         </div>
@@ -241,7 +276,8 @@ export default function App() {
         {view === 'lab' && <LabView />}
         {view === 'games' && <GamesView />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
-        {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} />}
+        {/* Pass LiteMode props to ProfileView */}
+        {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} liteMode={liteMode} toggleLiteMode={toggleLiteMode} />}
         {view === 'admin' && <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} paymentRequests={paymentRequests} />}
         {view === 'master-deck' && <WisdomDeck onBack={() => setView('home')} lang={lang} cards={masterCards} userData={userData} setView={setView} notify={showNotify} />}
       </main>
@@ -321,14 +357,26 @@ const SOSModal = ({ onClose }) => {
 };
 
 // --- GATEVIEW ---
-function GateView({ onAccept, lang, setLang, policyLink, manualLink }) {
+function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteMode }) {
   const [agreed, setAgreed] = useState(false);
   return (
     <div className="min-h-screen bg-[#020b08] flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-1000 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[100px]"></div>
+      {!liteMode && (
+        <>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[100px]"></div>
+        </>
+      )}
       <div className="relative z-10 w-full max-w-md">
-        <div className="relative mb-8 group cursor-pointer"><div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div><h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1><p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p></div>
+        <div className="relative mb-8 group cursor-pointer">
+            {!liteMode && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div>}
+            {/* LOGO AT GATE */}
+            {logo ? (
+                <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" />
+            ) : null}
+            <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1>
+            <p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p>
+        </div>
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[35px] p-8 text-left space-y-6 mb-8 max-h-[45vh] overflow-y-auto shadow-2xl relative">
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 border-b border-red-500/20 pb-1">Disclaimer</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p></div>
           <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p></div>
@@ -366,7 +414,17 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {HALLS.map(h => (
           <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
-            <div className="p-4 rounded-2xl shadow-inner bg-white/10 text-emerald-400"><h.icon size={24} /></div><div><h3 className="font-black text-lg uppercase tracking-tight leading-none text-emerald-50">{h.label}</h3></div>
+            {/* LOGO IMPLEMENTATION */}
+            <div className="relative">
+               {APP_LOGO ? (
+                   <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">
+                      <img src={APP_LOGO} className="w-full h-full object-cover" alt="AshokaManas Logo"/>
+                   </div>
+               ) : (
+                   <div className="p-4 rounded-2xl shadow-inner bg-white/10 text-emerald-400"><h.icon size={24} /></div>
+               )}
+            </div>
+            <div><h3 className="font-black text-lg uppercase tracking-tight leading-none text-emerald-50">{h.label}</h3></div>
           </button>
         ))}
       </div>
@@ -374,11 +432,12 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
   );
 }
 
-// --- ADMIN / FOUNDER STUDIO ---
+// --- ADMIN / FOUNDER STUDIO (UPDATED: SEARCH) ---
 function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests }) {
   const [tab, setTab] = useState('seed');
   const [jsonInput, setJsonInput] = useState("");
   const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
+  const [adminSearch, setAdminSearch] = useState(""); // ADMIN SEARCH STATE
   
   const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
   const depositSeeds = () => { try { const data = JSON.parse(jsonInput); if(Array.isArray(data)) { setCards(prev => [...prev, ...data]); saveToCloud('config', 'master_deck', { cards: [...cards, ...data] }); notify("Seeds Planted."); setJsonInput(""); } } catch(e) { notify("Invalid JSON"); } };
@@ -400,21 +459,30 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
       }
   };
 
+  // FILTERED LISTS
+  const filteredPayments = paymentRequests.filter(req => 
+      req.paymentId.toLowerCase().includes(adminSearch.toLowerCase()) || 
+      req.uid.toLowerCase().includes(adminSearch.toLowerCase())
+  );
+
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['seed', 'law', 'brain', 'treasury', 'bank', 'sentinel', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
+      
       {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
       {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
       {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
       {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
       
-      {/* THE BANK */}
+      {/* THE BANK (UPDATED WITH SEARCH) */}
       {tab === 'bank' && (
          <div className="space-y-4">
-             <h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3>
-             {(!paymentRequests || paymentRequests.length === 0) && <p className="text-center text-xs opacity-50">No pending requests.</p>}
-             {paymentRequests?.map((req) => (
+             <div className="flex justify-between items-center"><h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3>
+             <input value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} placeholder="Search ID..." className="bg-white/10 text-white p-2 rounded text-[10px] w-32 border border-white/10"/></div>
+             
+             {filteredPayments.length === 0 && <p className="text-center text-xs opacity-50">No pending requests found.</p>}
+             {filteredPayments.map((req) => (
                  <div key={req.id} className="p-4 rounded-xl border border-amber-500/30 bg-[#1a1400] flex justify-between items-center">
                      <div>
                          <p className="text-xs font-mono text-amber-200">ID: {req.paymentId}</p>
@@ -432,16 +500,41 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   );
 }
 
-// --- PROFILE & SUSTENANCE ---
-function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers }) {
+// --- PROFILE & SUSTENANCE (UPDATED: LITE MODE) ---
+function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers, liteMode, toggleLiteMode }) {
   const [agreed, setAgreed] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [key, setKey] = useState("");
   const [whisper, setWhisper] = useState("");
   const [paymentId, setPaymentId] = useState("");
 
-  const verify = () => { if (key === DOCTOR_KEY) { setUserData(p => ({...p, role: 'doctor'})); localStorage.setItem('ashoka_role', 'doctor'); notify("Verified."); setKey(""); } else { notify("Invalid"); } };
-  const handleAdmin = () => { if (key === ADMIN_KEY) { setView('admin'); setKey(""); } else { notify("Invalid Admin Key"); } };
+  // SECURE VERIFY LOGIC
+  const verify = async () => {
+    if (!key.trim()) return;
+    notify("Verifying...");
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const role = docSnap.data().role;
+        if (role === 'admin') {
+          setView('admin');
+          notify("Welcome, Founder.");
+        } else if (role === 'doctor') {
+          setUserData(p => ({...p, role: 'doctor'}));
+          localStorage.setItem('ashoka_role', 'doctor');
+          notify("Verified: Doctor Access Granted.");
+        }
+        setKey("");
+      } else {
+        notify("Invalid Access Key.");
+      }
+    } catch (e) {
+      notify("Verification Failed. Check Internet.");
+    }
+  };
+
   const sendWhisper = async () => { if(!whisper.trim()) return; notify("Sent to Founder"); setWhispers(p=>[...p,{text:whisper, date:Date.now()}]); if(isFirebaseInitialized) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), { text: whisper, createdAt: serverTimestamp(), uid: user.uid }); setWhisper(""); };
   const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
   const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
@@ -481,6 +574,20 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
         <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
       </div>
 
+      {/* LITE MODE TOGGLE */}
+      <button onClick={toggleLiteMode} className={`w-full p-4 rounded-[30px] border flex items-center justify-between ${liteMode ? 'bg-emerald-900/50 border-emerald-500' : 'bg-white/5 border-white/10'}`}>
+          <div className="flex items-center gap-4">
+              <BatteryLow className={liteMode ? "text-emerald-400" : "text-gray-400"} />
+              <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">Lite Mode</h3>
+                  <p className="text-[10px] text-gray-400">Reduce motion & save battery</p>
+              </div>
+          </div>
+          <div className={`w-12 h-6 rounded-full p-1 transition-colors ${liteMode ? 'bg-emerald-500' : 'bg-gray-600'}`}>
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${liteMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+          </div>
+      </button>
+
       <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
         <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Support Mission":"మద్దతు ఇవ్వండి"}</h3></div>
         {!showPay ? (
@@ -500,6 +607,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
             {/* MANUAL MAGIC BOX */}
             <div className="pt-4 border-t border-white/10 mt-4">
                 <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
+                <p className="text-[9px] text-emerald-400/80 mb-2">Lost your device? Enter your previous Transaction ID here. The Founder will verify it and restore your Patron Access (Deep Mitra & Wisdom Deck). Note: Previous chat history cannot be restored for security reasons.</p>
                 <div className="flex gap-2">
                     <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
                     <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
@@ -515,8 +623,9 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
           <input value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="flex-1 p-3 rounded-xl text-center font-bold text-xs outline-none bg-black/30 text-white" />
           <button onClick={verify} className="px-4 bg-emerald-800 text-white rounded-xl text-xs font-bold">Verify</button>
         </div>
-        <p className="text-[9px] mb-4 text-center text-gray-500">Lost your device? Enter Access Key to Restore.</p>
-        <button onClick={() => { if(key === ADMIN_KEY) setView('admin'); else notify("Admin Key Required"); }} className="w-full py-3 bg-indigo-900 text-white rounded-xl font-bold text-xs uppercase">Founder Console</button>
+        <p className="text-[9px] mb-4 text-center text-gray-500">Enter Access Key (Doctor or Admin) to Unlock.</p>
+        {/* Unified Button for Admin/Doctor */}
+        <button onClick={verify} className="w-full py-3 bg-indigo-900 text-white rounded-xl font-bold text-xs uppercase">Unlock Special Access</button>
       </div>
       
       <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
@@ -793,7 +902,20 @@ function MandalaArt({ onBack }) { const r = useRef(); const d = e => { if (!r.cu
 function BubblePop({ onBack }) { const [b, setB] = useState(Array.from({length:15},(_,i)=>({id:i,x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}))); const pop = (id) => { SoundEngine.playPop(); setB(p=>p.filter(i=>i.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}]), 500); }; return <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30"><button onClick={onBack} className="absolute top-6 left-6 text-blue-400 font-black text-[10px] uppercase z-20">Back</button>{b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}</div>; }
 function ExpertGate({ setView, onBack, setUserData }) { 
   const [key, setKey] = useState("");
-  const verify = () => { if(key===DOCTOR_KEY){setUserData(p=>({...p,role:'doctor'})); localStorage.setItem('ashoka_role','doctor'); alert("Verified");} else alert("Invalid"); };
+  const verify = async () => { 
+    if (!key.trim()) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().role === 'doctor') {
+        setUserData(p => ({...p, role: 'doctor'}));
+        localStorage.setItem('ashoka_role', 'doctor');
+        alert("Verified: Access Granted.");
+      } else {
+        alert("Invalid Key.");
+      }
+    } catch(e) { alert("Verification Failed."); }
+  };
   return (
     <div className="p-12 rounded-[60px] text-center space-y-8 shadow-2xl animate-in zoom-in border bg-[#022c22] border-emerald-500/20">
       <Lock size={60} className="mx-auto opacity-20 text-emerald-400" />
