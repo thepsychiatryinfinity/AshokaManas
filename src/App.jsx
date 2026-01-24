@@ -36,9 +36,6 @@ try {
 } catch (e) { console.warn("Offline Mode Active."); }
 
 // --- KEYS & ASSETS ---
-// Secure Keys are now managed via Firestore 'secure_gates' collection.
-
-// ⬇️ YOUR LOGO ⬇️
 const APP_LOGO = "https://firebasestorage.googleapis.com/v0/b/ashokamanas.firebasestorage.app/o/assets%2Flogo.png?alt=media&token=5355e65d-33b4-4698-95b6-dcc09469d78c"; 
 
 // --- SOUND ENGINE ---
@@ -77,14 +74,71 @@ const SoundEngine = {
 
 // --- DATA ---
 const WELCOME_MESSAGES = {
-  General: { en: "Welcome to Peer Support.", te: "సాధారణ మద్దతు హాల్‌కు స్వాగతం." },
-  Clinical: { en: "Welcome to Clinical Hub.", te: "క్లినికల్ హబ్." },
-  Caregiver: { en: "Caregiver Support.", te: "సంరక్షకులు." },
-  Addiction: { en: "Addiction Recovery.", te: "వ్యసన విముక్తి." },
-  Child: { en: "Child & Teen Space.", te: "పిల్లల హాల్." },
-  SideEffects: { en: "Medication Support.", te: "మందుల సమాచారం." },
-  Stories: { en: "My Story.", te: "నా కథ." },
-  Lab: { en: "Wellness Lab.", te: "వెల్నెస్ ల్యాబ్." }
+  General: { 
+    en: "Welcome. You are safe here. Share your burden, or just listen. You are not alone.", 
+    te: "స్వాగతం. మీరు ఇక్కడ సురక్షితం. మీ బాధను పంచుకోండి, లేదా వినండి. మీరు ఒంటరి కాదు.",
+    disclaimer_en: "This is peer support, not medical treatment. In emergencies, call 108.",
+    disclaimer_te: "ఇది పరస్పర సహకారం మాత్రమే, వైద్య చికిత్స కాదు. అత్యవసర పరిస్థితుల్లో 108 కి కాల్ చేయండి."
+  },
+  Clinical: { 
+    en: "Verified Experts Only. A space for clinical discussion and case studies.", 
+    te: "నిపుణులకు మాత్రమే. ఇది వైద్య చర్చల కోసం కేటాయించిన స్థలం.",
+    disclaimer_en: "Strictly for educational purposes. Do NOT share real patient names or identities.",
+    disclaimer_te: "కేవలం విద్యా ప్రయోజనాల కోసం మాత్రమే. రోగుల పేర్లను లేదా వివరాలను బయటపెట్టవద్దు."
+  },
+  Caregiver: { 
+    en: "Caring for others is heavy work. Here, you can put the weight down.", 
+    te: "ఇతరులను చూసుకోవడం పెద్ద బాధ్యత. ఇక్కడ మీరు కాసేపు విశ్రాంతి తీసుకోవచ్చు.",
+    disclaimer_en: "Focus on your mental health. For patient medical issues, consult a specialist.",
+    disclaimer_te: "మీ మానసిక ఆరోగ్యంపై దృష్టి పెట్టండి. రోగి వైద్య సమస్యల కోసం స్పెషలిస్ట్‌ను సంప్రదించండి."
+  },
+  Addiction: { 
+    en: "One breath at a time. Relapse is not the end. We walk this path together.", 
+    te: "ఒక్కొక్క అడుగు వేయండి. ఓడిపోవడం అంటే ముగింపు కాదు. మనం కలిసి ఈ ప్రయాణం చేద్దాం.",
+    disclaimer_en: "We offer support, not detox. If you have severe withdrawal symptoms, go to a hospital immediately.",
+    disclaimer_te: "మేము మానసిక మద్దతు మాత్రమే ఇస్తాము. తీవ్రమైన విత్ డ్రాయల్ లక్షణాలు ఉంటే వెంటనే ఆసుపత్రికి వెళ్లండి."
+  },
+  Child: { 
+    en: "Growing up is hard. This space is monitored for safety.", 
+    te: "ఎదగడం కష్టమే. ఇది పిల్లల కోసం సురక్షితమైన స్థలం.",
+    disclaimer_en: "Bullying or abuse leads to an immediate ban. Be kind.",
+    disclaimer_te: "వేధించడం (Bullying) లేదా బూతులు మాట్లాడితే వెంటనే బ్యాన్ చేయబడతారు. దయతో ఉండండి."
+  },
+  SideEffects: { 
+    en: "Discuss medication experiences here. This is a shared learning space.", 
+    te: "మందుల అనుభవాల గురించి చర్చించండి. ఇది మనం నేర్చుకునే స్థలం.",
+    disclaimer_en: "Experiences vary. Do NOT stop or change medication without your doctor's approval.",
+    disclaimer_te: "అందరి అనుభవాలు ఒకేలా ఉండవు. డాక్టర్ సలహా లేకుండా మందులు ఆపవద్దు లేదా మార్చవద్దు."
+  },
+  Stories: { 
+    en: "Your story matters. Speak your truth without fear.", 
+    te: "మీ కథకు విలువ ఉంది. భయం లేకుండా మీ మనసులో మాట చెప్పండి.",
+    disclaimer_en: "These are personal stories, not facts. Please respect everyone's journey.",
+    disclaimer_te: "ఇవి వ్యక్తిగత కథనాలు, వాస్తవాలు కాకపోవచ్చు. దయచేసి ఇతరుల ప్రయాణాన్ని గౌరవించండి."
+  }
+};
+
+const GAME_INFO = {
+    snake: {
+        t: "Neon Snake", te_t: "నియాన్ స్నేక్",
+        d: "Focus your attention. Guide the energy without hitting the walls.", te_d: "మీ ఏకాగ్రతను నిలపండి. గోడలను తాకకుండా శక్తిని నడిపించండి.",
+        warn_en: "Designed to improve focus and patience. Not for competitive stress.", warn_te: "ఏకాగ్రత మరియు ఓర్పు పెంచడానికి రూపొందించబడింది. ఒత్తిడి కోసం కాదు."
+    },
+    mandala: {
+        t: "Mandala Art", te_t: "మండలా ఆర్ట్",
+        d: "Create balance from chaos. Let symmetry calm your mind.", te_d: "గందరగోళం నుండి సమతుల్యతను సృష్టించండి. ఈ కళ మీ మనస్సును శాంతపరచనివ్వండి.",
+        warn_en: "Art therapy concept. There are no mistakes here, only expression.", warn_te: "ఇక్కడ తప్పులు లేవు, కేవలం మీ భావప్రకటన మాత్రమే."
+    },
+    bubble: {
+        t: "Bubble Pop", te_t: "బబుల్ పాప్",
+        d: "Pop the stress away. A simple sensory release for anxiety.", te_d: "ఒత్తిడిని పేల్చేయండి. ఆందోళన తగ్గించడానికి ఒక చిన్న మార్గం.",
+        warn_en: "Use for short breaks to reset your nervous system.", warn_te: "మీ నరాలకు విశ్రాంతి ఇవ్వడానికి చిన్న విరామాలలో వాడండి."
+    },
+    lab: {
+        t: "Wellness Lab", te_t: "వెల్నెస్ ల్యాబ్",
+        d: "Tools for the mind. Burn stress, breathe life.", te_d: "మనశ్శాంతి కోసం పనిముట్లు. ఒత్తిడిని కాల్చేయండి, ప్రాణశక్తిని పొందండి.",
+        warn_en: "These tools help regulate emotion but do not replace therapy.", warn_te: "ఈ టూల్స్ మీ భావోద్వేగాలను నియంత్రించడానికి సహాయపడతాయి, కానీ థెరపీకి ప్రత్యామ్నాయం కాదు."
+    }
 };
 
 const DEFAULT_LEGAL = [
@@ -106,6 +160,43 @@ const HALLS = [
   { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'Consult your doctor.' },
   { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey matters.' },
 ];
+
+// --- GATEVIEW ---
+function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteMode }) {
+  const [agreed, setAgreed] = useState(false);
+  return (
+    <div className="min-h-screen bg-[#020b08] flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-1000 relative overflow-hidden">
+      {!liteMode && (
+        <>
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[100px]"></div>
+        </>
+      )}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="relative mb-8 group cursor-pointer">
+            {!liteMode && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div>}
+            {/* LOGO AT GATE */}
+            {logo ? (
+                <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" />
+            ) : null}
+            <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1>
+            <p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p>
+        </div>
+        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[35px] p-8 text-left space-y-6 mb-8 max-h-[45vh] overflow-y-auto shadow-2xl relative">
+          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 border-b border-red-500/20 pb-1">Disclaimer</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p></div>
+          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p></div>
+          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400 border-b border-blue-500/20 pb-1">Minor Guidance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">Intended for users 18+. Minors must access under Parental Guidance.</p></div>
+          <div className="flex gap-4 mt-4">
+             {policyLink && <a href={policyLink} target="_blank" className="text-[10px] text-emerald-400 underline">Privacy Policy</a>}
+             {manualLink && <a href={manualLink} target="_blank" className="text-[10px] text-emerald-400 underline">User Manual</a>}
+          </div>
+        </div>
+        <div className="space-y-4"><label className="flex items-center justify-center gap-3 p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-emerald-500/20 group"><div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 ${agreed ? 'bg-emerald-500 border-emerald-500 scale-110' : 'border-gray-600'}`}>{agreed && <CheckSquare size={12} className="text-black"/>}</div><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-emerald-200">I have read and accept the Protocol</span><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="hidden" /></label><button onClick={() => { SoundEngine.playClick(); onAccept(); }} disabled={!agreed} className={`w-full py-5 rounded-[35px] font-black text-lg shadow-[0_0_40px_rgba(16,185,129,0.2)] transition-all uppercase tracking-widest relative overflow-hidden ${agreed ? 'bg-emerald-600 text-white hover:scale-[1.02]' : 'bg-white/5 text-gray-700 cursor-not-allowed'}`}>AGREE & ENTER</button></div>
+        <p className="text-[9px] text-white/20 uppercase tracking-widest mt-10">Copyright © AshokaManas™. All rights reserved.</p>
+      </div>
+    </div>
+  );
+}
 
 // --- MAIN APP ---
 export default function App() {
@@ -150,7 +241,7 @@ export default function App() {
   const [userList, setUserList] = useState([]); // Empty start, filled by Cloud Sync
   const [whispers, setWhispers] = useState([]); 
   const [paymentRequests, setPaymentRequests] = useState([]); 
-  const [reportedPosts, setReportedPosts] = useState([]); // FOR MODERATION QUEUE
+  const [reportedPosts, setReportedPosts] = useState([]); 
 
   useEffect(() => {
     SoundEngine.enabled = !liteMode;
@@ -189,7 +280,7 @@ export default function App() {
     return () => unsubscribeAuth();
   }, []);
 
-  // CLOUD SYNC (NOW INCLUDES REPORTED MESSAGES)
+  // CLOUD SYNC PHASE 1: PUBLIC
   useEffect(() => {
     if (!isFirebaseInitialized) return;
     const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global_settings');
@@ -213,32 +304,40 @@ export default function App() {
             localStorage.setItem('ashoka_cards', JSON.stringify(doc.data().cards));
         }
     });
+
+    return () => { unsubConfig(); unsubCards(); };
+  }, []);
+
+  // CLOUD SYNC PHASE 2: ADMIN DATA (Protected)
+  useEffect(() => {
+    if (!isFirebaseInitialized || !user) return; 
+
     const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
        setWhispers(snap.docs.map(d => d.data()));
-    });
+    }, (e) => console.log("Whispers Sync: Pending Auth"));
+
     const paymentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests');
     const unsubPayments = onSnapshot(query(paymentsRef, orderBy('createdAt', 'desc'), limit(50)), (snap) => {
        setPaymentRequests(snap.docs.map(d => ({id: d.id, ...d.data()})));
-    });
-    
-    // FETCH REPORTED MESSAGES (NEW: Moderation Queue)
-    // Note: This 'collectionGroup' query might need an Index in Firebase Console.
+    }, (e) => console.log("Payments Sync: Pending Auth"));
+
     const qReports = query(collectionGroup(db, 'messages'), where('reported', '==', true));
     const unsubReports = onSnapshot(qReports, (snap) => {
         setReportedPosts(snap.docs.map(d => ({ ...d.data(), id: d.id, refPath: d.ref.path })));
-    });
+    }, (e) => console.log("Reports Sync: Pending Auth"));
 
-    // FETCH USERS FOR STATS
     const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
     const unsubUsers = onSnapshot(usersRef, (snap) => {
         setUserList(snap.docs.map(d => d.data()));
-    });
+    }, (e) => console.log("Users Sync: Pending Auth"));
 
-    return () => { unsubConfig(); unsubCards(); unsubWhispers(); unsubPayments(); unsubUsers(); unsubReports(); };
-  }, []);
+    return () => { unsubWhispers(); unsubPayments(); unsubReports(); unsubUsers(); };
+  }, [user]);
 
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
+  
+  // FIX: Define STICKY_TEXT *BEFORE* using it
   const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." : "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు.";
 
   if (loading) return <div className="min-h-screen bg-[#020b08] flex items-center justify-center text-emerald-500"><Loader className="animate-spin" size={32}/></div>;
@@ -288,8 +387,8 @@ export default function App() {
         
         {view === 'home' && !activeHall && <HomeHub setHall={setActiveHall} setView={setView} lang={lang} query={searchQuery} openMitra={() => setShowMitra(true)} userData={userData} notify={showNotify} />}
         {activeHall && <HallView hall={activeHall} onBack={() => setActiveHall(null)} userData={userData} user={user} lang={lang} searchQuery={searchQuery} setView={setView} setUserData={setUserData} notify={showNotify} welcomeMsgs={welcomeMsgs} />}
-        {view === 'lab' && <LabView />}
-        {view === 'games' && <GamesView />}
+        {view === 'lab' && <LabView lang={lang} />}
+        {view === 'games' && <GamesView lang={lang} />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
         {/* Pass LiteMode props to ProfileView */}
         {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} liteMode={liteMode} toggleLiteMode={toggleLiteMode} />}
@@ -377,43 +476,6 @@ const SOSModal = ({ onClose }) => {
     </div>
   );
 };
-
-// --- GATEVIEW ---
-function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteMode }) {
-  const [agreed, setAgreed] = useState(false);
-  return (
-    <div className="min-h-screen bg-[#020b08] flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-1000 relative overflow-hidden">
-      {!liteMode && (
-        <>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20"></div>
-          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-900/20 rounded-full blur-[100px]"></div>
-        </>
-      )}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="relative mb-8 group cursor-pointer">
-            {!liteMode && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div>}
-            {/* LOGO AT GATE */}
-            {logo ? (
-                <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" />
-            ) : null}
-            <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1>
-            <p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p>
-        </div>
-        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[35px] p-8 text-left space-y-6 mb-8 max-h-[45vh] overflow-y-auto shadow-2xl relative">
-          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-red-400 border-b border-red-500/20 pb-1">Disclaimer</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">This platform is for Education & Peer Support only. It does NOT establish a Doctor-Patient relationship.</p></div>
-          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400 border-b border-orange-500/20 pb-1">Zero Tolerance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">We have Zero Tolerance for abuse, hate speech, bullying, or solicitation. Violations result in immediate permanent exile from the platform.</p></div>
-          <div className="space-y-2"><h3 className="text-[10px] font-black uppercase tracking-widest text-blue-400 border-b border-blue-500/20 pb-1">Minor Guidance</h3><p className="text-[11px] text-gray-400 leading-relaxed font-medium">Intended for users 18+. Minors must access under Parental Guidance.</p></div>
-          <div className="flex gap-4 mt-4">
-             {policyLink && <a href={policyLink} target="_blank" className="text-[10px] text-emerald-400 underline">Privacy Policy</a>}
-             {manualLink && <a href={manualLink} target="_blank" className="text-[10px] text-emerald-400 underline">User Manual</a>}
-          </div>
-        </div>
-        <div className="space-y-4"><label className="flex items-center justify-center gap-3 p-4 rounded-2xl cursor-pointer hover:bg-white/5 transition-colors border border-transparent hover:border-emerald-500/20 group"><div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-300 ${agreed ? 'bg-emerald-500 border-emerald-500 scale-110' : 'border-gray-600'}`}>{agreed && <CheckSquare size={12} className="text-black"/>}</div><span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider group-hover:text-emerald-200">I have read and accept the Protocol</span><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="hidden" /></label><button onClick={() => { SoundEngine.playClick(); onAccept(); }} disabled={!agreed} className={`w-full py-5 rounded-[35px] font-black text-lg shadow-[0_0_40px_rgba(16,185,129,0.2)] transition-all uppercase tracking-widest relative overflow-hidden ${agreed ? 'bg-emerald-600 text-white hover:scale-[1.02]' : 'bg-white/5 text-gray-700 cursor-not-allowed'}`}>AGREE & ENTER</button></div>
-        <p className="text-[9px] text-white/20 uppercase tracking-widest mt-10">Copyright © AshokaManas™. All rights reserved.</p>
-      </div>
-    </div>
-  );
-}
 
 // --- HOME HUB ---
 function HomeHub({ setHall, setView, openMitra, userData, notify }) {
@@ -503,10 +565,10 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
       }
   };
   
-  // MODERATION ACTIONS (NEW)
+  // MODERATION ACTIONS
   const resolveReport = async (post, action) => {
       try {
-          const postRef = doc(db, post.refPath); // Use the refPath we stored
+          const postRef = doc(db, post.refPath); 
           if (action === 'ban') {
               await deleteDoc(postRef);
               notify("Message Nuked.");
@@ -619,6 +681,13 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
       
       if (docSnap.exists()) {
         const role = docSnap.data().role;
+        
+        // AUTO-STAMP: Promote User in DB
+        if (isFirebaseInitialized && user) {
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+            await updateDoc(userRef, { role: role, access_key: key.trim() });
+        }
+
         if (role === 'admin') {
           setView('admin');
           notify("Welcome, Founder.");
@@ -881,7 +950,7 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
                  
                  {/* Details */}
                  {c.ancestralRoot && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Ancestral Root</strong> {c.ancestralRoot}</p>}
-                 {c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Forensic Logic</strong> {c.awarenessLogic}</p>}
+                 {c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Logic</strong> {c.awarenessLogic}</p>}
                  
                  {/* Action Box */}
                  <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-500/10 mt-4">
@@ -905,7 +974,7 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
 }
 
 // --- RESTORED TOOLS & GAMES (Persistent Chat Logic + Actions) ---
-function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs }) { // Renamed prop to searchQuery
+function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs }) { 
   const [posts, setPosts] = useState(() => {
      const saved = localStorage.getItem(`chat_${hall.id}`);
      return saved ? JSON.parse(saved) : [];
@@ -925,9 +994,7 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
 
   const send = async () => { 
     if (!msg.trim()) return; 
-    // Phone/Email Regex Block
     if (/[0-9]{10}/.test(msg) || /\S+@\S+\.\S+/.test(msg)) { notify("Safety Block: Personal Contacts not allowed."); return; }
-    // Abuse Dictionary
     const forbidden = ["kill", "die", "suicide", "hate", "stupid", "idiot", "abuse", "scam"];
     if (forbidden.some(w => msg.toLowerCase().includes(w))) { notify("Safety Block: Harmful language detected."); return; }
 
@@ -935,10 +1002,8 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     const currentUid = user?.uid || "guest_" + Date.now();
     const tempId = "temp_" + Date.now();
     const tempPost = { id: tempId, text: textToSend, uid: currentUid, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
-    
     setPosts(prev => [tempPost, ...prev]);
     localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
-    
     setMsg(""); setReplyTo(null); SoundEngine.playClick();
     if (isFirebaseInitialized && user) {
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { uid: user.uid, text: textToSend, createdAt: serverTimestamp(), reported: false, likes: 0, pinned: false }); 
@@ -946,15 +1011,12 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
   };
   
   const handleLike = (id, currentLikes) => { 
-    // Immediate Visual Feedback
     setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p));
     if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); 
     SoundEngine.playClick(); 
   };
-
   const handleFlag = (id) => { if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { reported: true }); notify("Reported"); };
   const handleDelete = (id) => { 
-      // ZOMBIE KILLER LOGIC: Remove from State AND LocalStorage immediately
       const newPosts = posts.filter(p => p.id !== id);
       setPosts(newPosts);
       localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts));
@@ -969,15 +1031,20 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
   
   if (hall.expertOnly && userData?.role !== 'doctor') return <ExpertGate setView={setView} onBack={onBack} setUserData={setUserData} />;
   
-  const safeMessage = welcomeMsgs?.[hall.id] || { en: "Welcome", te: "స్వాగతం" };
+  const msgData = welcomeMsgs?.[hall.id] || { en: "Welcome", te: "స్వాగతం" };
 
   return (
     <div className="pb-24 space-y-4">
       <button onClick={onBack} className="opacity-50 text-xs font-bold uppercase flex gap-2 text-white"><ArrowLeft size={14}/> Back</button>
       <div className="p-8 bg-emerald-900 rounded-[40px] text-white">
         <h2 className="text-2xl font-black uppercase mb-2">{hall.label}</h2>
-        {/* DYNAMIC WELCOME MESSAGE */}
-        <p className="text-sm opacity-80">{lang === 'en' ? safeMessage.en : safeMessage.te}</p>
+        <p className="text-sm opacity-80 leading-relaxed">{lang === 'en' ? msgData.en : msgData.te}</p>
+        <div className="mt-4 pt-4 border-t border-emerald-500/30">
+             <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+                 <AlertTriangle size={12}/> {lang === 'en' ? "Notice" : "గమనిక"}
+             </p>
+             <p className="text-[10px] opacity-60 mt-1">{lang === 'en' ? msgData.disclaimer_en : msgData.disclaimer_te}</p>
+        </div>
       </div>
       
       <div className="p-4 rounded-[30px] border bg-white/5 border-white/5">
@@ -994,7 +1061,6 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
               <button onClick={()=>handleLike(p.id, p.likes)} className="flex items-center gap-1 text-[10px] hover:text-emerald-400"><Heart size={12} className={p.likes > 0 ? "fill-white" : ""}/> {p.likes||0}</button>
               <button onClick={()=>{setReplyTo(p); window.scrollTo({top:0, behavior:'smooth'});}} className="text-[10px] hover:text-blue-400"><Reply size={12}/></button>
               <button onClick={()=>handleFlag(p.id)} className="text-[10px] hover:text-red-400"><Flag size={12}/></button>
-              {/* Delete logic: Allow if user is author OR user is Doctor (Expert) */}
               {(p.uid === user?.uid || p.uid.startsWith("guest") || userData?.role === 'doctor') && <button onClick={()=>handleDelete(p.id)} className="text-[10px] hover:text-red-500"><Trash2 size={12}/></button>}
               {userData?.role === 'doctor' && <button onClick={()=>handlePin(p.id, p.pinned)} className="text-[10px] hover:text-amber-400"><Pin size={12}/></button>}
             </div>
@@ -1005,18 +1071,100 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
   );
 }
 
-function LegalView({ docs, policyLink, manualLink }) { return <div className="space-y-4 pb-20"><h2 className="text-2xl font-black uppercase text-center text-white">Legal Guide</h2>{docs.map((d,i)=><div key={i} className="p-6 rounded-[30px] border bg-white/5 border-white/10"><h3 className="font-bold text-xs mb-2 opacity-70 text-white">{d.t}</h3><p className="text-xs opacity-60 leading-relaxed text-white">{d.m}</p></div>)} {policyLink && <a href={policyLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-6">Full Privacy Policy</a>} {manualLink && <a href={manualLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-4">User Manual</a>}</div>; }
-function LabView() { const [a, s] = useState(null); if(a==='b')return <BurnVault onBack={()=>s(null)}/>; if(a==='p')return <PranaBreath onBack={()=>s(null)}/>; if(a==='pa')return <Panchabhoota onBack={()=>s(null)}/>; return <div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-black text-center text-emerald-100 uppercase tracking-tight mb-8">Healing Lab</h2><StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/><StationCard icon={Wind} title="Breath" te="ప్రాణ" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/><StationCard icon={Sparkles} title="Pancha" te="పంచ" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/></div>; }
-function GamesView() { const [a, s] = useState(null); if(a==='s')return <SnakeGame onBack={()=>s(null)}/>; if(a==='m')return <MandalaArt onBack={()=>s(null)}/>; if(a==='b')return <BubblePop onBack={()=>s(null)}/>; return <div className="space-y-6 animate-in fade-in"><h2 className="text-3xl font-black text-center text-emerald-100 uppercase tracking-tight mb-8">Mind Games</h2><GameBtn icon={Flame} title="Snake" desc="Nature" onClick={()=>s('s')} color="bg-emerald-900/20 border-emerald-500/30"/><GameBtn icon={Brush} title="Mandala" desc="Art" onClick={()=>s('m')} color="bg-purple-900/20 border-purple-500/30"/><GameBtn icon={Zap} title="Bubbles" desc="Pop" onClick={()=>s('b')} color="bg-blue-900/20 border-blue-500/30"/></div>; }
+// --- UPDATED LAB & GAMES (With Bilingual Messages) ---
+function LabView({ lang }) { 
+    const [a, s] = useState(null); 
+    const t = GAME_INFO.lab; // Wellness Lab Intro
+    
+    if(a==='b')return <BurnVault onBack={()=>s(null)}/>; 
+    if(a==='p')return <PranaBreath onBack={()=>s(null)}/>; 
+    if(a==='pa')return <Panchabhoota onBack={()=>s(null)}/>; 
+
+    return (
+        <div className="space-y-6 animate-in fade-in">
+           <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-[40px] mb-8 text-center">
+               <h2 className="text-2xl font-black text-blue-100 uppercase tracking-tight mb-2">{lang==='en' ? t.t : t.te_t}</h2>
+               <p className="text-xs text-blue-200/70 mb-4">{lang==='en' ? t.d : t.te_d}</p>
+               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{lang==='en' ? t.warn_en : t.warn_te}</p>
+           </div>
+           <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/>
+           <StationCard icon={Wind} title="Breath" te="ప్రాణ" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/>
+           <StationCard icon={Sparkles} title="Pancha" te="పంచ" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/>
+        </div>
+    ); 
+}
+
+function GamesView({ lang }) { 
+    const [a, s] = useState(null); 
+    if(a==='s')return <SnakeGame onBack={()=>s(null)} lang={lang}/>; 
+    if(a==='m')return <MandalaArt onBack={()=>s(null)} lang={lang}/>; 
+    if(a==='b')return <BubblePop onBack={()=>s(null)} lang={lang}/>; 
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        <h2 className="text-3xl font-black text-center text-emerald-100 uppercase tracking-tight mb-8">Mind Games</h2>
+        <GameBtn icon={Flame} title="Snake" desc="Nature" onClick={()=>s('s')} color="bg-emerald-900/20 border-emerald-500/30"/>
+        <GameBtn icon={Brush} title="Mandala" desc="Art" onClick={()=>s('m')} color="bg-purple-900/20 border-purple-500/30"/>
+        <GameBtn icon={Zap} title="Bubbles" desc="Pop" onClick={()=>s('b')} color="bg-blue-900/20 border-blue-500/30"/>
+      </div>
+    ); 
+}
+
+function SnakeGame({ onBack, lang }) { 
+    const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); 
+    const info = GAME_INFO.snake;
+
+    useEffect(() => { const i = setInterval(() => { const h = {x:s[0].x+d.x, y:s[0].y+d.y}; if(h.x<0||h.x>19||h.y<0||h.y>19) return; const n = [h, ...s]; if(h.x===f.x && h.y===f.y) { SF({x:Math.floor(Math.random()*20), y:Math.floor(Math.random()*20)}); SoundEngine.playFreq(600,'sine',0.1); } else n.pop(); SS(n); }, 150); return () => clearInterval(i); }, [s, d, f]); 
+    
+    return (
+      <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50">
+        <div className="mb-6">
+            <h3 className="text-xl font-black text-emerald-400 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
+            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : info.te_d}</p>
+        </div>
+        <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button>
+        <div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div>
+        <div className="flex justify-center gap-4 mt-6"><button onClick={()=>SD({x:-1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16}/></button><button onClick={()=>SD({x:0,y:-1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16}/></button><button onClick={()=>SD({x:0,y:1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16} className="rotate-180"/></button><button onClick={()=>SD({x:1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16} className="rotate-180"/></button></div>
+      </div>
+    ); 
+}
+
+function MandalaArt({ onBack, lang }) { 
+    const r = useRef(); const info = GAME_INFO.mandala;
+    const d = e => { if (!r.current) return; const c = r.current.getContext('2d'); const b = r.current.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; const x = clientX - b.left - 150, y = clientY - b.top - 150; c.translate(150, 150); c.strokeStyle = '#10b981'; c.lineWidth = 2; for (let i = 0; i < 8; i++) { c.rotate(Math.PI / 4); c.beginPath(); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.save(); c.scale(1, -1); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.restore(); } c.setTransform(1, 0, 0, 1, 0, 0); }; 
+    return (
+      <div className="p-8 rounded-[50px] text-center border-4 bg-black border-purple-900/50">
+        <div className="mb-6">
+            <h3 className="text-xl font-black text-purple-400 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
+            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : info.te_d}</p>
+        </div>
+        <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-6">Exit</button>
+        <canvas ref={r} width={300} height={300} className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" onMouseMove={e => e.buttons === 1 && d(e)} onTouchMove={d} /><button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="mt-6 px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase">Clear</button>
+      </div>
+    ); 
+}
+
+function BubblePop({ onBack, lang }) { 
+    const [b, setB] = useState(Array.from({length:15},(_,i)=>({id:i,x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}))); const info = GAME_INFO.bubble;
+    const pop = (id) => { SoundEngine.playPop(); setB(p=>p.filter(i=>i.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}]), 500); }; 
+    return (
+       <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30">
+         <div className="absolute top-6 left-6 z-20">
+             <button onClick={onBack} className="text-blue-400 font-black text-[10px] uppercase mb-2">Back</button>
+             <h3 className="text-lg font-black text-blue-100 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
+             <p className="text-[9px] text-blue-300 w-40">{lang==='en' ? info.warn_en : info.warn_te}</p>
+         </div>
+         {b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}
+       </div>
+    ); 
+}
+
 function NavBtn({ icon: Icon, active, onClick }) { return <button onClick={onClick} className={`p-4 rounded-[30px] transition-all duration-500 ${active ? 'bg-emerald-500 text-[#022c22] shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : 'text-emerald-500/30 hover:bg-white/5 hover:text-emerald-400'}`}><Icon size={24} /></button>; }
 function StationCard({ icon: Icon, title, te, onClick, color }) { return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te}</p></div></button>; }
 function GameBtn({ icon: Icon, title, desc, onClick, color }) { return <button onClick={onClick} className={`p-8 ${color} border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{desc}</p></div></button>; }
 function BurnVault({ onBack }) { const [t,T]=useState(""); const [b,B]=useState(false); return <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30"><button onClick={onBack} className="text-gray-500 mb-10 text-[10px] uppercase font-bold tracking-widest">Back</button>{!b ? ( <><div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div><textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." /><button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button></> ) : <div className="text-8xl animate-bounce">🔥</div>}</div>; }
 function PranaBreath({ onBack }) { const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); const start = () => { T("Inhale"); S(1.5); let i = 1; const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); } }, 1000); } }, 1000); } }, 1000); }; return <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20"><button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button><div className="flex justify-center py-20"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div><button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button></div>; }
 function Panchabhoota({ onBack }) { return <div className="space-y-4 pb-20"><button onClick={onBack} className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 block">Back</button>{[{t:'Earth (396Hz)',i:Mountain,f:396},{t:'Water (417Hz)',i:Droplets,f:417},{t:'Fire (528Hz)',i:Flame,f:528},{t:'Air (639Hz)',i:Wind,f:639},{t:'Space (963Hz)',i:Sparkles,f:963}].map(e=>(<div key={e.t} onClick={()=>SoundEngine.playAncient(e.f)} className="p-8 border rounded-[40px] flex items-center gap-6 active:scale-95 transition-all cursor-pointer bg-white/5 border-white/5 hover:bg-emerald-900/20"><e.i size={24} className="text-emerald-400"/><div><h3 className="font-black uppercase text-lg text-emerald-100">{e.t}</h3></div></div>))}</div>; }
-function SnakeGame({ onBack }) { const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); useEffect(() => { const i = setInterval(() => { const h = {x:s[0].x+d.x, y:s[0].y+d.y}; if(h.x<0||h.x>19||h.y<0||h.y>19) return; const n = [h, ...s]; if(h.x===f.x && h.y===f.y) { SF({x:Math.floor(Math.random()*20), y:Math.floor(Math.random()*20)}); SoundEngine.playFreq(600,'sine',0.1); } else n.pop(); SS(n); }, 150); return () => clearInterval(i); }, [s, d, f]); return <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50"><button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button><div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div><div className="flex justify-center gap-4 mt-6"><button onClick={()=>SD({x:-1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16}/></button><button onClick={()=>SD({x:0,y:-1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16}/></button><button onClick={()=>SD({x:0,y:1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16} className="rotate-180"/></button><button onClick={()=>SD({x:1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16} className="rotate-180"/></button></div></div>; }
-function MandalaArt({ onBack }) { const r = useRef(); const d = e => { if (!r.current) return; const c = r.current.getContext('2d'); const b = r.current.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; const x = clientX - b.left - 150, y = clientY - b.top - 150; c.translate(150, 150); c.strokeStyle = '#10b981'; c.lineWidth = 2; for (let i = 0; i < 8; i++) { c.rotate(Math.PI / 4); c.beginPath(); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.save(); c.scale(1, -1); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.restore(); } c.setTransform(1, 0, 0, 1, 0, 0); }; return <div className="p-8 rounded-[50px] text-center border-4 bg-black border-purple-900/50"><button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-6">Exit</button><canvas ref={r} width={300} height={300} className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" onMouseMove={e => e.buttons === 1 && d(e)} onTouchMove={d} /><button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="mt-6 px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase">Clear</button></div>; }
-function BubblePop({ onBack }) { const [b, setB] = useState(Array.from({length:15},(_,i)=>({id:i,x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}))); const pop = (id) => { SoundEngine.playPop(); setB(p=>p.filter(i=>i.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}]), 500); }; return <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30"><button onClick={onBack} className="absolute top-6 left-6 text-blue-400 font-black text-[10px] uppercase z-20">Back</button>{b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}</div>; }
+
 function ExpertGate({ setView, onBack, setUserData }) { 
   const [key, setKey] = useState("");
   const verify = async () => { 
@@ -1045,3 +1193,4 @@ function ExpertGate({ setView, onBack, setUserData }) {
     </div>
   ); 
 }
+function LegalView({ docs, policyLink, manualLink }) { return <div className="space-y-4 pb-20"><h2 className="text-2xl font-black uppercase text-center text-white">Legal Guide</h2>{docs.map((d,i)=><div key={i} className="p-6 rounded-[30px] border bg-white/5 border-white/10"><h3 className="font-bold text-xs mb-2 opacity-70 text-white">{d.t}</h3><p className="text-xs opacity-60 leading-relaxed text-white">{d.m}</p></div>)} {policyLink && <a href={policyLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-6">Full Privacy Policy</a>} {manualLink && <a href={manualLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-4">User Manual</a>}</div>; }
