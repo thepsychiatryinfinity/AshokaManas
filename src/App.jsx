@@ -51,13 +51,18 @@ const SoundEngine = {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (AudioContext) this.ctx = new AudioContext();
       }
-      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
     } catch (e) {}
   },
   playFreq(f, type = 'sine', duration = 0.1) {
     if(!this.enabled) return;
     this.init();
     if (!this.ctx) return;
+    
+    // CHROME FIX: Force wake up if suspended
+    if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(e => console.error("Audio blocked:", e));
+    }
+
     try {
       const o = this.ctx.createOscillator(); 
       const g = this.ctx.createGain();
@@ -72,7 +77,7 @@ const SoundEngine = {
   playPop() { this.playFreq(600, 'sine', 0.1); },
   playBurn() { this.playFreq(100, 'sawtooth', 1.5); },
   playAncient(f) { this.playFreq(f, 'sine', 3.0); },
-  playKarma() { this.playFreq(800, 'sine', 0.5); } 
+  playKarma() { this.playFreq(800, 'sine', 0.5); }
 };
 
 // --- DATA ---
