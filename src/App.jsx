@@ -5,13 +5,15 @@ import {
   Lock, User, Sparkles, AlertCircle, Brush,
   Search, Send, Flag, Stethoscope, Pill, Baby, HeartHandshake, ScrollText,
   Pin, Trash2, Droplets, Mountain, Fan,
-  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check, BatteryLow
+  Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check, BatteryLow,
+  BarChart3, PieChart, TrendingDown, Mic, Languages, MicOff, Wifi, WifiOff, Eraser,
+  HandHeart, UserPlus
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
 import { 
   getFirestore, doc, onSnapshot, setDoc, serverTimestamp, 
-  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs, getDoc, collectionGroup 
+  collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs, getDoc, collectionGroup, writeBatch, increment 
 } from 'firebase/firestore';
 
 // --- CONFIGURATION GUARD ---
@@ -69,7 +71,8 @@ const SoundEngine = {
   playClick() { this.playFreq(400, 'triangle', 0.05); },
   playPop() { this.playFreq(600, 'sine', 0.1); },
   playBurn() { this.playFreq(100, 'sawtooth', 1.5); },
-  playAncient(f) { this.playFreq(f, 'sine', 3.0); }
+  playAncient(f) { this.playFreq(f, 'sine', 3.0); },
+  playKarma() { this.playFreq(800, 'sine', 0.5); } 
 };
 
 // --- DATA ---
@@ -77,67 +80,81 @@ const WELCOME_MESSAGES = {
   General: { 
     en: "Welcome. You are safe here. Share your burden, or just listen. You are not alone.", 
     te: "స్వాగతం. మీరు ఇక్కడ సురక్షితం. మీ బాధను పంచుకోండి, లేదా వినండి. మీరు ఒంటరి కాదు.",
+    hi: "स्वागत है। आप यहाँ सुरक्षित हैं। अपना बोझ साझा करें, या बस सुनें। आप अकेले नहीं हैं।",
     disclaimer_en: "This is peer support, not medical treatment. In emergencies, call 108.",
-    disclaimer_te: "ఇది పరస్పర సహకారం మాత్రమే, వైద్య చికిత్స కాదు. అత్యవసర పరిస్థితుల్లో 108 కి కాల్ చేయండి."
+    disclaimer_te: "ఇది పరస్పర సహకారం మాత్రమే, వైద్య చికిత్స కాదు. అత్యవసర పరిస్థితుల్లో 108 కి కాల్ చేయండి.",
+    disclaimer_hi: "यह केवल साथी सहयोग है, चिकित्सा उपचार नहीं। आपात स्थिति में 108 पर कॉल करें।"
   },
   Clinical: { 
     en: "Verified Experts Only. A space for clinical discussion and case studies.", 
     te: "నిపుణులకు మాత్రమే. ఇది వైద్య చర్చల కోసం కేటాయించిన స్థలం.",
+    hi: "केवल सत्यापित विशेषज्ञ। नैदानिक चर्चा और केस अध्ययन के लिए एक स्थान।",
     disclaimer_en: "Strictly for educational purposes. Do NOT share real patient names or identities.",
-    disclaimer_te: "కేవలం విద్యా ప్రయోజనాల కోసం మాత్రమే. రోగుల పేర్లను లేదా వివరాలను బయటపెట్టవద్దు."
+    disclaimer_te: "కేవలం విద్యా ప్రయోజనాల కోసం మాత్రమే. రోగుల పేర్లను లేదా వివరాలను బయటపెట్టవద్దు.",
+    disclaimer_hi: "सख्ती से शैक्षिक उद्देश्यों के लिए। असली रोगी के नाम या पहचान साझा न करें।"
   },
   Caregiver: { 
     en: "Caring for others is heavy work. Here, you can put the weight down.", 
     te: "ఇతరులను చూసుకోవడం పెద్ద బాధ్యత. ఇక్కడ మీరు కాసేపు విశ్రాంతి తీసుకోవచ్చు.",
+    hi: "दूसरों की देखभाल करना भारी काम है। यहाँ आप अपना बोझ हल्का कर सकते हैं।",
     disclaimer_en: "Focus on your mental health. For patient medical issues, consult a specialist.",
-    disclaimer_te: "మీ మానసిక ఆరోగ్యంపై దృష్టి పెట్టండి. రోగి వైద్య సమస్యల కోసం స్పెషలిస్ట్‌ను సంప్రదించండి."
+    disclaimer_te: "మీ మానసిక ఆరోగ్యంపై దృష్టి పెట్టండి. రోగి వైద్య సమస్యల కోసం స్పెషలిస్ట్‌ను సంప్రదించండి.",
+    disclaimer_hi: "अपने मानसिक स्वास्थ्य पर ध्यान दें। रोगी की चिकित्सा समस्याओं के लिए विशेषज्ञ से सलाह लें।"
   },
   Addiction: { 
     en: "One breath at a time. Relapse is not the end. We walk this path together.", 
     te: "ఒక్కొక్క అడుగు వేయండి. ఓడిపోవడం అంటే ముగింపు కాదు. మనం కలిసి ఈ ప్రయాణం చేద్దాం.",
+    hi: "एक बार में एक सांस। रिलैप्स अंत नहीं है। हम इस रास्ते पर साथ चलते हैं।",
     disclaimer_en: "We offer support, not detox. If you have severe withdrawal symptoms, go to a hospital immediately.",
-    disclaimer_te: "మేము మానసిక మద్దతు మాత్రమే ఇస్తాము. తీవ్రమైన విత్ డ్రాయల్ లక్షణాలు ఉంటే వెంటనే ఆసుపత్రికి వెళ్లండి."
+    disclaimer_te: "మేము మానసిక మద్దతు మాత్రమే ఇస్తాము. తీవ్రమైన విత్ డ్రాయల్ లక్షణాలు ఉంటే వెంటనే ఆసుపత్రికి వెళ్లండి.",
+    disclaimer_hi: "हम केवल समर्थन प्रदान करते हैं। यदि आपको गंभीर लक्षण हैं, तो तुरंत अस्पताल जाएं।"
   },
   Child: { 
     en: "Growing up is hard. This space is monitored for safety.", 
     te: "ఎదగడం కష్టమే. ఇది పిల్లల కోసం సురక్షితమైన స్థలం.",
+    hi: "बड़ा होना कठिन है। यह स्थान सुरक्षा के लिए निगरानी में है।",
     disclaimer_en: "Bullying or abuse leads to an immediate ban. Be kind.",
-    disclaimer_te: "వేధించడం (Bullying) లేదా బూతులు మాట్లాడితే వెంటనే బ్యాన్ చేయబడతారు. దయతో ఉండండి."
+    disclaimer_te: "వేధించడం (Bullying) లేదా బూతులు మాట్లాడితే వెంటనే బ్యాన్ చేయబడతారు. దయతో ఉండండి.",
+    disclaimer_hi: "गाली-गलौज या बदमाशी करने पर तुरंत प्रतिबंध (Ban) लगेगा। दयालु बनें।"
   },
   SideEffects: { 
     en: "Discuss medication experiences here. This is a shared learning space.", 
     te: "మందుల అనుభవాల గురించి చర్చించండి. ఇది మనం నేర్చుకునే స్థలం.",
+    hi: "दवा के अनुभवों पर चर्चा करें। यह एक साझा सीखने की जगह है।",
     disclaimer_en: "Experiences vary. Do NOT stop or change medication without your doctor's approval.",
-    disclaimer_te: "అందరి అనుభవాలు ఒకేలా ఉండవు. డాక్టర్ సలహా లేకుండా మందులు ఆపవద్దు లేదా మార్చవద్దు."
+    disclaimer_te: "అందరి అనుభవాలు ఒకేలా ఉండవు. డాక్టర్ సలహా లేకుండా మందులు ఆపవద్దు లేదా మార్చవద్దు.",
+    disclaimer_hi: "अनुभव अलग-अलग होते हैं। डॉक्टर की सलाह के बिना दवा बंद या न बदलें।"
   },
   Stories: { 
     en: "Your story matters. Speak your truth without fear.", 
     te: "మీ కథకు విలువ ఉంది. భయం లేకుండా మీ మనసులో మాట చెప్పండి.",
+    hi: "आपकी कहानी मायने रखती है। बिना डर के अपना सच बोलें।",
     disclaimer_en: "These are personal stories, not facts. Please respect everyone's journey.",
-    disclaimer_te: "ఇవి వ్యక్తిగత కథనాలు, వాస్తవాలు కాకపోవచ్చు. దయచేసి ఇతరుల ప్రయాణాన్ని గౌరవించండి."
+    disclaimer_te: "ఇవి వ్యక్తిగత కథనాలు, వాస్తవాలు కాకపోవచ్చు. దయచేసి ఇతరుల ప్రయాణాన్ని గౌరవించండి.",
+    disclaimer_hi: "ये व्यक्तिगत कहानियाँ हैं, तथ्य नहीं। कृपया सभी की यात्रा का सम्मान करें।"
   }
 };
 
 const GAME_INFO = {
     snake: {
-        t: "Neon Snake", te_t: "నియాన్ స్నేక్",
-        d: "Focus your attention. Guide the energy without hitting the walls.", te_d: "మీ ఏకాగ్రతను నిలపండి. గోడలను తాకకుండా శక్తిని నడిపించండి.",
-        warn_en: "Designed to improve focus and patience. Not for competitive stress.", warn_te: "ఏకాగ్రత మరియు ఓర్పు పెంచడానికి రూపొందించబడింది. ఒత్తిడి కోసం కాదు."
+        t: "Neon Snake", te_t: "నియాన్ స్నేక్", hi_t: "नियॉन स्नेक",
+        d: "Focus your attention. Guide the energy without hitting the walls.", te_d: "మీ ఏకాగ్రతను నిలపండి. గోడలను తాకకుండా శక్తిని నడిపించండి.", hi_d: "अपना ध्यान केंद्रित करें। दीवारों से टकराए बिना ऊर्जा का मार्गदर्शन करें।",
+        warn_en: "Designed to improve focus and patience. Not for competitive stress.", warn_te: "ఏకాగ్రత మరియు ఓర్పు పెంచడానికి రూపొందించబడింది. ఒత్తిడి కోసం కాదు.", warn_hi: "फोकस और धैर्य सुधारने के लिए डिज़ाइन किया गया है। तनाव के लिए नहीं।"
     },
     mandala: {
-        t: "Mandala Art", te_t: "మండలా ఆర్ట్",
-        d: "Create balance from chaos. Let symmetry calm your mind.", te_d: "గందరగోళం నుండి సమతుల్యతను సృష్టించండి. ఈ కళ మీ మనస్సును శాంతపరచనివ్వండి.",
-        warn_en: "Art therapy concept. There are no mistakes here, only expression.", warn_te: "ఇక్కడ తప్పులు లేవు, కేవలం మీ భావప్రకటన మాత్రమే."
+        t: "Mandala Art", te_t: "మండలా ఆర్ట్", hi_t: "मंडला कला",
+        d: "Create balance from chaos. Let symmetry calm your mind.", te_d: "గందరగోళం నుండి సమతుల్యతను సృష్టించండి. ఈ కళ మీ మనస్సును శాంతపరచనివ్వండి.", hi_d: "अराजकता से संतुलन बनाएँ। समरूपता को अपने मन को शांत करने दें।",
+        warn_en: "Art therapy concept. There are no mistakes here, only expression.", warn_te: "ఇక్కడ తప్పులు లేవు, కేవలం మీ భావప్రకటన మాత్రమే.", warn_hi: "यहां कोई गलती नहीं है, केवल अभिव्यक्ति है।"
     },
     bubble: {
-        t: "Bubble Pop", te_t: "బబుల్ పాప్",
-        d: "Pop the stress away. A simple sensory release for anxiety.", te_d: "ఒత్తిడిని పేల్చేయండి. ఆందోళన తగ్గించడానికి ఒక చిన్న మార్గం.",
-        warn_en: "Use for short breaks to reset your nervous system.", warn_te: "మీ నరాలకు విశ్రాంతి ఇవ్వడానికి చిన్న విరామాలలో వాడండి."
+        t: "Bubble Pop", te_t: "బబుల్ పాప్", hi_t: "बबल पॉप",
+        d: "Pop the stress away. A simple sensory release for anxiety.", te_d: "ఒత్తిడిని పేల్చేయండి. ఆందోళన తగ్గించడానికి ఒక చిన్న మార్గం.", hi_d: "तनाव को फोड़ दें। चिंता के लिए एक सरल संवेदी रिहाई।",
+        warn_en: "Use for short breaks to reset your nervous system.", warn_te: "మీ నరాలకు విశ్రాంతి ఇవ్వడానికి చిన్న విరామాలలో వాడండి.", warn_hi: "अपने तंत्रिका तंत्र को रीसेट करने के लिए छोटे ब्रेक के लिए उपयोग करें।"
     },
     lab: {
-        t: "Wellness Lab", te_t: "వెల్నెస్ ల్యాబ్",
-        d: "Tools for the mind. Burn stress, breathe life.", te_d: "మనశ్శాంతి కోసం పనిముట్లు. ఒత్తిడిని కాల్చేయండి, ప్రాణశక్తిని పొందండి.",
-        warn_en: "These tools help regulate emotion but do not replace therapy.", warn_te: "ఈ టూల్స్ మీ భావోద్వేగాలను నియంత్రించడానికి సహాయపడతాయి, కానీ థెరపీకి ప్రత్యామ్నాయం కాదు."
+        t: "Wellness Lab", te_t: "వెల్నెస్ ల్యాబ్", hi_t: "वेलनेस लैब",
+        d: "Tools for the mind. Burn stress, breathe life.", te_d: "మనశ్శాంతి కోసం పనిముట్లు. ఒత్తిడిని కాల్చేయండి, ప్రాణశక్తిని పొందండి.", hi_d: "मन के लिए उपकरण। तनाव जलाएं, जीवन में सांस लें।",
+        warn_en: "These tools help regulate emotion but do not replace therapy.", warn_te: "ఈ టూల్స్ మీ భావోద్వేగాలను నియంత్రించడానికి సహాయపడతాయి, కానీ థెరపీకి ప్రత్యామ్నాయం కాదు.", warn_hi: "ये उपकरण भावनाओं को विनियमित करने में मदद करते हैं लेकिन चिकित्सा की जगह नहीं लेते।"
     }
 };
 
@@ -148,17 +165,17 @@ const DEFAULT_LEGAL = [
 ];
 
 const DEFAULT_CARDS = [
-  { id: 1, category: "Self", title: "The Void | శూన్యం", question: "Why do I feel empty?", answer: "Because you are a tool waiting to be used.", ancestralRoot: "Purpose was survival.", awarenessLogic: "Create meaning.", action: "Help someone today." }
+  { id: 1, category: "Self", title: "The Void | శూన్యం | शून्य", question: "Why do I feel empty?", answer: "Because you are a tool waiting to be used.", ancestralRoot: "Purpose was survival.", awarenessLogic: "Create meaning.", action: "Help someone today." }
 ];
 
 const HALLS = [
-  { id: 'General', label: 'General Support', te: 'సాధారణ', icon: Users, color: 'emerald', sticky: 'Identity Protected.' },
-  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Experts Only.' },
-  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital.' },
-  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', icon: Pill, color: 'amber', sticky: 'One day at a time.' },
-  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు', icon: Baby, color: 'pink', sticky: 'Supervision Required.' },
-  { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', icon: AlertCircle, color: 'orange', sticky: 'Consult your doctor.' },
-  { id: 'Stories', label: 'My Story', te: 'నా కథ', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey matters.' },
+  { id: 'General', label: 'General Support', te: 'సాధారణ', hi: 'सामान्य', icon: Users, color: 'emerald', sticky: 'Identity Protected.' },
+  { id: 'Clinical', label: 'Clinical Hub', te: 'క్లినికల్', hi: 'विशेषज्ञ', icon: Stethoscope, color: 'cyan', expertOnly: true, sticky: 'Verified Experts Only.' },
+  { id: 'Caregiver', label: 'Caregiver Burden', te: 'సంరక్షకుల', hi: 'देखभालकर्ता', icon: HeartHandshake, color: 'rose', sticky: 'Self-care is vital.' },
+  { id: 'Addiction', label: 'Addiction Support', te: 'వ్యసన విముక్తి', hi: 'नशामुक्ति', icon: Pill, color: 'amber', sticky: 'One day at a time.' },
+  { id: 'Child', label: 'Child & Adolescent', te: 'పిల్లలు', hi: 'बाल एवं किशोर', icon: Baby, color: 'pink', sticky: 'Supervision Required.' },
+  { id: 'SideEffects', label: 'Side Effects', te: 'దుష్ప్రభావాలు', hi: 'दुष्प्रभाव', icon: AlertCircle, color: 'orange', sticky: 'Consult your doctor.' },
+  { id: 'Stories', label: 'My Story', te: 'నా కథ', hi: 'मेरी कहानी', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey matters.' },
 ];
 
 // --- GATEVIEW ---
@@ -198,10 +215,30 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteM
   );
 }
 
+// --- COSMIC PULSE MAP (Priority 4) ---
+const PulseMap = () => {
+    // Generate static pulse points for the UI demo
+    const pulses = Array.from({length: 12}).map((_,i) => ({
+        id: i,
+        top: Math.random() * 80 + 10 + '%',
+        left: Math.random() * 80 + 10 + '%',
+        delay: Math.random() * 2 + 's'
+    }));
+
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
+            {pulses.map(p => (
+                <div key={p.id} className="absolute w-2 h-2 bg-emerald-400 rounded-full animate-ping" 
+                     style={{top: p.top, left: p.left, animationDuration: '3s', animationDelay: p.delay}}></div>
+            ))}
+        </div>
+    );
+};
+
 // --- MAIN APP ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf' });
+  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf', karma: 0 }); // Added Karma
   const [view, setView] = useState('gate'); 
   const [activeHall, setActiveHall] = useState(null);
   const [lang, setLang] = useState('en');
@@ -209,10 +246,28 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSOS, setShowSOS] = useState(false);
   const [showMitra, setShowMitra] = useState(false);
+  
+  // SHARED AI STATE
+  const [translationRequest, setTranslationRequest] = useState(null);
+
   const [notification, setNotification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMood, setShowMood] = useState(false);
   
+  // ONLINE STATUS
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+      };
+  }, []);
+   
   // LITE MODE STATE 
   const [liteMode, setLiteMode] = useState(() => {
       return localStorage.getItem('ashoka_lite') === 'true';
@@ -224,7 +279,7 @@ export default function App() {
       SoundEngine.enabled = !newVal; 
       localStorage.setItem('ashoka_lite', newVal);
   };
-  
+   
   // LIVE GLOBAL STATE
   const [masterCards, setMasterCards] = useState(() => {
     const saved = localStorage.getItem('ashoka_cards');
@@ -237,7 +292,7 @@ export default function App() {
   const [globalAlert, setGlobalAlert] = useState(""); 
   const [policyLink, setPolicyLink] = useState("");
   const [manualLink, setManualLink] = useState("");
-  
+   
   const [userList, setUserList] = useState([]); // Empty start, filled by Cloud Sync
   const [whispers, setWhispers] = useState([]); 
   const [paymentRequests, setPaymentRequests] = useState([]); 
@@ -246,7 +301,7 @@ export default function App() {
   useEffect(() => {
     SoundEngine.enabled = !liteMode;
     if (!isFirebaseInitialized) { setLoading(false); return; }
-    
+     
     const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -254,12 +309,9 @@ export default function App() {
         onSnapshot(ref, (snap) => {
           if (snap.exists()) {
               const data = snap.data();
-              if (data.expiryDate && new Date() > data.expiryDate.toDate() && data.role === 'patron') {
-                  console.log("Subscription Expired");
-              }
               setUserData(data);
           }
-          else setDoc(ref, { uid: u.uid, role: 'guest', streak: 1, level: 'Leaf', lastActive: serverTimestamp() });
+          else setDoc(ref, { uid: u.uid, role: 'guest', streak: 1, level: 'Leaf', karma: 0, lastActive: serverTimestamp() });
           
           const lastMood = localStorage.getItem('ashoka_last_mood_date');
           const today = new Date().toDateString();
@@ -280,7 +332,7 @@ export default function App() {
     return () => unsubscribeAuth();
   }, []);
 
-  // CLOUD SYNC PHASE 1: PUBLIC
+  // CLOUD SYNC PHASE 1: PUBLIC (WITH CACHING FOR OFFLINE)
   useEffect(() => {
     if (!isFirebaseInitialized) return;
     const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global_settings');
@@ -314,7 +366,7 @@ export default function App() {
 
     const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
-       setWhispers(snap.docs.map(d => d.data()));
+       setWhispers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     }, (e) => console.log("Whispers Sync: Pending Auth"));
 
     const paymentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests');
@@ -329,16 +381,21 @@ export default function App() {
 
     const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
     const unsubUsers = onSnapshot(usersRef, (snap) => {
-        setUserList(snap.docs.map(d => d.data()));
+        setUserList(snap.docs.map(d => ({ id: d.id, ...d.data() }))); 
     }, (e) => console.log("Users Sync: Pending Auth"));
 
     return () => { unsubWhispers(); unsubPayments(); unsubReports(); unsubUsers(); };
   }, [user]);
 
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
-  
-  // FIX: Define STICKY_TEXT *BEFORE* using it
-  const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." : "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు.";
+   
+  const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." 
+                    : lang === 'te' ? "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు." 
+                    : "केवल शैक्षिक। चिकित्सा सलाह नहीं।";
+
+  const cycleLang = () => {
+      setLang(prev => prev === 'en' ? 'te' : prev === 'te' ? 'hi' : 'en');
+  };
 
   if (loading) return <div className="min-h-screen bg-[#020b08] flex items-center justify-center text-emerald-500"><Loader className="animate-spin" size={32}/></div>;
 
@@ -347,21 +404,25 @@ export default function App() {
   return (
     <div className={`min-h-screen font-sans bg-[#020b08] text-[#E0F2F1] transition-all duration-700 select-none overflow-x-hidden relative`}>
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-         {!liteMode && (
+          {!liteMode && (
            <>
              <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse"></div>
              <div className="absolute top-[20%] right-[30%] w-1 h-1 bg-emerald-400 rounded-full blur-[1px] animate-[ping_4s_infinite]"></div>
              <div className="absolute bottom-[30%] left-[20%] w-1.5 h-1.5 bg-yellow-100 rounded-full blur-[1px] animate-[ping_6s_infinite]"></div>
              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5"></div>
            </>
-         )}
+          )}
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
-      
+       
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
-        <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
+        {/* ONLINE STATUS INDICATOR */}
+        <div className="flex items-center gap-2">
+            {!isOnline && <div className="flex items-center gap-1 bg-red-600/20 px-2 py-1 rounded text-[9px] text-red-400 border border-red-500/30 animate-pulse"><WifiOff size={10}/> Offline Mode</div>}
+            <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
+        </div>
       </div>
       <header className="fixed top-[48px] left-0 right-0 p-4 flex justify-between items-center z-[350]">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
@@ -379,14 +440,16 @@ export default function App() {
           <div><h1 className="font-black text-xl tracking-tighter uppercase leading-none bg-gradient-to-r from-emerald-100 via-white to-emerald-200 bg-clip-text text-transparent drop-shadow-sm">ASHOKAMANAS<sup className="text-[8px] ml-0.5 text-emerald-500">TM</sup></h1></div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setLang(lang === 'en' ? 'te' : 'en')} className="px-3 py-1.5 border border-white/10 text-emerald-200 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-sm bg-white/5 hover:bg-white/10">{lang === 'en' ? 'తెలుగు' : 'EN'}</button>
+          <button onClick={cycleLang} className="px-3 py-1.5 border border-white/10 text-emerald-200 rounded-lg text-[10px] font-black uppercase tracking-widest backdrop-blur-sm bg-white/5 hover:bg-white/10 flex items-center gap-2">
+              <Languages size={12}/> {lang === 'en' ? 'ENGLISH' : lang === 'te' ? 'తెలుగు' : 'हिंदी'}
+          </button>
         </div>
       </header>
       <main className={`max-w-4xl mx-auto px-5 pb-40 relative z-10 animate-in fade-in duration-700 ${globalAlert ? 'pt-[160px]' : 'pt-[130px]'}`}>
         {!activeHall && (<div className="mb-8 relative group"><Search className="absolute left-6 top-1/2 -translate-y-1/2 size={16} text-emerald-500/50" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={lang === 'en' ? "Search..." : "వెతకండి..."} className="w-full p-4 pl-12 backdrop-blur-xl rounded-[30px] border outline-none font-medium text-sm transition-all shadow-inner bg-white/5 border-white/10 text-emerald-100 focus:border-emerald-500/50"/></div>)}
         
         {view === 'home' && !activeHall && <HomeHub setHall={setActiveHall} setView={setView} lang={lang} query={searchQuery} openMitra={() => setShowMitra(true)} userData={userData} notify={showNotify} />}
-        {activeHall && <HallView hall={activeHall} onBack={() => setActiveHall(null)} userData={userData} user={user} lang={lang} searchQuery={searchQuery} setView={setView} setUserData={setUserData} notify={showNotify} welcomeMsgs={welcomeMsgs} />}
+        {activeHall && <HallView hall={activeHall} onBack={() => setActiveHall(null)} userData={userData} user={user} lang={lang} searchQuery={searchQuery} setView={setView} setUserData={setUserData} notify={showNotify} welcomeMsgs={welcomeMsgs} setTranslationRequest={setTranslationRequest} setShowMitra={setShowMitra} />}
         {view === 'lab' && <LabView lang={lang} />}
         {view === 'games' && <GamesView lang={lang} />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
@@ -409,7 +472,10 @@ export default function App() {
         <NavBtn icon={User} active={view === 'profile'} onClick={() => { setView('profile'); setActiveHall(null); }} />
       </nav>
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
-      {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} userData={userData} setView={setView} notify={showNotify} />}
+      
+      {/* DEEP MITRA - NOW ACCEPTS EXTERNAL PROMPTS */}
+      {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} userData={userData} setView={setView} notify={showNotify} initialPrompt={translationRequest} />}
+      
       {showMood && <MoodModal onClose={() => setShowMood(false)} notify={showNotify} />}
     </div>
   );
@@ -417,8 +483,20 @@ export default function App() {
 
 // --- NEW COMPONENTS (MOOD & SOS) ---
 function MoodModal({ onClose, notify }) {
-  const saveMood = (mood) => {
+  const saveMood = async (mood) => {
+    // 1. Save locally for user privacy
     localStorage.setItem('ashoka_last_mood_date', new Date().toDateString());
+    
+    // 2. Send ANONYMOUS ping to Clinical Data Bridge
+    if(isFirebaseInitialized) {
+        try {
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), {
+                mood: mood,
+                timestamp: serverTimestamp()
+            });
+        } catch(e) { console.log("Offline mood log"); }
+    }
+
     notify(`Mood Logged: ${mood}`);
     onClose();
   };
@@ -467,11 +545,11 @@ const SOSModal = ({ onClose }) => {
       <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div>
       <h2 className="text-6xl font-black uppercase mb-2 tracking-tighter">Emergency</h2>
       <p className="text-xs uppercase tracking-widest text-red-400 mb-8 font-bold">Detected Region: {isIndia ? "India" : "Global"}</p>
-      
+       
       <a href={`tel:${numbers.amb}`} className="block w-full py-5 bg-red-600 rounded-[30px] font-black text-2xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL AMBULANCE ({numbers.amb})</a>
       <a href={`tel:${numbers.help}`} className="block w-full py-5 bg-blue-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">MENTAL HELPLINE ({numbers.help})</a>
       <button onClick={silentSOS} className="block w-full py-5 bg-emerald-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-emerald-800 active:scale-95 transition-all mt-4">SILENT SOS (WHATSAPP)</button>
-      
+       
       <button onClick={onClose} className="mt-10 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button>
     </div>
   );
@@ -483,11 +561,14 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
   const lockedClick = (feature) => { notify(`${feature} requires Contribution.`); setView('profile'); };
   const [pulse, setPulse] = useState(false); const triggerHeart = () => { setPulse(true); SoundEngine.playFreq(60, 'sine', 0.6); setTimeout(()=>setPulse(false), 1000); };
   return (
-    <div className="space-y-8 pb-32">
-      <div onClick={triggerHeart} className="relative rounded-[60px] bg-gradient-to-br from-[#064E3B] to-[#022c22] p-10 text-center text-white shadow-2xl overflow-hidden cursor-pointer group border border-emerald-500/20 active:scale-95 transition-all duration-500">
+    <div className="space-y-8 pb-32 relative">
+      {/* COSMIC PULSE MAP BACKGROUND */}
+      <PulseMap />
+
+      <div onClick={triggerHeart} className="relative rounded-[60px] bg-gradient-to-br from-[#064E3B] to-[#022c22] p-10 text-center text-white shadow-2xl overflow-hidden cursor-pointer group border border-emerald-500/20 active:scale-95 transition-all duration-500 z-10">
         <div className={`absolute inset-0 bg-emerald-500/20 rounded-full blur-3xl transition-transform duration-1000 ${pulse ? 'scale-150 opacity-100' : 'scale-0 opacity-0'}`} style={{left:'50%', top:'50%', transform:'translate(-50%, -50%)'}}></div><Heart size={48} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.6)] animate-pulse mx-auto mb-6 relative z-10" fill="currentColor" /><h2 className="text-4xl font-black uppercase tracking-tighter leading-none relative z-10">Sanctuary</h2><p className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[0.4em] mt-4 relative z-10">Tap to Breathe</p>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 relative z-10">
         <button onClick={() => {SoundEngine.playClick(); isPaid ? openMitra() : lockedClick("Deep Mitra");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#1e1b4b]/40 border-indigo-500/20 hover:border-indigo-500/50">
             {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-indigo-500/20 text-indigo-300"><Sparkles size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-indigo-100">Trusted Companion</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-indigo-400">AI Friend</p>
         </button>
@@ -495,7 +576,7 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
             {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-amber-500/20 text-amber-300"><Crown size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-amber-100">Master Deck</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-amber-500">Ancient Wisdom</p>
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
         {HALLS.map(h => (
           <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
             {/* LOGO IMPLEMENTATION */}
@@ -518,11 +599,45 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
 
 // --- ADMIN / FOUNDER STUDIO (UPDATED: STATS, MODERATION & SAFE SEARCH) ---
 function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests, reportedPosts }) {
-  const [tab, setTab] = useState('seed');
+  const [tab, setTab] = useState('sentinel');
   const [jsonInput, setJsonInput] = useState("");
   const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
   const [adminSearch, setAdminSearch] = useState(""); 
   
+  // NEW: Clinical Data State
+  const [clinicalData, setClinicalData] = useState({ sunny:0, rainy:0, cloudy:0, totalSessions:0, avgReduction:0 });
+
+  useEffect(() => {
+      // Fetch Clinical Data
+      if(isFirebaseInitialized) {
+          const qMoods = query(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), limit(100));
+          const qSessions = query(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), limit(100));
+          
+          getDocs(qMoods).then(snap => {
+              let s=0, r=0, c=0;
+              snap.forEach(d => {
+                  const m = d.data().mood;
+                  if(m==='Sunny') s++; else if(m==='Rainy') r++; else c++;
+              });
+              setClinicalData(prev => ({...prev, sunny:s, rainy:r, cloudy:c}));
+          });
+          
+          getDocs(qSessions).then(snap => {
+              let totalRed = 0;
+              let count = 0;
+              snap.forEach(d => {
+                  const data = d.data();
+                  if(data.pre && data.post) {
+                      totalRed += (data.pre - data.post);
+                      count++;
+                  }
+              });
+              const avg = count > 0 ? (totalRed / count).toFixed(1) : 0;
+              setClinicalData(prev => ({...prev, totalSessions: snap.size, avgReduction: avg}));
+          });
+      }
+  }, []);
+   
   // STATS CALCULATION
   const stats = {
     total: users.length,
@@ -532,7 +647,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   };
 
   const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
-  
+   
   const depositSeeds = () => { 
       try { 
           const data = JSON.parse(jsonInput); 
@@ -550,12 +665,13 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   };
 
   const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
-  const exileUser = (uid) => { setUsers(users.map(u => u.uid === uid ? {...u, status:'banned'} : u)); notify("User Exiled"); };
+  const exileUser = (id) => { updateUserRole(id, 'banned'); notify("User Exiled"); }; // UPDATED to use ID
+  const restoreUser = (id) => { updateUserRole(id, 'guest'); notify("User Restored to Guest"); }; // NEW RESTORE FUNCTION
   const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs, policy: policyLink, manual: manualLink });
   const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona, ai_key: config.key });
   const saveTreasury = () => saveToCloud('config', 'global_settings', { treasury: treasury });
   const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
-  
+   
   // BANK ACTIONS
   const approvePayment = async (req) => {
       if(isFirebaseInitialized) {
@@ -564,7 +680,65 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
           notify("User Upgraded to Patron");
       }
   };
-  
+
+  const denyPayment = async (id) => {
+      if(isFirebaseInitialized) {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', id));
+          notify("Request Denied");
+      }
+  };
+
+  // --- NEW ACTIONS FOR ADMIN ---
+  const deleteWhisper = async (id) => {
+    if(!id) return;
+    try {
+        if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'whispers', id));
+        notify("Whisper Burned.");
+    } catch(e) { notify("Error deleting whisper."); }
+  };
+
+  const updateUserRole = async (uid, newRole) => {
+    try {
+        // Correctly updates 'role' or 'status' depending on context, but here we update 'role' for dr/patron and 'status' for ban
+        if (newRole === 'banned') {
+             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'banned' });
+        } else if (newRole === 'guest') {
+             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'active', role: 'guest' });
+        } else {
+             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { role: newRole });
+             notify(`User promoted to ${newRole}`);
+        }
+    } catch(e) { notify("Error updating role."); }
+  };
+
+  const deleteUser = async (id) => {
+    if(!confirm("Destroy this user record? Cannot be undone.")) return;
+    try {
+        if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
+        notify("User Obliterated.");
+    } catch(e) { notify("Error deleting user."); }
+  };
+
+  // --- DIGITAL JANITOR (DATA PURGE) ---
+  const purgeOldChats = async () => {
+      if(!confirm("⚠️ NUKE OLD CHATS? This deletes all General Hall messages older than 7 days.")) return;
+      if(!isFirebaseInitialized) return;
+      
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      try {
+          const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'posts', 'General', 'messages'), where('createdAt', '<', sevenDaysAgo), limit(400));
+          const snapshot = await getDocs(q);
+          const batch = writeBatch(db);
+          snapshot.docs.forEach((doc) => {
+              batch.delete(doc.ref);
+          });
+          await batch.commit();
+          notify(`Purged ${snapshot.size} old messages.`);
+      } catch(e) { notify("Purge Error."); }
+  };
+   
   // MODERATION ACTIONS
   const resolveReport = async (post, action) => {
       try {
@@ -588,13 +762,55 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   return (
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['seed', 'law', 'brain', 'treasury', 'bank', 'sentinel', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
-      
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['sentinel', 'clinical', 'bank', 'law', 'brain', 'treasury', 'seed', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
+       
       {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
       {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
       {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
       {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
-      
+       
+      {/* NEW CLINICAL TAB */}
+      {tab === 'clinical' && (
+          <div className="space-y-6">
+              <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight">Clinical Evidence Engine</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
+                      <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold uppercase text-[10px]"><Activity size={14}/> Therapy Sessions</div>
+                      <h4 className="text-3xl font-black text-white">{clinicalData.totalSessions}</h4>
+                      <p className="text-[10px] text-gray-500">Tools Completed</p>
+                  </div>
+                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
+                      <div className="flex items-center gap-2 mb-2 text-blue-400 font-bold uppercase text-[10px]"><TrendingDown size={14}/> Efficacy</div>
+                      <h4 className="text-3xl font-black text-white">{clinicalData.avgReduction}</h4>
+                      <p className="text-[10px] text-gray-500">Avg. Stress Reduction</p>
+                  </div>
+              </div>
+
+              <div className="p-6 bg-black rounded-[30px] border border-white/10">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Community Mood Distribution</h4>
+                  <div className="flex items-end gap-2 h-32 pl-2 border-l border-white/10 pb-2 border-b">
+                      {/* Bars */}
+                      <div className="flex-1 bg-yellow-500/20 rounded-t-lg relative group">
+                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.sunny/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-yellow-500">{clinicalData.sunny}</span>
+                      </div>
+                      <div className="flex-1 bg-gray-500/20 rounded-t-lg relative group">
+                          <div className="absolute bottom-0 left-0 right-0 bg-gray-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.cloudy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-500">{clinicalData.cloudy}</span>
+                      </div>
+                      <div className="flex-1 bg-blue-500/20 rounded-t-lg relative group">
+                          <div className="absolute bottom-0 left-0 right-0 bg-blue-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.rainy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-500">{clinicalData.rainy}</span>
+                      </div>
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-500 uppercase font-bold mt-2 px-4">
+                      <span>Sunny</span><span>Cloudy</span><span>Rainy</span>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* THE BANK (UPDATED WITH SEARCH) */}
       {tab === 'bank' && (
          <div className="space-y-4">
@@ -608,12 +824,15 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
                          <p className="text-xs font-mono text-amber-200">ID: {req.paymentId}</p>
                          <p className="text-[9px] text-gray-500">User: {req.uid.substring(0,8)}...</p>
                      </div>
-                     <button onClick={()=>approvePayment(req)} className="px-3 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold uppercase">Approve</button>
+                     <div className="flex gap-2">
+                        <button onClick={()=>approvePayment(req)} className="px-3 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold uppercase">Approve</button>
+                        <button onClick={()=>denyPayment(req.id)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Deny</button>
+                     </div>
                  </div>
              ))}
          </div>
       )}
-      
+       
       {tab === 'sentinel' && ( 
         <div className="space-y-4">
           {/* NEW STATS DASHBOARD */}
@@ -631,7 +850,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
                 <p className="text-[9px] uppercase tracking-widest text-gray-400">Total Souls</p>
              </div>
           </div>
-          
+           
           {/* MODERATION QUEUE */}
           <h3 className="text-xs uppercase font-bold text-orange-500 mt-6">Moderation Queue ({reportedPosts.length})</h3>
           <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2 bg-[#1a0505]">
@@ -649,27 +868,68 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
 
           <h3 className="text-xs uppercase font-bold text-red-500 mt-6">Global Alert</h3>
           <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
-          
+           
           <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
-          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{(whispers||[]).map((w,i)=><div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400">{w.text}</div>)}{(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}</div>
-          
+          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+            {(whispers||[]).map((w,i)=>(
+                <div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400 flex justify-between items-center">
+                    <span>{w.text}</span>
+                    <button onClick={() => deleteWhisper(w.id)} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
+                </div>
+            ))}
+            {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
+          </div>
+           
           <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
-          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">{users.map((u, i) => (<div key={i} className="p-4 rounded-xl border flex justify-between items-center bg-[#111] border-white/10"><span className="text-xs font-mono text-white">{u.uid} <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.status})</span></span>{u.status === 'active' && <button onClick={() => exileUser(u.uid)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Exile</button>}</div>))}</div>
+          <div className="h-60 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+            {users.map((u, i) => (
+                <div key={i} className="p-4 rounded-xl border flex flex-col gap-2 bg-[#111] border-white/10">
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-mono text-white">{u.uid.substring(0,10)}... <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.role})</span></span>
+                        <div className="flex gap-2">
+                           <button onClick={() => deleteUser(u.id)} className="p-1 bg-red-900/50 text-red-400 rounded hover:bg-red-600 hover:text-white"><Trash2 size={12}/></button>
+                        </div>
+                    </div>
+                    {/* CONTROL PANEL */}
+                    <div className="flex gap-2 mt-2">
+                        {u.status === 'active' ? (
+                            <button onClick={() => exileUser(u.id)} className="flex-1 py-1 bg-red-600 text-white rounded text-[9px] font-bold uppercase">Exile</button>
+                        ) : (
+                            <button onClick={() => restoreUser(u.id)} className="flex-1 py-1 bg-gray-600 text-white rounded text-[9px] font-bold uppercase border border-gray-500">Restore</button>
+                        )}
+                        <button onClick={() => updateUserRole(u.id, 'doctor')} className={`flex-1 py-1 text-white rounded text-[9px] font-bold uppercase ${u.role==='doctor' ? 'bg-indigo-600 opacity-50' : 'bg-indigo-600'}`}>Make Dr.</button>
+                        <button onClick={() => updateUserRole(u.id, 'patron')} className={`flex-1 py-1 text-black rounded text-[9px] font-bold uppercase ${u.role==='patron' ? 'bg-amber-500 opacity-50' : 'bg-amber-500'}`}>Make Patron</button>
+                    </div>
+                </div>
+            ))}
+          </div>
+
+          {/* DIGITAL JANITOR */}
+          <h3 className="text-xs uppercase font-bold text-red-500 mt-6 flex items-center gap-2"><Eraser size={12}/> Danger Zone: Database Cleanup</h3>
+          <button onClick={purgeOldChats} className="w-full py-4 bg-red-900/50 border border-red-500 text-red-200 text-xs font-bold uppercase rounded-xl hover:bg-red-900">
+              PURGE MESSAGES {'>'} 7 DAYS OLD
+          </button>
         </div> 
       )}
-      
+       
       {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
     </div>
   );
 }
 
-// --- PROFILE & SUSTENANCE (UPDATED: LITE MODE) ---
+// --- PROFILE & SUSTENANCE (UPDATED: LITE MODE + KARMA) ---
 function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers, liteMode, toggleLiteMode }) {
   const [agreed, setAgreed] = useState(false);
   const [showPay, setShowPay] = useState(false);
   const [key, setKey] = useState("");
   const [whisper, setWhisper] = useState("");
   const [paymentId, setPaymentId] = useState("");
+  const [trustContact, setTrustContact] = useState(() => localStorage.getItem('ashoka_trust_contact') || "");
+
+  const saveTrustContact = () => {
+      localStorage.setItem('ashoka_trust_contact', trustContact);
+      notify("Safety Contact Saved.");
+  };
 
   // SECURE VERIFY LOGIC
   const verify = async () => {
@@ -678,70 +938,71 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
       const docSnap = await getDoc(docRef);
-      
+       
       if (docSnap.exists()) {
         const role = docSnap.data().role;
-        
-        // AUTO-STAMP: Promote User in DB
         if (isFirebaseInitialized && user) {
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
             await updateDoc(userRef, { role: role, access_key: key.trim() });
         }
-
-        if (role === 'admin') {
-          setView('admin');
-          notify("Welcome, Founder.");
-        } else if (role === 'doctor') {
+        if (role === 'admin') { setView('admin'); notify("Welcome, Founder."); } 
+        else if (role === 'doctor') {
           setUserData(p => ({...p, role: 'doctor'}));
           localStorage.setItem('ashoka_role', 'doctor');
           notify("Verified: Doctor Access Granted.");
         }
         setKey("");
-      } else {
-        notify("Invalid Access Key.");
-      }
-    } catch (e) {
-      notify("Verification Failed. Check Internet.");
-    }
+      } else { notify("Invalid Access Key."); }
+    } catch (e) { notify("Verification Failed. Check Internet."); }
   };
 
   const sendWhisper = async () => { if(!whisper.trim()) return; notify("Sent to Founder"); setWhispers(p=>[...p,{text:whisper, date:Date.now()}]); if(isFirebaseInitialized) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), { text: whisper, createdAt: serverTimestamp(), uid: user.uid }); setWhisper(""); };
   const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
   const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
-  
+   
   // MANUAL MAGIC: Send Request to Founder
   const submitPaymentRequest = async () => {
       if(paymentId.length < 5) { notify("Invalid ID"); return; }
       notify("Verifying with Founder...");
       if(isFirebaseInitialized) {
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), {
-              uid: user.uid,
-              paymentId: paymentId,
-              createdAt: serverTimestamp()
-          });
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), { uid: user.uid, paymentId: paymentId, createdAt: serverTimestamp() });
           notify("Request Sent! Wait for Approval.");
           setShowPay(false);
-      } else {
-          notify("Offline: Cannot Verify.");
-      }
+      } else { notify("Offline: Cannot Verify."); }
   };
 
   const sustText = {
-    en: "We are a community-supported space designed for clarity and peace. AshokaManas was built to help you navigate daily stress through self-awareness and proven techniques. We focus on education and peer support.\n\nWhat This Unlocks:\n1. Master Wisdom Deck\n2. Trusted Companion AI\n3. Wellness Tools\n\nYour Contribution:\nThis platform is ad-free and privacy-focused. Your one-time contribution supports the ongoing maintenance, research, and technical costs to keep this space open and secure for years to come.",
-    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక. రోజువారీ ఒత్తిడిని అర్థం చేసుకోవడానికి మరియు వాటిని దాటడానికి అవసరమైన 'అవగాహన' (Awareness) కల్పించడమే మా లక్ష్యం.\n\nమీకు లభించేవి:\n1. మాస్టర్ విస్డమ్ డెక్\n2. విశ్వసనీయ మిత్ర (AI)\n3. వెల్నెస్ టూల్స్\n\nమీ సహకారం:\nఈ వేదికలో ఎలాంటి ప్రకటనలు (Ads) ఉండవు. మీ ఈ సహకారం, రాబోయే సంవత్సరాల్లో ఈ ప్లాట్‌ఫామ్‌ను నడపడానికి ఉపయోగపడుతుంది."
+    en: "We are a community-supported space designed for clarity and peace.",
+    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక.",
+    hi: "हम शांति और स्पष्टता के लिए एक समुदाय समर्थित स्थान हैं।"
   };
-  
-  const refundText = {
-    en: "A Note on Refunds:\nBecause AshokaManas is a digital sanctuary, we unlock our entire library of Wisdom, Tools, and AI support for you the moment you join. Since these resources are digital and cannot be 'returned' once seen, this contribution is final and non-refundable.",
-    te: "రీఫండ్ పాలసీ (ముఖ్య గమనిక):\nఅశోకమనస్ ఒక డిజిటల్ వేదిక. మీరు చేరగానే మా విజ్ఞానం, టూల్స్ మరియు AI సేవలు అన్నీ మీకు వెంటనే అందుబాటులోకి వస్తాయి. ఒకసారి చూసిన సమాచారాన్ని వెనక్కి ఇవ్వలేము కాబట్టి, ఈ రుసుము వెనక్కి ఇవ్వబడదు (Non-Refundable)."
+   
+  const getKarmaRank = (k) => {
+      if(k > 50) return "Guardian Angel";
+      if(k > 20) return "Healer";
+      if(k > 5) return "Compassionate Soul";
+      return "Seeker";
   };
 
   return (
     <div className="pb-24 space-y-8">
-      <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white">
+      {/* IDENTITY CARD */}
+      <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-emerald-400 to-blue-500"></div>
         <User size={48} className="mx-auto mb-2"/>
         <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
+        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-2">{getKarmaRank(userData.karma || 0)} • {userData.karma || 0} Karma</p>
         <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
+      </div>
+
+      {/* SAFETY HANDSHAKE */}
+      <div className="p-6 rounded-[40px] border bg-red-900/10 border-red-500/20">
+          <h3 className="font-black uppercase text-red-400 flex items-center gap-2 mb-4"><HeartHandshake size={16}/> Safety Circle</h3>
+          <div className="flex gap-2">
+              <input value={trustContact} onChange={e=>setTrustContact(e.target.value)} placeholder="Trusted Phone (e.g. 9199...)" className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
+              <button onClick={saveTrustContact} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold">Save</button>
+          </div>
+          <p className="text-[9px] text-gray-500 mt-2">This number will be pre-filled if you use Silent SOS.</p>
       </div>
 
       {/* LITE MODE TOGGLE */}
@@ -765,9 +1026,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
         ) : (
           <div className="space-y-4">
             <div className="p-4 rounded-xl h-40 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap bg-black/20 text-amber-100/80">
-               {lang==='en' ? sustText.en : sustText.te}
-               <br/><br/>
-               <span className="text-red-300 font-bold">{lang==='en' ? refundText.en : refundText.te}</span>
+               {lang==='en' ? sustText.en : lang==='te' ? sustText.te : sustText.hi}
             </div>
             <label className="flex gap-2 items-center text-xs font-bold text-amber-200"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}/> I Accept Non-Refundable Policy</label>
             <div className="grid gap-2">
@@ -777,7 +1036,6 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
             {/* MANUAL MAGIC BOX */}
             <div className="pt-4 border-t border-white/10 mt-4">
                 <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
-                <p className="text-[9px] text-emerald-400/80 mb-2">Lost your device? Enter your previous Transaction ID here. The Founder will verify it and restore your Patron Access (Deep Mitra & Wisdom Deck). Note: Previous chat history cannot be restored for security reasons.</p>
                 <div className="flex gap-2">
                     <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
                     <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
@@ -793,11 +1051,8 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
           <input value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="flex-1 p-3 rounded-xl text-center font-bold text-xs outline-none bg-black/30 text-white" />
           <button onClick={verify} className="px-4 bg-emerald-800 text-white rounded-xl text-xs font-bold">Verify</button>
         </div>
-        <p className="text-[9px] mb-4 text-center text-gray-500">Enter Access Key (Doctor or Admin) to Unlock.</p>
-        {/* Unified Button for Admin/Doctor */}
-        <button onClick={verify} className="w-full py-3 bg-indigo-900 text-white rounded-xl font-bold text-xs uppercase">Unlock Special Access</button>
       </div>
-      
+       
       <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
         <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Whisper to Founder</h3>
         <div className="flex gap-2">
@@ -814,7 +1069,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
 }
 
 // --- DEEP MITRA AI (Fixed: Readable Text & Auto-Scroll) ---
-function DeepMitra({ onBack, persona, userData, setView, notify }) {
+function DeepMitra({ onBack, persona, userData, setView, notify, initialPrompt }) {
   const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
   const [txt, setTxt] = useState("");
   const scrollRef = useRef(null); // Reference for auto-scrolling
@@ -825,14 +1080,40 @@ function DeepMitra({ onBack, persona, userData, setView, notify }) {
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [msgs]);
-  
+
+  // AUTO-SEND INITIAL PROMPT (For Translation Feature)
+  useEffect(() => {
+      if (initialPrompt && isFirebaseInitialized) {
+          // Add user message first locally
+          setMsgs(p => [...p, {role: 'user', text: initialPrompt}]);
+          
+          // Send to Cloud
+          const sendAuto = async () => {
+              try {
+                  const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
+                      prompt: initialPrompt,
+                      persona: persona, 
+                      createdAt: serverTimestamp()
+                  });
+                  const unsub = onSnapshot(docRef, (snap) => {
+                      if (snap.exists() && snap.data().response) {
+                          setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]);
+                          unsub(); 
+                      }
+                  });
+              } catch(e) {}
+          };
+          sendAuto();
+      }
+  }, [initialPrompt]);
+   
   if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
 
   const reply = async () => {
     if(!txt.trim()) return;
     setMsgs(p => [...p, {role: 'user', text: txt}]);
     setTxt(""); 
-    
+     
     if (txt.toLowerCase().includes("diagnos") || txt.toLowerCase().includes("medic")) {
         setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I am a wise friend, not a doctor. I cannot provide medical diagnosis."}]), 500);
         return;
@@ -866,7 +1147,7 @@ function DeepMitra({ onBack, persona, userData, setView, notify }) {
         <div className="flex items-center gap-3"><div className="p-2 bg-indigo-600 rounded-lg"><BrainCircuit size={18} className="text-white"/></div><div><h3 className="text-sm font-black uppercase tracking-wider text-white">Trusted Companion</h3><p className="text-[9px] text-indigo-400">Safe Space AI</p></div></div>
         <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10"><X size={18} className="text-gray-400"/></button>
       </div>
-      
+       
       {/* Messages Container with Auto-Scroll & Formatting Fix */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6 scroll-smooth">
         {msgs.map((m, i) => (
@@ -893,7 +1174,7 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
 
   // UNLOCK FOR PATRON OR DOCTOR
   const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
-  
+   
   if (!isUnlocked) { 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center">
@@ -912,7 +1193,7 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   const filteredCards = filter === 'All' 
     ? cards 
     : cards.filter(c => c.category === filter);
-  
+   
   return (
     <div className="min-h-screen p-4 bg-black text-amber-50">
       <div className="flex justify-between items-center mb-8">
@@ -974,13 +1255,16 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
 }
 
 // --- RESTORED TOOLS & GAMES (Persistent Chat Logic + Actions) ---
-function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs }) { 
+function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs, setTranslationRequest, setShowMitra }) { 
   const [posts, setPosts] = useState(() => {
      const saved = localStorage.getItem(`chat_${hall.id}`);
      return saved ? JSON.parse(saved) : [];
   }); 
   const [msg, setMsg] = useState(""); const [replyTo, setReplyTo] = useState(null);
   
+  // VOICE INPUT STATE
+  const [isListening, setIsListening] = useState(false);
+
   useEffect(() => { 
     if (hall.expertOnly && userData?.role !== 'doctor') return; 
     if (!isFirebaseInitialized) return; 
@@ -992,6 +1276,45 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     }); 
   }, [hall, userData]);
 
+  // VOICE INPUT LOGIC (ROBUST)
+  const startListening = () => {
+      // 1. Check Browser Support
+      if (!('webkitSpeechRecognition' in window)) {
+          notify("Browser does not support Voice.");
+          return;
+      }
+
+      // 2. Request Permission Explicitly (Fix for audio-capture error)
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+            const recognition = new window.webkitSpeechRecognition();
+            recognition.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            setIsListening(true);
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                setMsg(prev => prev + " " + transcript);
+                setIsListening(false);
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech error", event.error);
+                setIsListening(false);
+                notify("Voice Error: Check Mic Permissions.");
+            };
+
+            recognition.onend = () => setIsListening(false);
+            recognition.start();
+        })
+        .catch((err) => {
+            console.error("Mic Permission Denied", err);
+            notify("Please Allow Microphone Access.");
+        });
+  };
+
   const send = async () => { 
     if (!msg.trim()) return; 
     if (/[0-9]{10}/.test(msg) || /\S+@\S+\.\S+/.test(msg)) { notify("Safety Block: Personal Contacts not allowed."); return; }
@@ -1001,15 +1324,51 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     const textToSend = replyTo ? `[Replying to: "${replyTo.text.substring(0, 20)}..."]\n${msg}` : msg; 
     const currentUid = user?.uid || "guest_" + Date.now();
     const tempId = "temp_" + Date.now();
-    const tempPost = { id: tempId, text: textToSend, uid: currentUid, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
+    // UPDATED: Include role in message payload
+    const userRole = userData?.role || 'guest';
+    const tempPost = { id: tempId, text: textToSend, uid: currentUid, role: userRole, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
     setPosts(prev => [tempPost, ...prev]);
     localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
     setMsg(""); setReplyTo(null); SoundEngine.playClick();
     if (isFirebaseInitialized && user) {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { uid: user.uid, text: textToSend, createdAt: serverTimestamp(), reported: false, likes: 0, pinned: false }); 
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { 
+            uid: user.uid, 
+            text: textToSend, 
+            role: userRole, // Storing role here
+            createdAt: serverTimestamp(), 
+            reported: false, 
+            likes: 0, 
+            pinned: false 
+        }); 
     }
   };
   
+  // TRANSLATE MESSAGE LOGIC (UPDATED FLOW)
+  const handleTranslate = (text) => {
+      notify("Opening Mitra to Translate...");
+      const targetLang = lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : 'English';
+      const prompt = `Translate this text to ${targetLang}: "${text}"`;
+      
+      // 1. Set global translation request
+      setTranslationRequest(prompt);
+      // 2. Open Mitra Panel
+      setShowMitra(true);
+  };
+
+  // KARMA LOGIC
+  const handleGratitude = async (targetUid) => {
+      if(!targetUid || targetUid === user?.uid) { notify("You cannot thank yourself."); return; }
+      SoundEngine.playKarma();
+      notify("Gratitude Sent! Karma +1");
+      if(isFirebaseInitialized) {
+          try {
+              // Increment Karma for the helper
+              const targetRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid);
+              await updateDoc(targetRef, { karma: increment(1) });
+          } catch(e) { console.log("Karma error"); }
+      }
+  };
+
   const handleLike = (id, currentLikes) => { 
     setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p));
     if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); 
@@ -1028,44 +1387,79 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
       if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin });
       notify(currentPin ? "Unpinned" : "Pinned");
   };
+
+  // Helper for Timestamps
+  const formatTime = (t) => {
+    if (!t) return "Just now";
+    try {
+        const date = t.toDate ? t.toDate() : new Date(t.seconds * 1000 || t);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch(e) { return ""; }
+  };
   
   if (hall.expertOnly && userData?.role !== 'doctor') return <ExpertGate setView={setView} onBack={onBack} setUserData={setUserData} />;
   
-  const msgData = welcomeMsgs?.[hall.id] || { en: "Welcome", te: "స్వాగతం" };
+  const msgData = welcomeMsgs?.[hall.id] || { en: "Welcome", te: "స్వాగతం", hi: "स्वागत है" };
 
   return (
     <div className="pb-24 space-y-4">
       <button onClick={onBack} className="opacity-50 text-xs font-bold uppercase flex gap-2 text-white"><ArrowLeft size={14}/> Back</button>
       <div className="p-8 bg-emerald-900 rounded-[40px] text-white">
         <h2 className="text-2xl font-black uppercase mb-2">{hall.label}</h2>
-        <p className="text-sm opacity-80 leading-relaxed">{lang === 'en' ? msgData.en : msgData.te}</p>
+        <p className="text-sm opacity-80 leading-relaxed">{lang === 'en' ? msgData.en : lang === 'te' ? msgData.te : msgData.hi}</p>
         <div className="mt-4 pt-4 border-t border-emerald-500/30">
              <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
                  <AlertTriangle size={12}/> {lang === 'en' ? "Notice" : "గమనిక"}
              </p>
-             <p className="text-[10px] opacity-60 mt-1">{lang === 'en' ? msgData.disclaimer_en : msgData.disclaimer_te}</p>
+             <p className="text-[10px] opacity-60 mt-1">{lang === 'en' ? msgData.disclaimer_en : lang === 'te' ? msgData.disclaimer_te : msgData.disclaimer_hi}</p>
         </div>
       </div>
       
-      <div className="p-4 rounded-[30px] border bg-white/5 border-white/5">
+      <div className="p-4 rounded-[30px] border bg-white/5 border-white/5 relative">
         {replyTo && <div className="flex justify-between items-center bg-emerald-500/10 p-2 rounded mb-2"><span className="text-[10px] opacity-70">Replying to: {replyTo.text.substring(0,15)}...</span><button onClick={()=>setReplyTo(null)}><X size={12}/></button></div>}
-        <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share..." className="w-full bg-transparent border-none outline-none resize-none h-20 text-sm font-medium text-white" />
+        <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share..." className="w-full bg-transparent border-none outline-none resize-none h-20 text-sm font-medium text-white pr-10" />
+        
+        {/* MIC BUTTON */}
+        <button onClick={startListening} className={`absolute top-4 right-4 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-white/10 text-gray-400'}`}>
+            <Mic size={16}/>
+        </button>
+
         <div className="flex justify-end mt-2"><button onClick={send} className="p-3 bg-emerald-600 rounded-full text-white"><Send size={18}/></button></div>
       </div>
       
       <div className="space-y-3">
-        {posts.map(p => (
-          <div key={p.id} className={`p-6 rounded-[35px] border bg-white/5 border-white/5 ${p.pinned ? 'border-l-4 border-l-emerald-500' : ''}`}>
-            <p className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{p.text}</p>
-            <div className="flex gap-4 mt-4 opacity-50 text-white items-center">
-              <button onClick={()=>handleLike(p.id, p.likes)} className="flex items-center gap-1 text-[10px] hover:text-emerald-400"><Heart size={12} className={p.likes > 0 ? "fill-white" : ""}/> {p.likes||0}</button>
-              <button onClick={()=>{setReplyTo(p); window.scrollTo({top:0, behavior:'smooth'});}} className="text-[10px] hover:text-blue-400"><Reply size={12}/></button>
-              <button onClick={()=>handleFlag(p.id)} className="text-[10px] hover:text-red-400"><Flag size={12}/></button>
-              {(p.uid === user?.uid || p.uid.startsWith("guest") || userData?.role === 'doctor') && <button onClick={()=>handleDelete(p.id)} className="text-[10px] hover:text-red-500"><Trash2 size={12}/></button>}
-              {userData?.role === 'doctor' && <button onClick={()=>handlePin(p.id, p.pinned)} className="text-[10px] hover:text-amber-400"><Pin size={12}/></button>}
+        {posts.map(p => {
+          const isExpert = p.role === 'doctor' || p.role === 'admin';
+          return (
+            <div key={p.id} className={`p-6 rounded-[35px] border ${isExpert ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-white/5 border-white/5'} ${p.pinned ? 'border-l-4 border-l-emerald-500' : ''}`}>
+                {/* VERIFIED BADGE HEADER */}
+                {isExpert && (
+                    <div className="flex items-center gap-1 mb-2 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
+                        <ShieldCheck size={12} fill="currentColor" className="text-emerald-900"/> Verified Expert
+                    </div>
+                )}
+                
+                {/* Message Text */}
+                <div className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{p.text}</div>
+                
+                {/* Footer: Timestamp & Actions */}
+                <div className="flex justify-between items-center mt-4 opacity-50 text-white">
+                    {/* TIMESTAMP */}
+                    <span className="text-[9px] font-mono tracking-wide">{formatTime(p.createdAt)}</span>
+
+                    <div className="flex gap-4 items-center">
+                        <button onClick={()=>handleTranslate(p.text)} className="text-[10px] hover:text-blue-400" title="Translate"><Globe size={12}/></button>
+                        <button onClick={()=>handleGratitude(p.uid)} className="text-[10px] hover:text-purple-400" title="Give Karma"><HandHeart size={12}/></button>
+                        <button onClick={()=>handleLike(p.id, p.likes)} className="flex items-center gap-1 text-[10px] hover:text-emerald-400"><Heart size={12} className={p.likes > 0 ? "fill-white" : ""}/> {p.likes||0}</button>
+                        <button onClick={()=>{setReplyTo(p); window.scrollTo({top:0, behavior:'smooth'});}} className="text-[10px] hover:text-blue-400"><Reply size={12}/></button>
+                        <button onClick={()=>handleFlag(p.id)} className="text-[10px] hover:text-red-400"><Flag size={12}/></button>
+                        {(p.uid === user?.uid || p.uid.startsWith("guest") || userData?.role === 'doctor') && <button onClick={()=>handleDelete(p.id)} className="text-[10px] hover:text-red-500"><Trash2 size={12}/></button>}
+                        {userData?.role === 'doctor' && <button onClick={()=>handlePin(p.id, p.pinned)} className="text-[10px] hover:text-amber-400"><Pin size={12}/></button>}
+                    </div>
+                </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1083,13 +1477,13 @@ function LabView({ lang }) {
     return (
         <div className="space-y-6 animate-in fade-in">
            <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-[40px] mb-8 text-center">
-               <h2 className="text-2xl font-black text-blue-100 uppercase tracking-tight mb-2">{lang==='en' ? t.t : t.te_t}</h2>
-               <p className="text-xs text-blue-200/70 mb-4">{lang==='en' ? t.d : t.te_d}</p>
-               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{lang==='en' ? t.warn_en : t.warn_te}</p>
+               <h2 className="text-2xl font-black text-blue-100 uppercase tracking-tight mb-2">{lang==='en' ? t.t : lang==='te' ? t.te_t : t.hi_t}</h2>
+               <p className="text-xs text-blue-200/70 mb-4">{lang==='en' ? t.d : lang==='te' ? t.te_d : t.hi_d}</p>
+               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{lang==='en' ? t.warn_en : lang==='te' ? t.warn_te : t.warn_hi}</p>
            </div>
-           <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/>
-           <StationCard icon={Wind} title="Breath" te="ప్రాణ" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/>
-           <StationCard icon={Sparkles} title="Pancha" te="పంచ" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/>
+           <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" hi="बर्न वॉल्ट" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/>
+           <StationCard icon={Wind} title="Breath" te="ప్రాణ" hi="सांस" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/>
+           <StationCard icon={Sparkles} title="Pancha" te="పంచ" hi="पंच" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/>
         </div>
     ); 
 }
@@ -1118,8 +1512,8 @@ function SnakeGame({ onBack, lang }) {
     return (
       <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50">
         <div className="mb-6">
-            <h3 className="text-xl font-black text-emerald-400 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
-            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : info.te_d}</p>
+            <h3 className="text-xl font-black text-emerald-400 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3>
+            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : lang==='te' ? info.te_d : info.hi_d}</p>
         </div>
         <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button>
         <div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div>
@@ -1134,8 +1528,8 @@ function MandalaArt({ onBack, lang }) {
     return (
       <div className="p-8 rounded-[50px] text-center border-4 bg-black border-purple-900/50">
         <div className="mb-6">
-            <h3 className="text-xl font-black text-purple-400 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
-            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : info.te_d}</p>
+            <h3 className="text-xl font-black text-purple-400 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3>
+            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : lang==='te' ? info.te_d : info.hi_d}</p>
         </div>
         <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-6">Exit</button>
         <canvas ref={r} width={300} height={300} className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" onMouseMove={e => e.buttons === 1 && d(e)} onTouchMove={d} /><button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="mt-6 px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase">Clear</button>
@@ -1150,8 +1544,8 @@ function BubblePop({ onBack, lang }) {
        <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30">
          <div className="absolute top-6 left-6 z-20">
              <button onClick={onBack} className="text-blue-400 font-black text-[10px] uppercase mb-2">Back</button>
-             <h3 className="text-lg font-black text-blue-100 uppercase">{lang==='en' ? info.t : info.te_t}</h3>
-             <p className="text-[9px] text-blue-300 w-40">{lang==='en' ? info.warn_en : info.warn_te}</p>
+             <h3 className="text-lg font-black text-blue-100 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3>
+             <p className="text-[9px] text-blue-300 w-40">{lang==='en' ? info.warn_en : lang==='te' ? info.warn_te : info.warn_hi}</p>
          </div>
          {b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}
        </div>
@@ -1159,10 +1553,103 @@ function BubblePop({ onBack, lang }) {
 }
 
 function NavBtn({ icon: Icon, active, onClick }) { return <button onClick={onClick} className={`p-4 rounded-[30px] transition-all duration-500 ${active ? 'bg-emerald-500 text-[#022c22] shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : 'text-emerald-500/30 hover:bg-white/5 hover:text-emerald-400'}`}><Icon size={24} /></button>; }
-function StationCard({ icon: Icon, title, te, onClick, color }) { return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te}</p></div></button>; }
+function StationCard({ icon: Icon, title, te, hi, onClick, color }) { return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te || hi}</p></div></button>; }
 function GameBtn({ icon: Icon, title, desc, onClick, color }) { return <button onClick={onClick} className={`p-8 ${color} border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{desc}</p></div></button>; }
-function BurnVault({ onBack }) { const [t,T]=useState(""); const [b,B]=useState(false); return <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30"><button onClick={onBack} className="text-gray-500 mb-10 text-[10px] uppercase font-bold tracking-widest">Back</button>{!b ? ( <><div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div><textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." /><button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button></> ) : <div className="text-8xl animate-bounce">🔥</div>}</div>; }
-function PranaBreath({ onBack }) { const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); const start = () => { T("Inhale"); S(1.5); let i = 1; const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); } }, 1000); } }, 1000); } }, 1000); }; return <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20"><button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button><div className="flex justify-center py-20"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div><button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button></div>; }
+
+// --- LOGGING HELPERS FOR TOOLS ---
+const logToolSession = async (toolName, pre, post) => {
+    if(isFirebaseInitialized) {
+        try {
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), {
+                tool: toolName,
+                pre: pre,
+                post: post,
+                timestamp: serverTimestamp()
+            });
+        } catch(e) {}
+    }
+};
+
+// --- PRE/POST CHECKIN COMPONENT (INTERNAL) ---
+const ToolCheckin = ({ title, onSelect }) => (
+    <div className="text-center animate-in zoom-in duration-300">
+        <h3 className="text-lg font-black text-white uppercase mb-6 tracking-tight">{title}</h3>
+        <p className="text-[10px] text-gray-400 mb-4 font-bold uppercase tracking-widest">Rate your Stress (1 = Calm, 5 = Panic)</p>
+        <div className="flex justify-center gap-3">
+            {[1,2,3,4,5].map(n => (
+                <button key={n} onClick={()=>onSelect(n)} className={`w-12 h-12 rounded-xl font-black text-lg transition-all active:scale-90 ${n<3?'bg-emerald-500 text-black':n===3?'bg-yellow-500 text-black':'bg-red-500 text-white'}`}>
+                    {n}
+                </button>
+            ))}
+        </div>
+    </div>
+);
+
+function BurnVault({ onBack }) { 
+    const [step, setStep] = useState('pre'); // pre, active, post
+    const [scores, setScores] = useState({pre:0, post:0});
+    const [t,T]=useState(""); 
+    const [b,B]=useState(false); 
+
+    const finish = (finalScore) => {
+        logToolSession('BurnVault', scores.pre, finalScore);
+        onBack();
+    };
+
+    return (
+        <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30 relative">
+            <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 text-[10px] uppercase font-bold tracking-widest">Exit</button>
+            
+            {step === 'pre' && <ToolCheckin title="Before we begin..." onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
+            
+            {step === 'active' && !b && (
+                <div className="animate-in fade-in">
+                    <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div>
+                    <textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." />
+                    <button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); setStep('post'); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button>
+                </div>
+            )}
+            
+            {step === 'active' && b && <div className="text-8xl animate-bounce">🔥</div>}
+            
+            {step === 'post' && <ToolCheckin title="How do you feel now?" onSelect={(n)=>finish(n)} />}
+        </div>
+    );
+}
+
+function PranaBreath({ onBack }) { 
+    const [step, setStep] = useState('pre'); 
+    const [scores, setScores] = useState({pre:0, post:0});
+    const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); 
+    
+    const finish = (finalScore) => {
+        logToolSession('PranaBreath', scores.pre, finalScore);
+        onBack();
+    };
+
+    const start = () => { 
+        T("Inhale"); S(1.5); let i = 1; 
+        const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); setStep('post'); } }, 1000); } }, 1000); } }, 1000); 
+    }; 
+    
+    return (
+        <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20 min-h-[400px] flex flex-col justify-center">
+            <button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button>
+            
+            {step === 'pre' && <ToolCheckin title="Check Pulse" onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
+            
+            {step === 'active' && (
+                <div className="animate-in zoom-in">
+                    <div className="flex justify-center py-10"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div>
+                    {t === 'Ready' && <button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button>}
+                </div>
+            )}
+
+            {step === 'post' && <ToolCheckin title="Check Pulse Again" onSelect={(n)=>finish(n)} />}
+        </div>
+    );
+}
+
 function Panchabhoota({ onBack }) { return <div className="space-y-4 pb-20"><button onClick={onBack} className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 block">Back</button>{[{t:'Earth (396Hz)',i:Mountain,f:396},{t:'Water (417Hz)',i:Droplets,f:417},{t:'Fire (528Hz)',i:Flame,f:528},{t:'Air (639Hz)',i:Wind,f:639},{t:'Space (963Hz)',i:Sparkles,f:963}].map(e=>(<div key={e.t} onClick={()=>SoundEngine.playAncient(e.f)} className="p-8 border rounded-[40px] flex items-center gap-6 active:scale-95 transition-all cursor-pointer bg-white/5 border-white/5 hover:bg-emerald-900/20"><e.i size={24} className="text-emerald-400"/><div><h3 className="font-black uppercase text-lg text-emerald-100">{e.t}</h3></div></div>))}</div>; }
 
 function ExpertGate({ setView, onBack, setUserData }) { 
