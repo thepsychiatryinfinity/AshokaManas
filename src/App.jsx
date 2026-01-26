@@ -365,10 +365,22 @@ export default function App() {
     return () => { unsubConfig(); unsubCards(); };
   }, []);
 
-  // CLOUD SYNC PHASE 2: ADMIN DATA (Protected)
+    // CLOUD SYNC PHASE 2: ADMIN DATA (Protected)
+  // UPDATED: Now includes a "Guard Clause" to prevent permission errors for guests
   useEffect(() => {
     if (!isFirebaseInitialized || !user) return; 
 
+    // --- THE GUARD CLAUSE ---
+    // If the user is NOT an admin, stop here. Do not try to read restricted data.
+    if (userData?.role !== 'admin') {
+        setWhispers([]);
+        setPaymentRequests([]);
+        setReportedPosts([]);
+        setUserList([]);
+        return; // <--- The app stops asking for secrets here.
+    }
+
+    // If we passed the guard, we are an Admin. Proceed to fetch.
     const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
        setWhispers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -390,7 +402,7 @@ export default function App() {
     }, (e) => console.log("Users Sync: Pending Auth"));
 
     return () => { unsubWhispers(); unsubPayments(); unsubReports(); unsubUsers(); };
-  }, [user]);
+  }, [user, userData?.role]); // <--- Dependency updated to react when role changes
 
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
    
