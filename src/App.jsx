@@ -7,16 +7,17 @@ import {
   Pin, Trash2, Droplets, Mountain, Fan,
   Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check, BatteryLow,
   BarChart3, PieChart, TrendingDown, Mic, Languages, MicOff, Wifi, WifiOff, Eraser,
-  HandHeart, UserPlus
+  HandHeart, UserPlus, Map
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut, signInWithCustomToken } from 'firebase/auth';
 import { 
   getFirestore, doc, onSnapshot, setDoc, serverTimestamp, 
   collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs, getDoc, collectionGroup, writeBatch, increment 
 } from 'firebase/firestore';
 
 // --- CONFIGURATION GUARD ---
+// Note: In this preview environment, we use the provided config or fallbacks.
 const firebaseConfig = {
   apiKey: "AIzaSyDyipE8alZJTB7diAmBkgR4AaPeS7x0JrQ",
   authDomain: "ashokamanas.firebaseapp.com",
@@ -27,15 +28,21 @@ const firebaseConfig = {
   measurementId: "G-HY8TS7H8LW"
 };
 
-let db, auth, appId = 'ashokamanas-live-v1';
+// Global variables for Firebase
+let db, auth;
+let appId = 'ashokamanas-live-v1';
 let isFirebaseInitialized = false;
 
+// Attempt to initialize Firebase, handle failure gracefully for preview
 try {
-  const app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  isFirebaseInitialized = true;
-} catch (e) { console.warn("Offline Mode Active."); }
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    isFirebaseInitialized = true;
+} catch (e) { 
+    console.warn("Offline Mode Active or Firebase Init Failed:", e); 
+    isFirebaseInitialized = false;
+}
 
 // --- KEYS & ASSETS ---
 const APP_LOGO = "https://firebasestorage.googleapis.com/v0/b/ashokamanas.firebasestorage.app/o/assets%2Flogo.png?alt=media&token=5355e65d-33b4-4698-95b6-dcc09469d78c"; 
@@ -57,12 +64,9 @@ const SoundEngine = {
     if(!this.enabled) return;
     this.init();
     if (!this.ctx) return;
-    
-    // CHROME FIX: Force wake up if suspended
     if (this.ctx.state === 'suspended') {
         this.ctx.resume().catch(e => console.error("Audio blocked:", e));
     }
-
     try {
       const o = this.ctx.createOscillator(); 
       const g = this.ctx.createGain();
@@ -197,7 +201,6 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteM
       <div className="relative z-10 w-full max-w-md">
         <div className="relative mb-8 group cursor-pointer">
             {!liteMode && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div>}
-            {/* LOGO AT GATE */}
             {logo ? (
                 <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" />
             ) : null}
@@ -220,9 +223,8 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteM
   );
 }
 
-// --- COSMIC PULSE MAP (Priority 4) ---
+// --- COSMIC PULSE MAP ---
 const PulseMap = () => {
-    // Generate static pulse points for the UI demo
     const pulses = Array.from({length: 12}).map((_,i) => ({
         id: i,
         top: Math.random() * 80 + 10 + '%',
@@ -234,7 +236,7 @@ const PulseMap = () => {
         <div className="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
             {pulses.map(p => (
                 <div key={p.id} className="absolute w-2 h-2 bg-emerald-400 rounded-full animate-ping" 
-                     style={{top: p.top, left: p.left, animationDuration: '3s', animationDelay: p.delay}}></div>
+                      style={{top: p.top, left: p.left, animationDuration: '3s', animationDelay: p.delay}}></div>
             ))}
         </div>
     );
@@ -243,7 +245,7 @@ const PulseMap = () => {
 // --- MAIN APP ---
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf', karma: 0 }); // Added Karma
+  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf', karma: 0 }); 
   const [view, setView] = useState('gate'); 
   const [activeHall, setActiveHall] = useState(null);
   const [lang, setLang] = useState('en');
@@ -272,7 +274,7 @@ export default function App() {
           window.removeEventListener('offline', handleOffline);
       };
   }, []);
-   
+    
   // LITE MODE STATE 
   const [liteMode, setLiteMode] = useState(() => {
       return localStorage.getItem('ashoka_lite') === 'true';
@@ -284,7 +286,7 @@ export default function App() {
       SoundEngine.enabled = !newVal; 
       localStorage.setItem('ashoka_lite', newVal);
   };
-   
+    
   // LIVE GLOBAL STATE
   const [masterCards, setMasterCards] = useState(() => {
     const saved = localStorage.getItem('ashoka_cards');
@@ -297,8 +299,8 @@ export default function App() {
   const [globalAlert, setGlobalAlert] = useState(""); 
   const [policyLink, setPolicyLink] = useState("");
   const [manualLink, setManualLink] = useState("");
-   
-  const [userList, setUserList] = useState([]); // Empty start, filled by Cloud Sync
+    
+  const [userList, setUserList] = useState([]); 
   const [whispers, setWhispers] = useState([]); 
   const [paymentRequests, setPaymentRequests] = useState([]); 
   const [reportedPosts, setReportedPosts] = useState([]); 
@@ -306,7 +308,7 @@ export default function App() {
   useEffect(() => {
     SoundEngine.enabled = !liteMode;
     if (!isFirebaseInitialized) { setLoading(false); return; }
-     
+      
     const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
@@ -337,7 +339,7 @@ export default function App() {
     return () => unsubscribeAuth();
   }, []);
 
-  // CLOUD SYNC PHASE 1: PUBLIC (WITH CACHING FOR OFFLINE)
+  // CLOUD SYNC
   useEffect(() => {
     if (!isFirebaseInitialized) return;
     const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global_settings');
@@ -365,22 +367,18 @@ export default function App() {
     return () => { unsubConfig(); unsubCards(); };
   }, []);
 
-    // CLOUD SYNC PHASE 2: ADMIN DATA (Protected)
-  // UPDATED: Now includes a "Guard Clause" to prevent permission errors for guests
+  // ADMIN SYNC
   useEffect(() => {
     if (!isFirebaseInitialized || !user) return; 
-
-    // --- THE GUARD CLAUSE ---
-    // If the user is NOT an admin, stop here. Do not try to read restricted data.
-    if (userData?.role !== 'admin') {
+    
+    if (userData.role !== 'admin') {
         setWhispers([]);
         setPaymentRequests([]);
         setReportedPosts([]);
         setUserList([]);
-        return; // <--- The app stops asking for secrets here.
+        return;
     }
 
-    // If we passed the guard, we are an Admin. Proceed to fetch.
     const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
     const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
        setWhispers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -402,10 +400,10 @@ export default function App() {
     }, (e) => console.log("Users Sync: Pending Auth"));
 
     return () => { unsubWhispers(); unsubPayments(); unsubReports(); unsubUsers(); };
-  }, [user, userData?.role]); // <--- Dependency updated to react when role changes
-
+  }, [user, userData.role]); 
+  
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
-   
+    
   const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." 
                     : lang === 'te' ? "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు." 
                     : "केवल शैक्षिक। चिकित्सा सलाह नहीं।";
@@ -432,7 +430,7 @@ export default function App() {
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
-       
+        
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
         {/* ONLINE STATUS INDICATOR */}
@@ -470,10 +468,8 @@ export default function App() {
         {view === 'lab' && <LabView lang={lang} />}
         {view === 'games' && <GamesView lang={lang} />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
-        {/* Pass LiteMode props to ProfileView */}
         {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} liteMode={liteMode} toggleLiteMode={toggleLiteMode} />}
         
-        {/* LAZY LOADED ADMIN VIEW */}
         {view === 'admin' && (
             <Suspense fallback={<div className="text-center text-emerald-500 text-xs p-10">Accessing Secure Vault...</div>}>
                 <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} paymentRequests={paymentRequests} reportedPosts={reportedPosts} />
@@ -490,10 +486,384 @@ export default function App() {
       </nav>
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
       
-      {/* DEEP MITRA - NOW ACCEPTS EXTERNAL PROMPTS */}
-      {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} userData={userData} setView={setView} notify={showNotify} initialPrompt={translationRequest} />}
+      {/* DEEP MITRA - WITH REAL LOGIC */}
+      {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} apiKey={mitraConfig.key} userData={userData} user={user} setView={setView} notify={showNotify} initialPrompt={translationRequest} />}
       
       {showMood && <MoodModal onClose={() => setShowMood(false)} notify={showNotify} />}
+    </div>
+  );
+}
+
+// --- DEEP MITRA AI (FUNCTIONAL) ---
+function DeepMitra({ onBack, persona, apiKey, userData, user, setView, notify, initialPrompt }) {
+  const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
+  const [txt, setTxt] = useState("");
+  const [typing, setTyping] = useState(false);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [msgs, typing]);
+
+  // HANDLE TRANSLATION REQUEST
+  useEffect(() => {
+    if (initialPrompt) {
+        // Delay slightly to ensure UI is ready
+        setTimeout(() => handleSend(initialPrompt), 500);
+    }
+  }, [initialPrompt]);
+
+  if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
+
+  const handleSend = async (inputText) => {
+    const textToSend = inputText || txt;
+    if(!textToSend.trim()) return;
+    
+    // 1. Add User Message
+    const userMsg = {role: 'user', text: textToSend};
+    setMsgs(prev => [...prev, userMsg]);
+    setTxt("");
+    setTyping(true);
+
+    // 2. Safety Check (Client Side)
+    if (textToSend.toLowerCase().includes("diagnos") || textToSend.toLowerCase().includes("medic") || textToSend.toLowerCase().includes("suicide")) {
+        setTyping(false);
+        setMsgs(prev => [...prev, {role: 'bot', text: "I am a wise friend, not a doctor. I cannot provide medical diagnosis. If you are in danger, please use the SOS button."}]);
+        return;
+    }
+
+    let responseText = "";
+
+    try {
+        // 3. PERSIST HISTORY (Matches Rule F)
+        // We create the doc with user UID.
+        let docRef = null;
+        if (isFirebaseInitialized) {
+            docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
+                prompt: textToSend,
+                persona: persona, 
+                uid: user.uid,
+                createdAt: serverTimestamp()
+            });
+        }
+
+        // 4. GENERATE RESPONSE (Real or Simulated)
+        if (apiKey && apiKey.length > 10) {
+            // REAL AI CALL
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `${persona}\n\nUser: ${textToSend}\nMitra:` }] }]
+                })
+            });
+            const data = await response.json();
+            responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "I am having trouble connecting to the cosmos.";
+        } else {
+            // SIMULATED INTELLIGENCE (Fallback)
+            // This ensures the app is functional even without a key
+            await new Promise(r => setTimeout(r, 1500)); // Fake delay
+            const lower = textToSend.toLowerCase();
+            if (lower.includes("sad") || lower.includes("pain")) responseText = "I hear the weight in your words. Sorrow is a visitor, not a permanent resident. Would you like to try a breathing exercise?";
+            else if (lower.includes("anxious") || lower.includes("fear")) responseText = "Fear often lies about the future. Let us come back to the present moment. Take a deep breath with me.";
+            else if (lower.includes("thank")) responseText = "You are welcome. Gratitude is the highest frequency.";
+            else if (lower.includes("translate")) responseText = "I have translated your request. The essence is preserved.";
+            else responseText = "I am listening. Please, tell me more about what is in your heart.";
+        }
+
+        setTyping(false);
+        setMsgs(prev => [...prev, {role: 'bot', text: responseText}]);
+
+        // 5. UPDATE HISTORY (Matches Rule F - Update own doc)
+        if (isFirebaseInitialized && docRef) {
+            // Client updates their own document with the response
+            await updateDoc(docRef, { response: responseText, responseAt: serverTimestamp() });
+        }
+
+    } catch (e) {
+        setTyping(false);
+        setMsgs(prev => [...prev, {role: 'bot', text: "My connection to the cloud is weak, but I am here with you."}]);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[600] backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom-10 bg-[#020617]/95">
+      <div className="p-4 border-b flex justify-between items-center bg-black/20 border-white/10">
+        <div className="flex items-center gap-3"><div className="p-2 bg-indigo-600 rounded-lg"><BrainCircuit size={18} className="text-white"/></div><div><h3 className="text-sm font-black uppercase tracking-wider text-white">Trusted Companion</h3><p className="text-[9px] text-indigo-400">Safe Space AI</p></div></div>
+        <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10"><X size={18} className="text-gray-400"/></button>
+      </div>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6 scroll-smooth">
+        {msgs.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-gray-200 rounded-bl-none shadow-sm'}`}>
+                  {m.text}
+              </div>
+          </div>
+        ))}
+        {typing && <div className="flex justify-start"><div className="p-4 rounded-2xl bg-white/10 text-gray-400 text-xs animate-pulse">Reflecting...</div></div>}
+      </div>
+      <div className="p-4 border-t flex gap-2 bg-black/40 border-white/10">
+        <input value={txt} onChange={e => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} className="flex-1 p-3 rounded-xl outline-none bg-white/10 text-white border-white/5 placeholder-white/30" placeholder="Type..." />
+        <button onClick={() => handleSend()} className="p-3 bg-indigo-600 text-white rounded-xl"><Send size={18}/></button>
+      </div>
+    </div>
+  );
+}
+
+// --- USER JOURNEY MAP COMPONENT ---
+function UserJourneyMap({ userData }) {
+  // 1. Calculate Progress
+  const streak = userData.streak || 0;
+  const karma = userData.karma || 0;
+  const role = userData.role || 'guest';
+
+  // 2. Define Milestones
+  const milestones = [
+    { 
+      id: 1, 
+      title: "The Seed", 
+      sub: "You have arrived.", 
+      icon: User, 
+      unlocked: true // Always true
+    },
+    { 
+      id: 2, 
+      title: "Consistency", 
+      sub: "3 Day Streak", 
+      icon: Flame, 
+      unlocked: streak >= 3 
+    },
+    { 
+      id: 3, 
+      title: "Kindness", 
+      sub: "5 Karma Points", 
+      icon: HeartHandshake, 
+      unlocked: karma >= 5 
+    },
+    { 
+      id: 4, 
+      title: "Resilience", 
+      sub: "7 Days + 10 Karma", 
+      icon: Mountain, 
+      unlocked: streak >= 7 && karma >= 10 
+    },
+    { 
+      id: 5, 
+      title: "Guardian", 
+      sub: "A Pillar of Ashoka", 
+      icon: Crown, 
+      unlocked: role === 'doctor' || role === 'patron' || karma >= 20 
+    }
+  ];
+
+  // 3. Calculate Completion % for the Progress Bar
+  const unlockedCount = milestones.filter(m => m.unlocked).length;
+  const progressPercent = ((unlockedCount - 1) / (milestones.length - 1)) * 100;
+
+  return (
+    <div className="p-8 rounded-[40px] border bg-black/40 border-emerald-500/20 relative overflow-hidden">
+      <h3 className="font-black uppercase text-emerald-400 mb-6 flex items-center gap-2">
+        <Map size={18} /> Your Soul Journey
+      </h3>
+
+      <div className="relative">
+        {/* Connecting Line (Background) */}
+        <div className="absolute left-[19px] top-0 bottom-0 w-1 bg-white/5 rounded-full z-0"></div>
+        
+        {/* Connecting Line (Progress - Lit Up) */}
+        <div 
+            className="absolute left-[19px] top-0 w-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] rounded-full z-0 transition-all duration-1000"
+            style={{ height: `${progressPercent}%` }}
+        ></div>
+
+        {/* Milestones */}
+        <div className="space-y-8 relative z-10">
+          {milestones.map((m, i) => (
+            <div key={m.id} className={`flex items-center gap-4 transition-all duration-500 ${m.unlocked ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+              
+              {/* The Star/Node */}
+              <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${m.unlocked ? 'bg-emerald-900 border-emerald-400 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-black border-gray-700 text-gray-700'}`}>
+                <m.icon size={16} fill={m.unlocked ? "currentColor" : "none"} />
+              </div>
+
+              {/* The Text */}
+              <div>
+                <h4 className={`font-bold uppercase text-xs ${m.unlocked ? 'text-white' : 'text-gray-500'}`}>
+                    {m.title}
+                </h4>
+                <p className="text-[10px] text-gray-500 font-mono">
+                    {m.sub}
+                </p>
+              </div>
+
+              {/* Checkmark for completed */}
+              {m.unlocked && <div className="ml-auto"><Check size={14} className="text-emerald-500"/></div>}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Encouragement Footer */}
+      <div className="mt-6 pt-4 border-t border-white/5 text-center">
+          <p className="text-[10px] text-emerald-300 italic">
+              {streak < 3 ? "Come back tomorrow to grow your light." : 
+               karma < 5 ? "Help someone in the Halls to gain Karma." : 
+               "You are becoming a beacon of hope."}
+          </p>
+      </div>
+    </div>
+  );
+}
+
+// --- PROFILE & SUSTENANCE ---
+function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers, liteMode, toggleLiteMode }) {
+  const [agreed, setAgreed] = useState(false);
+  const [showPay, setShowPay] = useState(false);
+  const [key, setKey] = useState("");
+  const [whisper, setWhisper] = useState("");
+  const [paymentId, setPaymentId] = useState("");
+  const [trustContact, setTrustContact] = useState(() => localStorage.getItem('ashoka_trust_contact') || "");
+
+  const saveTrustContact = () => {
+      localStorage.setItem('ashoka_trust_contact', trustContact);
+      notify("Safety Contact Saved.");
+  };
+
+  // SECURE VERIFY LOGIC - ALIGNED WITH SECURITY RULES
+  const verify = async () => {
+    if (!key.trim()) return;
+    notify("Verifying...");
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
+      const docSnap = await getDoc(docRef); // Matches 'allow get' rule
+        
+      if (docSnap.exists()) {
+        const role = docSnap.data().role;
+        if (isFirebaseInitialized && user) {
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+            // Matches 'isValidKey' rule: we send the key AND the role for verification
+            await updateDoc(userRef, { role: role, access_key: key.trim() });
+        }
+        if (role === 'admin') { setView('admin'); notify("Welcome, Founder."); } 
+        else if (role === 'doctor') {
+          setUserData(p => ({...p, role: 'doctor'}));
+          localStorage.setItem('ashoka_role', 'doctor');
+          notify("Verified: Doctor Access Granted.");
+        }
+        setKey("");
+      } else { notify("Invalid Access Key."); }
+    } catch (e) { notify("Verification Failed. Check Internet."); }
+  };
+
+  const sendWhisper = async () => { if(!whisper.trim()) return; notify("Sent to Founder"); setWhispers(p=>[...p,{text:whisper, date:Date.now()}]); if(isFirebaseInitialized) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), { text: whisper, createdAt: serverTimestamp(), uid: user.uid }); setWhisper(""); };
+  const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
+  const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
+    
+  const submitPaymentRequest = async () => {
+      if(paymentId.length < 5) { notify("Invalid ID"); return; }
+      notify("Verifying with Founder...");
+      if(isFirebaseInitialized) {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), { uid: user.uid, paymentId: paymentId, createdAt: serverTimestamp() });
+          notify("Request Sent! Wait for Approval.");
+          setShowPay(false);
+      } else { notify("Offline: Cannot Verify."); }
+  };
+
+  const sustText = {
+    en: "We are a community-supported space designed for clarity and peace.",
+    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక.",
+    hi: "हम शांति और स्पष्टता के लिए एक समुदाय समर्थित स्थान हैं।"
+  };
+    
+  const getKarmaRank = (k) => {
+      if(k > 50) return "Guardian Angel";
+      if(k > 20) return "Healer";
+      if(k > 5) return "Compassionate Soul";
+      return "Seeker";
+  };
+
+  return (
+    <div className="pb-24 space-y-8">
+      {/* IDENTITY CARD */}
+      <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-emerald-400 to-blue-500"></div>
+        <User size={48} className="mx-auto mb-2"/>
+        <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
+        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-2">{getKarmaRank(userData.karma || 0)} • {userData.karma || 0} Karma</p>
+        <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
+      </div>
+
+      {/* --- NEW: SOUL JOURNEY MAP --- */}
+      <UserJourneyMap userData={userData} />
+
+      {/* SAFETY HANDSHAKE */}
+      <div className="p-6 rounded-[40px] border bg-red-900/10 border-red-500/20">
+          <h3 className="font-black uppercase text-red-400 flex items-center gap-2 mb-4"><HeartHandshake size={16}/> Safety Circle</h3>
+          <div className="flex gap-2">
+              <input value={trustContact} onChange={e=>setTrustContact(e.target.value)} placeholder="Trusted Phone (e.g. 9199...)" className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
+              <button onClick={saveTrustContact} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold">Save</button>
+          </div>
+          <p className="text-[9px] text-gray-500 mt-2">This number will be pre-filled if you use Silent SOS.</p>
+      </div>
+
+      {/* LITE MODE TOGGLE */}
+      <button onClick={toggleLiteMode} className={`w-full p-4 rounded-[30px] border flex items-center justify-between ${liteMode ? 'bg-emerald-900/50 border-emerald-500' : 'bg-white/5 border-white/10'}`}>
+          <div className="flex items-center gap-4">
+              <BatteryLow className={liteMode ? "text-emerald-400" : "text-gray-400"} />
+              <div className="text-left">
+                  <h3 className="font-bold text-white text-sm">Lite Mode</h3>
+                  <p className="text-[10px] text-gray-400">Reduce motion & save battery</p>
+              </div>
+          </div>
+          <div className={`w-12 h-6 rounded-full p-1 transition-colors ${liteMode ? 'bg-emerald-500' : 'bg-gray-600'}`}>
+              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${liteMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+          </div>
+      </button>
+
+      <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
+        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Support Mission":"మద్దతు ఇవ్వండి"}</h3></div>
+        {!showPay ? (
+          <button onClick={() => setShowPay(true)} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Open Contribution</button>
+        ) : (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl h-40 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap bg-black/20 text-amber-100/80">
+               {lang==='en' ? sustText.en : lang==='te' ? sustText.te : sustText.hi}
+            </div>
+            <label className="flex gap-2 items-center text-xs font-bold text-amber-200"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}/> I Accept Non-Refundable Policy</label>
+            <div className="grid gap-2">
+              <a href={treasury.india || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-amber-600 text-black' : 'opacity-50 cursor-not-allowed border-white/10'}`}>India (Google Pay / Razorpay)</a>
+              <a href={treasury.global || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-transparent text-amber-500 border-amber-500' : 'opacity-50 cursor-not-allowed border-white/10'}`}>Global (PayPal/Stripe)</a>
+            </div>
+            <div className="pt-4 border-t border-white/10 mt-4">
+                <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
+                <div className="flex gap-2">
+                    <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
+                    <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
+                </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
+        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Restore / Admin</h3>
+        <div className="flex gap-2 mb-4">
+          <input value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="flex-1 p-3 rounded-xl text-center font-bold text-xs outline-none bg-black/30 text-white" />
+          <button onClick={verify} className="px-4 bg-emerald-800 text-white rounded-xl text-xs font-bold">Verify</button>
+        </div>
+      </div>
+        
+      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
+        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Whisper to Founder</h3>
+        <div className="flex gap-2">
+          <input value={whisper} onChange={e => setWhisper(e.target.value)} placeholder="Private Feedback..." className="flex-1 p-3 rounded-xl text-xs outline-none bg-black/30 text-white" />
+          <button onClick={sendWhisper} className="px-4 bg-white/10 text-white rounded-xl"><Send size={14}/></button>
+        </div>
+      </div>
+
+      <div className="text-center">
+         <button onClick={deleteAccount} className="text-red-500 text-xs font-bold uppercase underline">Delete Identity</button>
+      </div>
     </div>
   );
 }
@@ -501,10 +871,7 @@ export default function App() {
 // --- NEW COMPONENTS (MOOD & SOS) ---
 function MoodModal({ onClose, notify }) {
   const saveMood = async (mood) => {
-    // 1. Save locally for user privacy
     localStorage.setItem('ashoka_last_mood_date', new Date().toDateString());
-    
-    // 2. Send ANONYMOUS ping to Clinical Data Bridge
     if(isFirebaseInitialized) {
         try {
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), {
@@ -513,7 +880,6 @@ function MoodModal({ onClose, notify }) {
             });
         } catch(e) { console.log("Offline mood log"); }
     }
-
     notify(`Mood Logged: ${mood}`);
     onClose();
   };
@@ -562,11 +928,11 @@ const SOSModal = ({ onClose }) => {
       <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div>
       <h2 className="text-6xl font-black uppercase mb-2 tracking-tighter">Emergency</h2>
       <p className="text-xs uppercase tracking-widest text-red-400 mb-8 font-bold">Detected Region: {isIndia ? "India" : "Global"}</p>
-       
+        
       <a href={`tel:${numbers.amb}`} className="block w-full py-5 bg-red-600 rounded-[30px] font-black text-2xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL AMBULANCE ({numbers.amb})</a>
       <a href={`tel:${numbers.help}`} className="block w-full py-5 bg-blue-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">MENTAL HELPLINE ({numbers.help})</a>
       <button onClick={silentSOS} className="block w-full py-5 bg-emerald-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-emerald-800 active:scale-95 transition-all mt-4">SILENT SOS (WHATSAPP)</button>
-       
+        
       <button onClick={onClose} className="mt-10 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button>
     </div>
   );
@@ -579,9 +945,7 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
   const [pulse, setPulse] = useState(false); const triggerHeart = () => { setPulse(true); SoundEngine.playFreq(60, 'sine', 0.6); setTimeout(()=>setPulse(false), 1000); };
   return (
     <div className="space-y-8 pb-32 relative">
-      {/* COSMIC PULSE MAP BACKGROUND */}
       <PulseMap />
-
       <div onClick={triggerHeart} className="relative rounded-[60px] bg-gradient-to-br from-[#064E3B] to-[#022c22] p-10 text-center text-white shadow-2xl overflow-hidden cursor-pointer group border border-emerald-500/20 active:scale-95 transition-all duration-500 z-10">
         <div className={`absolute inset-0 bg-emerald-500/20 rounded-full blur-3xl transition-transform duration-1000 ${pulse ? 'scale-150 opacity-100' : 'scale-0 opacity-0'}`} style={{left:'50%', top:'50%', transform:'translate(-50%, -50%)'}}></div><Heart size={48} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.6)] animate-pulse mx-auto mb-6 relative z-10" fill="currentColor" /><h2 className="text-4xl font-black uppercase tracking-tighter leading-none relative z-10">Sanctuary</h2><p className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[0.4em] mt-4 relative z-10">Tap to Breathe</p>
       </div>
@@ -596,7 +960,6 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
         {HALLS.map(h => (
           <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
-            {/* LOGO IMPLEMENTATION */}
             <div className="relative">
                {APP_LOGO ? (
                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">
@@ -614,22 +977,19 @@ function HomeHub({ setHall, setView, openMitra, userData, notify }) {
   );
 }
 
-// --- ADMIN / FOUNDER STUDIO (UPDATED: STATS, MODERATION & SAFE SEARCH) ---
+// --- ADMIN / FOUNDER STUDIO ---
 function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests, reportedPosts }) {
   const [tab, setTab] = useState('sentinel');
   const [jsonInput, setJsonInput] = useState("");
   const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
   const [adminSearch, setAdminSearch] = useState(""); 
   
-  // NEW: Clinical Data State
   const [clinicalData, setClinicalData] = useState({ sunny:0, rainy:0, cloudy:0, totalSessions:0, avgReduction:0 });
 
   useEffect(() => {
-      // Fetch Clinical Data
       if(isFirebaseInitialized) {
           const qMoods = query(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), limit(100));
           const qSessions = query(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), limit(100));
-          
           getDocs(qMoods).then(snap => {
               let s=0, r=0, c=0;
               snap.forEach(d => {
@@ -638,7 +998,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
               });
               setClinicalData(prev => ({...prev, sunny:s, rainy:r, cloudy:c}));
           });
-          
           getDocs(qSessions).then(snap => {
               let totalRed = 0;
               let count = 0;
@@ -654,8 +1013,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
           });
       }
   }, []);
-   
-  // STATS CALCULATION
+    
   const stats = {
     total: users.length,
     doctors: users.filter(u => u.role === 'doctor').length,
@@ -664,7 +1022,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   };
 
   const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
-   
+    
   const depositSeeds = () => { 
       try { 
           const data = JSON.parse(jsonInput); 
@@ -682,14 +1040,13 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
   };
 
   const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
-  const exileUser = (id) => { updateUserRole(id, 'banned'); notify("User Exiled"); }; // UPDATED to use ID
-  const restoreUser = (id) => { updateUserRole(id, 'guest'); notify("User Restored to Guest"); }; // NEW RESTORE FUNCTION
+  const exileUser = (id) => { updateUserRole(id, 'banned'); notify("User Exiled"); }; 
+  const restoreUser = (id) => { updateUserRole(id, 'guest'); notify("User Restored to Guest"); };
   const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs, policy: policyLink, manual: manualLink });
   const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona, ai_key: config.key });
   const saveTreasury = () => saveToCloud('config', 'global_settings', { treasury: treasury });
   const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
-   
-  // BANK ACTIONS
+    
   const approvePayment = async (req) => {
       if(isFirebaseInitialized) {
           await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', req.uid), { role: 'patron' });
@@ -705,7 +1062,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
       }
   };
 
-  // --- NEW ACTIONS FOR ADMIN ---
   const deleteWhisper = async (id) => {
     if(!id) return;
     try {
@@ -716,7 +1072,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
 
   const updateUserRole = async (uid, newRole) => {
     try {
-        // Correctly updates 'role' or 'status' depending on context, but here we update 'role' for dr/patron and 'status' for ban
         if (newRole === 'banned') {
              if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'banned' });
         } else if (newRole === 'guest') {
@@ -736,7 +1091,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
     } catch(e) { notify("Error deleting user."); }
   };
 
-  // --- DIGITAL JANITOR (DATA PURGE) ---
   const purgeOldChats = async () => {
       if(!confirm("⚠️ NUKE OLD CHATS? This deletes all General Hall messages older than 7 days.")) return;
       if(!isFirebaseInitialized) return;
@@ -755,8 +1109,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
           notify(`Purged ${snapshot.size} old messages.`);
       } catch(e) { notify("Purge Error."); }
   };
-   
-  // MODERATION ACTIONS
+    
   const resolveReport = async (post, action) => {
       try {
           const postRef = doc(db, post.refPath); 
@@ -770,7 +1123,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
       } catch (e) { notify("Error actioning report."); }
   };
 
-  // FILTERED LISTS - CRASH PROOF
   const filteredPayments = paymentRequests.filter(req => 
       (req.paymentId || "").toLowerCase().includes(adminSearch.toLowerCase()) || 
       (req.uid || "").toLowerCase().includes(adminSearch.toLowerCase())
@@ -780,13 +1132,12 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
     <div className="pb-20">
       <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['sentinel', 'clinical', 'bank', 'law', 'brain', 'treasury', 'seed', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
-       
+        
       {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
       {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
       {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
       {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
-       
-      {/* NEW CLINICAL TAB */}
+        
       {tab === 'clinical' && (
           <div className="space-y-6">
               <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight">Clinical Evidence Engine</h3>
@@ -807,7 +1158,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
               <div className="p-6 bg-black rounded-[30px] border border-white/10">
                   <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Community Mood Distribution</h4>
                   <div className="flex items-end gap-2 h-32 pl-2 border-l border-white/10 pb-2 border-b">
-                      {/* Bars */}
                       <div className="flex-1 bg-yellow-500/20 rounded-t-lg relative group">
                           <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.sunny/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
                           <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-yellow-500">{clinicalData.sunny}</span>
@@ -828,12 +1178,10 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
           </div>
       )}
 
-      {/* THE BANK (UPDATED WITH SEARCH) */}
       {tab === 'bank' && (
          <div className="space-y-4">
              <div className="flex justify-between items-center"><h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3>
              <input value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} placeholder="Search ID..." className="bg-white/10 text-white p-2 rounded text-[10px] w-32 border border-white/10"/></div>
-             
              {filteredPayments.length === 0 && <p className="text-center text-xs opacity-50">No pending requests found.</p>}
              {filteredPayments.map((req) => (
                  <div key={req.id} className="p-4 rounded-xl border border-amber-500/30 bg-[#1a1400] flex justify-between items-center">
@@ -849,10 +1197,9 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
              ))}
          </div>
       )}
-       
+        
       {tab === 'sentinel' && ( 
         <div className="space-y-4">
-          {/* NEW STATS DASHBOARD */}
           <div className="grid grid-cols-3 gap-2 mb-6">
              <div className="p-4 bg-emerald-900/30 rounded-xl text-center border border-emerald-500/30">
                 <h3 className="text-2xl font-black text-emerald-400">{stats.doctors}</h3>
@@ -867,8 +1214,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
                 <p className="text-[9px] uppercase tracking-widest text-gray-400">Total Souls</p>
              </div>
           </div>
-           
-          {/* MODERATION QUEUE */}
+            
           <h3 className="text-xs uppercase font-bold text-orange-500 mt-6">Moderation Queue ({reportedPosts.length})</h3>
           <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2 bg-[#1a0505]">
              {reportedPosts.length === 0 && <p className="text-center text-xs opacity-50">All clear. No reports.</p>}
@@ -885,7 +1231,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
 
           <h3 className="text-xs uppercase font-bold text-red-500 mt-6">Global Alert</h3>
           <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
-           
+            
           <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
           <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
             {(whispers||[]).map((w,i)=>(
@@ -896,7 +1242,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
             ))}
             {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
           </div>
-           
+            
           <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
           <div className="h-60 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
             {users.map((u, i) => (
@@ -907,7 +1253,6 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
                            <button onClick={() => deleteUser(u.id)} className="p-1 bg-red-900/50 text-red-400 rounded hover:bg-red-600 hover:text-white"><Trash2 size={12}/></button>
                         </div>
                     </div>
-                    {/* CONTROL PANEL */}
                     <div className="flex gap-2 mt-2">
                         {u.status === 'active' ? (
                             <button onClick={() => exileUser(u.id)} className="flex-1 py-1 bg-red-600 text-white rounded text-[9px] font-bold uppercase">Exile</button>
@@ -921,277 +1266,25 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
             ))}
           </div>
 
-          {/* DIGITAL JANITOR */}
           <h3 className="text-xs uppercase font-bold text-red-500 mt-6 flex items-center gap-2"><Eraser size={12}/> Danger Zone: Database Cleanup</h3>
           <button onClick={purgeOldChats} className="w-full py-4 bg-red-900/50 border border-red-500 text-red-200 text-xs font-bold uppercase rounded-xl hover:bg-red-900">
               PURGE MESSAGES {'>'} 7 DAYS OLD
           </button>
         </div> 
       )}
-       
+        
       {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
     </div>
   );
 }
 
-// --- PROFILE & SUSTENANCE (UPDATED: LITE MODE + KARMA) ---
-function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers, liteMode, toggleLiteMode }) {
-  const [agreed, setAgreed] = useState(false);
-  const [showPay, setShowPay] = useState(false);
-  const [key, setKey] = useState("");
-  const [whisper, setWhisper] = useState("");
-  const [paymentId, setPaymentId] = useState("");
-  const [trustContact, setTrustContact] = useState(() => localStorage.getItem('ashoka_trust_contact') || "");
-
-  const saveTrustContact = () => {
-      localStorage.setItem('ashoka_trust_contact', trustContact);
-      notify("Safety Contact Saved.");
-  };
-
-  // SECURE VERIFY LOGIC
-  const verify = async () => {
-    if (!key.trim()) return;
-    notify("Verifying...");
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
-      const docSnap = await getDoc(docRef);
-       
-      if (docSnap.exists()) {
-        const role = docSnap.data().role;
-        if (isFirebaseInitialized && user) {
-            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-            await updateDoc(userRef, { role: role, access_key: key.trim() });
-        }
-        if (role === 'admin') { setView('admin'); notify("Welcome, Founder."); } 
-        else if (role === 'doctor') {
-          setUserData(p => ({...p, role: 'doctor'}));
-          localStorage.setItem('ashoka_role', 'doctor');
-          notify("Verified: Doctor Access Granted.");
-        }
-        setKey("");
-      } else { notify("Invalid Access Key."); }
-    } catch (e) { notify("Verification Failed. Check Internet."); }
-  };
-
-  const sendWhisper = async () => { if(!whisper.trim()) return; notify("Sent to Founder"); setWhispers(p=>[...p,{text:whisper, date:Date.now()}]); if(isFirebaseInitialized) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), { text: whisper, createdAt: serverTimestamp(), uid: user.uid }); setWhisper(""); };
-  const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
-  const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
-   
-  // MANUAL MAGIC: Send Request to Founder
-  const submitPaymentRequest = async () => {
-      if(paymentId.length < 5) { notify("Invalid ID"); return; }
-      notify("Verifying with Founder...");
-      if(isFirebaseInitialized) {
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), { uid: user.uid, paymentId: paymentId, createdAt: serverTimestamp() });
-          notify("Request Sent! Wait for Approval.");
-          setShowPay(false);
-      } else { notify("Offline: Cannot Verify."); }
-  };
-
-  const sustText = {
-    en: "We are a community-supported space designed for clarity and peace.",
-    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక.",
-    hi: "हम शांति और स्पष्टता के लिए एक समुदाय समर्थित स्थान हैं।"
-  };
-   
-  const getKarmaRank = (k) => {
-      if(k > 50) return "Guardian Angel";
-      if(k > 20) return "Healer";
-      if(k > 5) return "Compassionate Soul";
-      return "Seeker";
-  };
-
-  return (
-    <div className="pb-24 space-y-8">
-      {/* IDENTITY CARD */}
-      <div className="bg-emerald-800 p-8 rounded-[40px] text-center text-white relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-emerald-400 to-blue-500"></div>
-        <User size={48} className="mx-auto mb-2"/>
-        <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
-        <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-2">{getKarmaRank(userData.karma || 0)} • {userData.karma || 0} Karma</p>
-        <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {user?.uid?.substring(0,8)}...</button>
-      </div>
-
-      {/* SAFETY HANDSHAKE */}
-      <div className="p-6 rounded-[40px] border bg-red-900/10 border-red-500/20">
-          <h3 className="font-black uppercase text-red-400 flex items-center gap-2 mb-4"><HeartHandshake size={16}/> Safety Circle</h3>
-          <div className="flex gap-2">
-              <input value={trustContact} onChange={e=>setTrustContact(e.target.value)} placeholder="Trusted Phone (e.g. 9199...)" className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
-              <button onClick={saveTrustContact} className="px-4 bg-red-600 text-white rounded-xl text-xs font-bold">Save</button>
-          </div>
-          <p className="text-[9px] text-gray-500 mt-2">This number will be pre-filled if you use Silent SOS.</p>
-      </div>
-
-      {/* LITE MODE TOGGLE */}
-      <button onClick={toggleLiteMode} className={`w-full p-4 rounded-[30px] border flex items-center justify-between ${liteMode ? 'bg-emerald-900/50 border-emerald-500' : 'bg-white/5 border-white/10'}`}>
-          <div className="flex items-center gap-4">
-              <BatteryLow className={liteMode ? "text-emerald-400" : "text-gray-400"} />
-              <div className="text-left">
-                  <h3 className="font-bold text-white text-sm">Lite Mode</h3>
-                  <p className="text-[10px] text-gray-400">Reduce motion & save battery</p>
-              </div>
-          </div>
-          <div className={`w-12 h-6 rounded-full p-1 transition-colors ${liteMode ? 'bg-emerald-500' : 'bg-gray-600'}`}>
-              <div className={`w-4 h-4 bg-white rounded-full transition-transform ${liteMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
-          </div>
-      </button>
-
-      <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
-        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Support Mission":"మద్దతు ఇవ్వండి"}</h3></div>
-        {!showPay ? (
-          <button onClick={() => setShowPay(true)} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Open Contribution</button>
-        ) : (
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl h-40 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap bg-black/20 text-amber-100/80">
-               {lang==='en' ? sustText.en : lang==='te' ? sustText.te : sustText.hi}
-            </div>
-            <label className="flex gap-2 items-center text-xs font-bold text-amber-200"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}/> I Accept Non-Refundable Policy</label>
-            <div className="grid gap-2">
-              <a href={treasury.india || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-amber-600 text-black' : 'opacity-50 cursor-not-allowed border-white/10'}`}>India (Google Pay / Razorpay)</a>
-              <a href={treasury.global || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-transparent text-amber-500 border-amber-500' : 'opacity-50 cursor-not-allowed border-white/10'}`}>Global (PayPal/Stripe)</a>
-            </div>
-            {/* MANUAL MAGIC BOX */}
-            <div className="pt-4 border-t border-white/10 mt-4">
-                <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
-                <div className="flex gap-2">
-                    <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
-                    <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
-                </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
-        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Restore / Admin</h3>
-        <div className="flex gap-2 mb-4">
-          <input value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="flex-1 p-3 rounded-xl text-center font-bold text-xs outline-none bg-black/30 text-white" />
-          <button onClick={verify} className="px-4 bg-emerald-800 text-white rounded-xl text-xs font-bold">Verify</button>
-        </div>
-      </div>
-       
-      <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
-        <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Whisper to Founder</h3>
-        <div className="flex gap-2">
-          <input value={whisper} onChange={e => setWhisper(e.target.value)} placeholder="Private Feedback..." className="flex-1 p-3 rounded-xl text-xs outline-none bg-black/30 text-white" />
-          <button onClick={sendWhisper} className="px-4 bg-white/10 text-white rounded-xl"><Send size={14}/></button>
-        </div>
-      </div>
-
-      <div className="text-center">
-         <button onClick={deleteAccount} className="text-red-500 text-xs font-bold uppercase underline">Delete Identity</button>
-      </div>
-    </div>
-  );
-}
-
-// --- DEEP MITRA AI (Fixed: Readable Text & Auto-Scroll) ---
-function DeepMitra({ onBack, persona, userData, setView, notify, initialPrompt }) {
-  const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
-  const [txt, setTxt] = useState("");
-  const scrollRef = useRef(null); // Reference for auto-scrolling
-
-  // Scroll to bottom whenever messages change
-  useEffect(() => {
-    if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [msgs]);
-
-  // AUTO-SEND INITIAL PROMPT (For Translation Feature)
-  useEffect(() => {
-      if (initialPrompt && isFirebaseInitialized) {
-          // Add user message first locally
-          setMsgs(p => [...p, {role: 'user', text: initialPrompt}]);
-          
-          // Send to Cloud
-          const sendAuto = async () => {
-              try {
-                  const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
-                      prompt: initialPrompt,
-                      persona: persona, 
-                      createdAt: serverTimestamp()
-                  });
-                  const unsub = onSnapshot(docRef, (snap) => {
-                      if (snap.exists() && snap.data().response) {
-                          setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]);
-                          unsub(); 
-                      }
-                  });
-              } catch(e) {}
-          };
-          sendAuto();
-      }
-  }, [initialPrompt]);
-   
-  if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
-
-  const reply = async () => {
-    if(!txt.trim()) return;
-    setMsgs(p => [...p, {role: 'user', text: txt}]);
-    setTxt(""); 
-     
-    if (txt.toLowerCase().includes("diagnos") || txt.toLowerCase().includes("medic")) {
-        setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I am a wise friend, not a doctor. I cannot provide medical diagnosis."}]), 500);
-        return;
-    }
-
-    if (isFirebaseInitialized) {
-        try {
-            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
-                prompt: txt,
-                persona: persona, 
-                createdAt: serverTimestamp()
-            });
-            const unsub = onSnapshot(docRef, (snap) => {
-                if (snap.exists() && snap.data().response) {
-                    setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]);
-                    unsub(); 
-                }
-            });
-            setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "Reflecting..."}]), 1000);
-        } catch(e) {
-            setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "Connection weak. I am listening locally."}]), 500);
-        }
-    } else {
-        setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I hear you. Tell me more."}]), 500);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[600] backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom-10 bg-[#020617]/95">
-      <div className="p-4 border-b flex justify-between items-center bg-black/20 border-white/10">
-        <div className="flex items-center gap-3"><div className="p-2 bg-indigo-600 rounded-lg"><BrainCircuit size={18} className="text-white"/></div><div><h3 className="text-sm font-black uppercase tracking-wider text-white">Trusted Companion</h3><p className="text-[9px] text-indigo-400">Safe Space AI</p></div></div>
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10"><X size={18} className="text-gray-400"/></button>
-      </div>
-       
-      {/* Messages Container with Auto-Scroll & Formatting Fix */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6 scroll-smooth">
-        {msgs.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-gray-200 rounded-bl-none shadow-sm'}`}>
-                  {m.text}
-              </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="p-4 border-t flex gap-2 bg-black/40 border-white/10">
-        <input value={txt} onChange={e => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && reply()} className="flex-1 p-3 rounded-xl outline-none bg-white/10 text-white border-white/5 placeholder-white/30" placeholder="Type..." />
-        <button onClick={reply} className="p-3 bg-indigo-600 text-white rounded-xl"><Send size={18}/></button>
-      </div>
-    </div>
-  );
-}
-
-// --- UPDATED WISDOM DECK (Q&A + CATEGORIES) ---
+// --- WISDOM DECK ---
 function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   const [exp, setExp] = useState(null);
   const [filter, setFilter] = useState("All");
 
-  // UNLOCK FOR PATRON OR DOCTOR
   const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
-   
+    
   if (!isUnlocked) { 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center">
@@ -1206,11 +1299,8 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
     ); 
   }
 
-  // Filter Logic (Safely handles missing categories)
-  const filteredCards = filter === 'All' 
-    ? cards 
-    : cards.filter(c => c.category === filter);
-   
+  const filteredCards = filter === 'All' ? cards : cards.filter(c => c.category === filter);
+    
   return (
     <div className="min-h-screen p-4 bg-black text-amber-50">
       <div className="flex justify-between items-center mb-8">
@@ -1218,7 +1308,6 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
         <button onClick={onBack}><X/></button>
       </div>
 
-      {/* Category Filter Bar */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
          {['All', 'Self', 'Mind', 'Life', 'Crisis', 'Relationships'].map(f => (
            <button key={f} onClick={()=>setFilter(f)} className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase border transition-all ${filter===f ? 'bg-amber-500 text-black border-amber-500' : 'border-amber-900 text-amber-700 bg-transparent'}`}>
@@ -1229,39 +1318,22 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
 
       <div className="space-y-6">
         {filteredCards.map((c, i) => (
-           // FIXED: Use Composite Key to prevent duplicates warning
            <div key={`${c.id}-${i}`} className="p-6 rounded-[30px] border bg-[#1c1204] border-amber-900/30 transition-all hover:border-amber-500/30">
-             {/* Title */}
              <h3 className="text-lg font-black uppercase mb-4 text-amber-100 tracking-tight">{c.title}</h3>
-             
-             {/* Question / Hurdle (Bold) */}
-             <p className="text-sm font-bold text-amber-50 mb-2 leading-relaxed">
-               {c.question || c.hurdle}
-             </p>
-
-             {/* Expanded Content */}
+             <p className="text-sm font-bold text-amber-50 mb-2 leading-relaxed">{c.question || c.hurdle}</p>
              {exp === c.id ? (
                <div className="space-y-4 pt-4 border-t border-amber-500/20 text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
-                 
-                 {/* The Answer */}
                  {c.answer && <p className="text-amber-200/90 italic mb-4 border-l-2 border-amber-500/50 pl-3">{c.answer}</p>}
-                 
-                 {/* Details */}
                  {c.ancestralRoot && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Ancestral Root</strong> {c.ancestralRoot}</p>}
                  {c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Logic</strong> {c.awarenessLogic}</p>}
-                 
-                 {/* Action Box */}
                  <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-500/10 mt-4">
                      <strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest flex items-center gap-2"><Flame size={12}/> Action</strong> 
                      {c.action}
                  </div>
-
                  <button onClick={() => setExp(null)} className="text-xs opacity-50 uppercase w-full text-center mt-6 py-2">Close Card</button>
                </div>
              ) : ( 
-               <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl mt-4 hover:bg-amber-700/30 transition-colors">
-                 Read Answer
-               </button> 
+               <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl mt-4 hover:bg-amber-700/30 transition-colors">Read Answer</button> 
              )}
            </div>
         ))}
@@ -1271,15 +1343,13 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   );
 }
 
-// --- RESTORED TOOLS & GAMES (Persistent Chat Logic + Actions) ---
+// --- HALL VIEW ---
 function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs, setTranslationRequest, setShowMitra }) { 
   const [posts, setPosts] = useState(() => {
      const saved = localStorage.getItem(`chat_${hall.id}`);
      return saved ? JSON.parse(saved) : [];
   }); 
   const [msg, setMsg] = useState(""); const [replyTo, setReplyTo] = useState(null);
-  
-  // VOICE INPUT STATE
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => { 
@@ -1293,43 +1363,23 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     }); 
   }, [hall, userData]);
 
-  // VOICE INPUT LOGIC (ROBUST)
   const startListening = () => {
-      // 1. Check Browser Support
-      if (!('webkitSpeechRecognition' in window)) {
-          notify("Browser does not support Voice.");
-          return;
-      }
-
-      // 2. Request Permission Explicitly (Fix for audio-capture error)
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
+      if (!('webkitSpeechRecognition' in window)) { notify("Browser does not support Voice."); return; }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
             const recognition = new window.webkitSpeechRecognition();
             recognition.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
             recognition.interimResults = false;
             recognition.maxAlternatives = 1;
-
             setIsListening(true);
-
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 setMsg(prev => prev + " " + transcript);
                 setIsListening(false);
             };
-
-            recognition.onerror = (event) => {
-                console.error("Speech error", event.error);
-                setIsListening(false);
-                notify("Voice Error: Check Mic Permissions.");
-            };
-
+            recognition.onerror = (event) => { setIsListening(false); notify("Voice Error: Check Mic Permissions."); };
             recognition.onend = () => setIsListening(false);
             recognition.start();
-        })
-        .catch((err) => {
-            console.error("Mic Permission Denied", err);
-            notify("Please Allow Microphone Access.");
-        });
+        }).catch((err) => { notify("Please Allow Microphone Access."); });
   };
 
   const send = async () => { 
@@ -1341,7 +1391,6 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     const textToSend = replyTo ? `[Replying to: "${replyTo.text.substring(0, 20)}..."]\n${msg}` : msg; 
     const currentUid = user?.uid || "guest_" + Date.now();
     const tempId = "temp_" + Date.now();
-    // UPDATED: Include role in message payload
     const userRole = userData?.role || 'guest';
     const tempPost = { id: tempId, text: textToSend, uid: currentUid, role: userRole, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
     setPosts(prev => [tempPost, ...prev]);
@@ -1351,7 +1400,7 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { 
             uid: user.uid, 
             text: textToSend, 
-            role: userRole, // Storing role here
+            role: userRole, 
             createdAt: serverTimestamp(), 
             reported: false, 
             likes: 0, 
@@ -1360,26 +1409,20 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
     }
   };
   
-  // TRANSLATE MESSAGE LOGIC (UPDATED FLOW)
   const handleTranslate = (text) => {
       notify("Opening Mitra to Translate...");
       const targetLang = lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : 'English';
       const prompt = `Translate this text to ${targetLang}: "${text}"`;
-      
-      // 1. Set global translation request
       setTranslationRequest(prompt);
-      // 2. Open Mitra Panel
       setShowMitra(true);
   };
 
-  // KARMA LOGIC
   const handleGratitude = async (targetUid) => {
       if(!targetUid || targetUid === user?.uid) { notify("You cannot thank yourself."); return; }
       SoundEngine.playKarma();
       notify("Gratitude Sent! Karma +1");
       if(isFirebaseInitialized) {
           try {
-              // Increment Karma for the helper
               const targetRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid);
               await updateDoc(targetRef, { karma: increment(1) });
           } catch(e) { console.log("Karma error"); }
@@ -1405,7 +1448,6 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
       notify(currentPin ? "Unpinned" : "Pinned");
   };
 
-  // Helper for Timestamps
   const formatTime = (t) => {
     if (!t) return "Just now";
     try {
@@ -1435,12 +1477,7 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
       <div className="p-4 rounded-[30px] border bg-white/5 border-white/5 relative">
         {replyTo && <div className="flex justify-between items-center bg-emerald-500/10 p-2 rounded mb-2"><span className="text-[10px] opacity-70">Replying to: {replyTo.text.substring(0,15)}...</span><button onClick={()=>setReplyTo(null)}><X size={12}/></button></div>}
         <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share..." className="w-full bg-transparent border-none outline-none resize-none h-20 text-sm font-medium text-white pr-10" />
-        
-        {/* MIC BUTTON */}
-        <button onClick={startListening} className={`absolute top-4 right-4 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-white/10 text-gray-400'}`}>
-            <Mic size={16}/>
-        </button>
-
+        <button onClick={startListening} className={`absolute top-4 right-4 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-white/10 text-gray-400'}`}><Mic size={16}/></button>
         <div className="flex justify-end mt-2"><button onClick={send} className="p-3 bg-emerald-600 rounded-full text-white"><Send size={18}/></button></div>
       </div>
       
@@ -1449,21 +1486,14 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
           const isExpert = p.role === 'doctor' || p.role === 'admin';
           return (
             <div key={p.id} className={`p-6 rounded-[35px] border ${isExpert ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-white/5 border-white/5'} ${p.pinned ? 'border-l-4 border-l-emerald-500' : ''}`}>
-                {/* VERIFIED BADGE HEADER */}
                 {isExpert && (
                     <div className="flex items-center gap-1 mb-2 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                         <ShieldCheck size={12} fill="currentColor" className="text-emerald-900"/> Verified Expert
                     </div>
                 )}
-                
-                {/* Message Text */}
                 <div className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{p.text}</div>
-                
-                {/* Footer: Timestamp & Actions */}
                 <div className="flex justify-between items-center mt-4 opacity-50 text-white">
-                    {/* TIMESTAMP */}
                     <span className="text-[9px] font-mono tracking-wide">{formatTime(p.createdAt)}</span>
-
                     <div className="flex gap-4 items-center">
                         <button onClick={()=>handleTranslate(p.text)} className="text-[10px] hover:text-blue-400" title="Translate"><Globe size={12}/></button>
                         <button onClick={()=>handleGratitude(p.uid)} className="text-[10px] hover:text-purple-400" title="Give Karma"><HandHeart size={12}/></button>
@@ -1482,10 +1512,9 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
   );
 }
 
-// --- UPDATED LAB & GAMES (With Bilingual Messages) ---
 function LabView({ lang }) { 
     const [a, s] = useState(null); 
-    const t = GAME_INFO.lab; // Wellness Lab Intro
+    const t = GAME_INFO.lab; 
     
     if(a==='b')return <BurnVault onBack={()=>s(null)}/>; 
     if(a==='p')return <PranaBreath onBack={()=>s(null)}/>; 
@@ -1523,9 +1552,7 @@ function GamesView({ lang }) {
 function SnakeGame({ onBack, lang }) { 
     const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); 
     const info = GAME_INFO.snake;
-
     useEffect(() => { const i = setInterval(() => { const h = {x:s[0].x+d.x, y:s[0].y+d.y}; if(h.x<0||h.x>19||h.y<0||h.y>19) return; const n = [h, ...s]; if(h.x===f.x && h.y===f.y) { SF({x:Math.floor(Math.random()*20), y:Math.floor(Math.random()*20)}); SoundEngine.playFreq(600,'sine',0.1); } else n.pop(); SS(n); }, 150); return () => clearInterval(i); }, [s, d, f]); 
-    
     return (
       <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50">
         <div className="mb-6">
@@ -1587,7 +1614,6 @@ const logToolSession = async (toolName, pre, post) => {
     }
 };
 
-// --- PRE/POST CHECKIN COMPONENT (INTERNAL) ---
 const ToolCheckin = ({ title, onSelect }) => (
     <div className="text-center animate-in zoom-in duration-300">
         <h3 className="text-lg font-black text-white uppercase mb-6 tracking-tight">{title}</h3>
@@ -1603,22 +1629,18 @@ const ToolCheckin = ({ title, onSelect }) => (
 );
 
 function BurnVault({ onBack }) { 
-    const [step, setStep] = useState('pre'); // pre, active, post
+    const [step, setStep] = useState('pre'); 
     const [scores, setScores] = useState({pre:0, post:0});
     const [t,T]=useState(""); 
     const [b,B]=useState(false); 
-
     const finish = (finalScore) => {
         logToolSession('BurnVault', scores.pre, finalScore);
         onBack();
     };
-
     return (
         <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30 relative">
             <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 text-[10px] uppercase font-bold tracking-widest">Exit</button>
-            
             {step === 'pre' && <ToolCheckin title="Before we begin..." onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
-            
             {step === 'active' && !b && (
                 <div className="animate-in fade-in">
                     <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div>
@@ -1626,9 +1648,7 @@ function BurnVault({ onBack }) {
                     <button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); setStep('post'); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button>
                 </div>
             )}
-            
             {step === 'active' && b && <div className="text-8xl animate-bounce">🔥</div>}
-            
             {step === 'post' && <ToolCheckin title="How do you feel now?" onSelect={(n)=>finish(n)} />}
         </div>
     );
@@ -1638,30 +1658,21 @@ function PranaBreath({ onBack }) {
     const [step, setStep] = useState('pre'); 
     const [scores, setScores] = useState({pre:0, post:0});
     const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); 
-    
-    const finish = (finalScore) => {
-        logToolSession('PranaBreath', scores.pre, finalScore);
-        onBack();
-    };
-
+    const finish = (finalScore) => { logToolSession('PranaBreath', scores.pre, finalScore); onBack(); };
     const start = () => { 
         T("Inhale"); S(1.5); let i = 1; 
         const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); setStep('post'); } }, 1000); } }, 1000); } }, 1000); 
     }; 
-    
     return (
         <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20 min-h-[400px] flex flex-col justify-center">
             <button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button>
-            
             {step === 'pre' && <ToolCheckin title="Check Pulse" onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
-            
             {step === 'active' && (
                 <div className="animate-in zoom-in">
                     <div className="flex justify-center py-10"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div>
                     {t === 'Ready' && <button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button>}
                 </div>
             )}
-
             {step === 'post' && <ToolCheckin title="Check Pulse Again" onSelect={(n)=>finish(n)} />}
         </div>
     );
@@ -1698,3 +1709,5 @@ function ExpertGate({ setView, onBack, setUserData }) {
   ); 
 }
 function LegalView({ docs, policyLink, manualLink }) { return <div className="space-y-4 pb-20"><h2 className="text-2xl font-black uppercase text-center text-white">Legal Guide</h2>{docs.map((d,i)=><div key={i} className="p-6 rounded-[30px] border bg-white/5 border-white/10"><h3 className="font-bold text-xs mb-2 opacity-70 text-white">{d.t}</h3><p className="text-xs opacity-60 leading-relaxed text-white">{d.m}</p></div>)} {policyLink && <a href={policyLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-6">Full Privacy Policy</a>} {manualLink && <a href={manualLink} target="_blank" className="block text-center text-xs text-emerald-500 underline mt-4">User Manual</a>}</div>; }
+
+
