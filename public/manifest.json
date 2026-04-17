@@ -1,12 +1,14 @@
 {
-  "name": "AshokaManas",
+  "name": "AshokaManas Behavioral Health",
   "short_name": "AshokaManas",
   "description": "Safe Space • Community. An offline-first behavioral health sanctuary featuring Deep Mitra, ancient wisdom, and mind games.",
   "start_url": "/",
+  "id": "/?source=pwa",
   "display": "standalone",
   "background_color": "#020b08",
   "theme_color": "#065F46",
   "orientation": "portrait",
+  "iarc_rating_id": "e58c174a-81d2-5c3c-32cc-34b8cecb7173",
   "icons": [
     {
       "src": "icon-192x192.png",
@@ -26,7 +28,7 @@
     {
       "name": "Emergency SOS",
       "short_name": "SOS",
-      "description": "Quick access to emergency numbers and Silent SOS.",
+      "description": "Quick access to emergency numbers.",
       "url": "/?action=sos",
       "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
     },
@@ -37,5 +39,22 @@
       "url": "/?action=burn",
       "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AshokaManas Sanctuary"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.ashokamanas.app",
+      "id": "com.ashokamanas.app"
+    }
+  ],
+  "prefer_related_applications": true
 }
