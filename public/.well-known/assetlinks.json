@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.ashokamanas.app",
+        "sha256_cert_fingerprints": ["5F:1F:3F:FD:73:6C:44:3A:B8:20:16:3E:84:26:C0:38:A6:56:FC:CD:39:17:9C:B9:91:0D:4E:92:DF:61:E6:C3"]
+      }
+    }]
