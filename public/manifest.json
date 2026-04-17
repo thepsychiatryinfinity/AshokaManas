@@ -1,0 +1,41 @@
+{
+  "name": "AshokaManas",
+  "short_name": "AshokaManas",
+  "description": "Safe Space • Community. An offline-first behavioral health sanctuary featuring Deep Mitra, ancient wisdom, and mind games.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020b08",
+  "theme_color": "#065F46",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "medical", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Emergency SOS",
+      "short_name": "SOS",
+      "description": "Quick access to emergency numbers and Silent SOS.",
+      "url": "/?action=sos",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Burn Vault",
+      "short_name": "Burn",
+      "description": "Release stress quickly.",
+      "url": "/?action=burn",
+      "icons": [{ "src": "icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
