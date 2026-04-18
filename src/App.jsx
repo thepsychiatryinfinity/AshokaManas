@@ -312,7 +312,7 @@ export default function App() {
   useEffect(() => {
     SoundEngine.enabled = !liteMode;
     if (!isFirebaseInitialized) { setLoading(false); return; }
-     
+      
     // 💉 STITCH 2: The "Ghost Filter" (Forces V2 ghosts out of V1)
     const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -442,7 +442,7 @@ export default function App() {
       </div>
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
-       
+        
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
         {/* ONLINE STATUS INDICATOR */}
@@ -875,7 +875,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
                 <p className="text-[9px] uppercase tracking-widest text-gray-400">Total Souls</p>
              </div>
           </div>
-           
+            
           <h3 className="text-xs uppercase font-bold text-orange-500 mt-6">Moderation Queue ({reportedPosts.length})</h3>
           <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2 bg-[#1a0505]">
              {reportedPosts.length === 0 && <p className="text-center text-xs opacity-50">All clear. No reports.</p>}
@@ -892,7 +892,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
 
           <h3 className="text-xs uppercase font-bold text-red-500 mt-6">Global Alert</h3>
           <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
-           
+            
           <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
           <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
             {(whispers||[]).map((w,i)=>(
@@ -903,7 +903,7 @@ function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury
             ))}
             {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
           </div>
-           
+            
           <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
           <div className="h-60 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
             {users.map((u, i) => (
@@ -1042,28 +1042,10 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
       </button>
 
       <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
-        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Support Mission":"మద్దతు ఇవ్వండి"}</h3></div>
-        {!showPay ? (
-          <button onClick={() => setShowPay(true)} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Open Contribution</button>
-        ) : (
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl h-40 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap bg-black/20 text-amber-100/80">
-               {lang==='en' ? sustText.en : lang==='te' ? sustText.te : sustText.hi}
-            </div>
-            <label className="flex gap-2 items-center text-xs font-bold text-amber-200"><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)}/> I Accept Non-Refundable Policy</label>
-            <div className="grid gap-2">
-              <a href={treasury.india || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-amber-600 text-black' : 'opacity-50 cursor-not-allowed border-white/10'}`}>India (Google Pay / Razorpay)</a>
-              <a href={treasury.global || "#"} target="_blank" className={`block text-center w-full py-3 rounded-xl font-bold text-xs border ${agreed ? 'bg-transparent text-amber-500 border-amber-500' : 'opacity-50 cursor-not-allowed border-white/10'}`}>Global (PayPal/Stripe)</a>
-            </div>
-            <div className="pt-4 border-t border-white/10 mt-4">
-                <p className="text-[10px] text-gray-400 mb-2">Already Paid? Paste Transaction ID:</p>
-                <div className="flex gap-2">
-                    <input value={paymentId} onChange={e=>setPaymentId(e.target.value)} placeholder="e.g. pay_M8s..." className="flex-1 p-3 rounded-xl bg-black/30 text-white text-xs outline-none border border-white/10"/>
-                    <button onClick={submitPaymentRequest} className="px-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">Verify</button>
-                </div>
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Premium Features":"ప్రీమియం"}</h3></div>
+        <button disabled className="w-full py-3 bg-gray-500/20 text-gray-400 rounded-xl font-bold uppercase text-xs cursor-not-allowed border border-gray-500/30">
+          🔒 Coming Soon
+        </button>
       </div>
 
       <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
@@ -1123,7 +1105,7 @@ function DeepMitra({ onBack, persona, userData, user, setView, notify, initialPr
       }
   }, [initialPrompt]);
    
-  if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Patron Companion</h2><p className="text-xs opacity-60">Deep Mitra requires support contribution.</p><button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-indigo-600 rounded-full text-xs font-bold">Unlock</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
+  if (userData?.role === 'guest') { return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-indigo-500"/><h2 className="text-xl font-bold">Premium Feature</h2><p className="text-xs opacity-60">Deep Mitra is currently in closed beta.</p><button disabled className="px-6 py-2 bg-gray-600 rounded-full text-xs font-bold text-gray-300 opacity-50 cursor-not-allowed">🔒 Coming Soon</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div>; }
 
   const reply = async () => {
     if(!txt.trim()) return;
@@ -1192,9 +1174,9 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center">
         <div className="space-y-4">
           <Lock size={40} className="mx-auto text-amber-500"/>
-          <h2 className="text-xl font-bold">Ancient Wisdom</h2>
-          <p className="text-xs opacity-60">Master Deck requires support contribution.</p>
-          <button onClick={()=>{onBack(); setView('profile'); notify("Check Profile");}} className="px-6 py-2 bg-amber-600 rounded-full text-xs font-bold text-black">Unlock</button>
+          <h2 className="text-xl font-bold">Premium Feature</h2>
+          <p className="text-xs opacity-60">Ancient Wisdom is currently in closed beta.</p>
+          <button disabled className="px-6 py-2 bg-gray-600 rounded-full text-xs font-bold text-gray-300 opacity-50 cursor-not-allowed">🔒 Coming Soon</button>
           <button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button>
         </div>
       </div>
