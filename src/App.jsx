@@ -7,7 +7,7 @@ import {
   Pin, Trash2, Droplets, Mountain, Fan,
   Database, Gavel, Crown, ArrowUp, ArrowLeft, X, CheckSquare, Edit3, Wallet, Play, Reply, ShieldCheck, Home, BrainCircuit, TreePine, Copy, Bell, MessageCircle, RefreshCw, BookOpen, Loader, Fingerprint, Globe, Sun as SunIcon, Cloud, CloudRain, CloudLightning, Check, BatteryLow,
   BarChart3, PieChart, TrendingDown, Mic, Languages, MicOff, Wifi, WifiOff, Eraser,
-  HandHeart, UserPlus
+  HandHeart, UserPlus, CreditCard, Download
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signOut, setPersistence, browserSessionPersistence } from 'firebase/auth';
@@ -16,7 +16,11 @@ import {
   collection, addDoc, updateDoc, deleteDoc, query, orderBy, limit, where, getDocs, getDoc, collectionGroup, writeBatch, increment 
 } from 'firebase/firestore';
 
-// --- CONFIGURATION GUARD ---
+// =====================================================================
+// 📦 MODULE 1: CORE CONFIGURATION & ENGINES
+// Contains Firebase setup, offline persistence, and global utilities.
+// =====================================================================
+
 const firebaseConfig = {
   apiKey: "AIzaSyDyipE8alZJTB7diAmBkgR4AaPeS7x0JrQ",
   authDomain: "ashokamanas.firebaseapp.com",
@@ -33,20 +37,15 @@ let isFirebaseInitialized = false;
 try {
   const app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  
-  // 💉 STITCH 1: The "Identity Partition"
   setPersistence(auth, browserSessionPersistence)
     .then(() => console.log("Identity Partitioned: Session Only"))
     .catch((err) => console.error("Persistence Error", err));
-
   db = getFirestore(app);
   isFirebaseInitialized = true;
 } catch (e) { console.warn("Offline Mode Active."); }
 
-// --- KEYS & ASSETS ---
 const APP_LOGO = "https://firebasestorage.googleapis.com/v0/b/ashokamanas.firebasestorage.app/o/assets%2Flogo.png?alt=media&token=5355e65d-33b4-4698-95b6-dcc09469d78c"; 
 
-// --- SOUND ENGINE ---
 const SoundEngine = {
   ctx: null,
   enabled: true, 
@@ -63,12 +62,9 @@ const SoundEngine = {
     if(!this.enabled) return;
     this.init();
     if (!this.ctx) return;
-    
-    // CHROME FIX: Force wake up if suspended
     if (this.ctx.state === 'suspended') {
         this.ctx.resume().catch(e => console.error("Audio blocked:", e));
     }
-
     try {
       const o = this.ctx.createOscillator(); 
       const g = this.ctx.createGain();
@@ -86,7 +82,11 @@ const SoundEngine = {
   playKarma() { this.playFreq(800, 'sine', 0.5); }
 };
 
-// --- DATA ---
+// =====================================================================
+// 📦 MODULE 2: STATIC DATA & CONSTANTS
+// Text repositories, legal defaults, and structure arrays.
+// =====================================================================
+
 const WELCOME_MESSAGES = {
   General: { 
     en: "Welcome. You are safe here. Share your burden, or just listen. You are not alone.", 
@@ -149,7 +149,7 @@ const WELCOME_MESSAGES = {
 const GAME_INFO = {
     snake: {
         t: "Neon Snake", te_t: "నియాన్ స్నేక్", hi_t: "नियॉन स्नेक",
-        d: "Focus your attention. Guide the energy without hitting the walls.", te_d: "మీ ఏకాగ్రతను నిలపండి. గోడలను తాకకుండా శక్తిని నడిపించండి.", hi_d: "अपना ध्यान केंद्रित करें। दीवारों से टकराए बिना ऊर्जा का मार्गदर्शन करें।",
+        d: "Focus your attention. Guide the energy without hitting the walls.", te_d: "మీ ఏకాగ్రతను నిలపండి. గోడలను తాకకుండా శక్తిని నడిపించండి.", hi_d: "अपना ध्यान केंद्रित करें। दीवारों से टकराए बिना ऊर्जा का मार्गदर्शन करें.",
         warn_en: "Designed to improve focus and patience. Not for competitive stress.", warn_te: "ఏకాగ్రత మరియు ఓర్పు పెంచడానికి రూపొందించబడింది. ఒత్తిడి కోసం కాదు.", warn_hi: "फोकस और धैर्य सुधारने के लिए डिज़ाइन किया गया है। तनाव के लिए नहीं।"
     },
     mandala: {
@@ -189,7 +189,35 @@ const HALLS = [
   { id: 'Stories', label: 'My Story', te: 'నా కథ', hi: 'मेरी कहानी', icon: ScrollText, color: 'fuchsia', sticky: 'Your journey matters.' },
 ];
 
-// --- GATEVIEW ---
+// =====================================================================
+// 📦 MODULE 3: GLOBAL UI COMPONENTS
+// Modals, Gateways, Navigation, and reusable micro-components.
+// =====================================================================
+
+const PulseMap = () => {
+    const pulses = Array.from({length: 12}).map((_,i) => ({
+        id: i, top: Math.random() * 80 + 10 + '%', left: Math.random() * 80 + 10 + '%', delay: Math.random() * 2 + 's'
+    }));
+    return (
+        <div className="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
+            {pulses.map(p => (
+                <div key={p.id} className="absolute w-2 h-2 bg-emerald-400 rounded-full animate-ping" 
+                    style={{top: p.top, left: p.left, animationDuration: '3s', animationDelay: p.delay}}></div>
+            ))}
+        </div>
+    );
+};
+
+function NavBtn({ icon: Icon, active, onClick }) { 
+    return <button onClick={onClick} className={`p-4 rounded-[30px] transition-all duration-500 ${active ? 'bg-emerald-500 text-[#022c22] shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : 'text-emerald-500/30 hover:bg-white/5 hover:text-emerald-400'}`}><Icon size={24} /></button>; 
+}
+function StationCard({ icon: Icon, title, te, hi, onClick, color }) { 
+    return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te || hi}</p></div></button>; 
+}
+function GameBtn({ icon: Icon, title, desc, onClick, color }) { 
+    return <button onClick={onClick} className={`p-8 ${color} border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{desc}</p></div></button>; 
+}
+
 function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteMode }) {
   const [agreed, setAgreed] = useState(false);
   return (
@@ -203,10 +231,7 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteM
       <div className="relative z-10 w-full max-w-md">
         <div className="relative mb-8 group cursor-pointer">
             {!liteMode && <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-110 animate-pulse"></div>}
-            {/* LOGO AT GATE */}
-            {logo ? (
-                <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" />
-            ) : null}
+            {logo ? <img src={logo} alt="AshokaManas" className="w-32 h-32 object-contain mx-auto mb-4 drop-shadow-[0_0_25px_rgba(16,185,129,0.6)] animate-in zoom-in duration-1000 relative z-20" /> : null}
             <h1 className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-400 relative z-10 drop-shadow-sm">ASHOKAMANAS<sup className="text-sm text-emerald-500 ml-1">TM</sup></h1>
             <p className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-[0.5em] mt-2">Safe Space • Community</p>
         </div>
@@ -226,30 +251,60 @@ function GateView({ onAccept, lang, setLang, policyLink, manualLink, logo, liteM
   );
 }
 
-// --- COSMIC PULSE MAP (Priority 4) ---
-const PulseMap = () => {
-    // Generate static pulse points for the UI demo
-    const pulses = Array.from({length: 12}).map((_,i) => ({
-        id: i,
-        top: Math.random() * 80 + 10 + '%',
-        left: Math.random() * 80 + 10 + '%',
-        delay: Math.random() * 2 + 's'
-    }));
+function MoodModal({ onClose, notify }) {
+  const saveMood = async (mood) => {
+    localStorage.setItem('ashoka_last_mood_date', new Date().toDateString());
+    if(isFirebaseInitialized) {
+        try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), { mood: mood, timestamp: serverTimestamp() }); } catch(e) { console.log("Offline mood log"); }
+    }
+    notify(`Mood Logged: ${mood}`);
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-[900] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 text-center animate-in zoom-in">
+       <div>
+         <h2 className="text-2xl font-black text-emerald-400 mb-6 uppercase">How is your spirit today?</h2>
+         <div className="grid grid-cols-1 gap-3 justify-center">
+            <button onClick={()=>saveMood('Sunny')} className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center gap-4 hover:bg-yellow-500/20"><SunIcon className="text-yellow-400" size={24}/> <div className="text-left"><h3 className="font-bold text-yellow-400">Sunny</h3><p className="text-[10px] text-gray-400">I feel bright, energetic, and hopeful.</p></div></button>
+            <button onClick={()=>saveMood('Cloudy')} className="p-4 bg-gray-500/10 border border-gray-500/30 rounded-2xl flex items-center gap-4 hover:bg-gray-500/20"><Cloud className="text-gray-400" size={24}/> <div className="text-left"><h3 className="font-bold text-gray-400">Cloudy</h3><p className="text-[10px] text-gray-400">I feel okay, but a bit heavy or neutral.</p></div></button>
+            <button onClick={()=>saveMood('Rainy')} className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center gap-4 hover:bg-blue-500/20"><CloudRain className="text-blue-400" size={24}/> <div className="text-left"><h3 className="font-bold text-blue-400">Rainy</h3><p className="text-[10px] text-gray-400">I feel sad, heavy, or tearful.</p></div></button>
+         </div>
+         <button onClick={onClose} className="mt-8 text-xs text-gray-500 underline">Skip for now</button>
+       </div>
+    </div>
+  );
+}
 
-    return (
-        <div className="absolute inset-0 z-0 overflow-hidden opacity-30 pointer-events-none">
-            {pulses.map(p => (
-                <div key={p.id} className="absolute w-2 h-2 bg-emerald-400 rounded-full animate-ping" 
-                    style={{top: p.top, left: p.left, animationDuration: '3s', animationDelay: p.delay}}></div>
-            ))}
-        </div>
-    );
+const SOSModal = ({ onClose }) => {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const isIndia = tz.includes("Calcutta") || tz.includes("Asia/Kolkata");
+  const isUS = tz.includes("America");
+  const isUK = tz.includes("London");
+
+  const numbers = isIndia ? {police:"100", amb:"108", help:"14416"} : isUS ? {police:"911", amb:"911", help:"988"} : isUK ? {police:"999", amb:"999", help:"111"} : {police:"112", amb:"112", help:"112"}; 
+  const silentSOS = () => { const msg = encodeURIComponent("I need help. I am using AshokaManas SOS. Please check on me."); window.open(`https://wa.me/?text=${msg}`, '_blank'); };
+
+  return (
+    <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500">
+      <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div>
+      <h2 className="text-6xl font-black uppercase mb-2 tracking-tighter">Emergency</h2>
+      <p className="text-xs uppercase tracking-widest text-red-400 mb-8 font-bold">Detected Region: {isIndia ? "India" : "Global"}</p>
+      <a href={`tel:${numbers.amb}`} className="block w-full py-5 bg-red-600 rounded-[30px] font-black text-2xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL AMBULANCE ({numbers.amb})</a>
+      <a href={`tel:${numbers.help}`} className="block w-full py-5 bg-blue-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">MENTAL HELPLINE ({numbers.help})</a>
+      <button onClick={silentSOS} className="block w-full py-5 bg-emerald-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-emerald-800 active:scale-95 transition-all mt-4">SILENT SOS (WHATSAPP)</button>
+      <button onClick={onClose} className="mt-10 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button>
+    </div>
+  );
 };
 
-// --- MAIN APP ---
+// =====================================================================
+// 📦 MODULE 4: THE MASTER APP CONTROLLER
+// The central brain handling state, routing, and Firebase bindings.
+// =====================================================================
+
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf', karma: 0 }); // Added Karma
+  const [userData, setUserData] = useState({ role: 'guest', streak: 0, level: 'Leaf', karma: 0 });
   const [view, setView] = useState('gate'); 
   const [activeHall, setActiveHall] = useState(null);
   const [lang, setLang] = useState('en');
@@ -257,15 +312,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSOS, setShowSOS] = useState(false);
   const [showMitra, setShowMitra] = useState(false);
-  
-  // SHARED AI STATE
   const [translationRequest, setTranslationRequest] = useState(null);
-
   const [notification, setNotification] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMood, setShowMood] = useState(false);
-  
-  // ONLINE STATUS
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
@@ -279,10 +329,7 @@ export default function App() {
       };
   }, []);
    
-  // LITE MODE STATE 
-  const [liteMode, setLiteMode] = useState(() => {
-      return localStorage.getItem('ashoka_lite') === 'true';
-  });
+  const [liteMode, setLiteMode] = useState(() => localStorage.getItem('ashoka_lite') === 'true');
 
   const toggleLiteMode = () => {
       const newVal = !liteMode;
@@ -291,7 +338,6 @@ export default function App() {
       localStorage.setItem('ashoka_lite', newVal);
   };
    
-  // LIVE GLOBAL STATE
   const [masterCards, setMasterCards] = useState(() => {
     const saved = localStorage.getItem('ashoka_cards');
     return saved ? JSON.parse(saved) : DEFAULT_CARDS;
@@ -304,7 +350,7 @@ export default function App() {
   const [policyLink, setPolicyLink] = useState("");
   const [manualLink, setManualLink] = useState("");
    
-  const [userList, setUserList] = useState([]); // Empty start, filled by Cloud Sync
+  const [userList, setUserList] = useState([]); 
   const [whispers, setWhispers] = useState([]); 
   const [paymentRequests, setPaymentRequests] = useState([]); 
   const [reportedPosts, setReportedPosts] = useState([]); 
@@ -313,44 +359,29 @@ export default function App() {
     SoundEngine.enabled = !liteMode;
     if (!isFirebaseInitialized) { setLoading(false); return; }
       
-    // 💉 STITCH 2: The "Ghost Filter" (Forces V2 ghosts out of V1)
     const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        if (u.email) {
-          console.warn("V2 Ghost Detected. Terminating session...");
-          await signOut(auth);
-          return;
-        }
+        if (u.email) { await signOut(auth); return; }
 
         setUser(u);
         const ref = doc(db, 'artifacts', appId, 'public', 'data', 'users', u.uid);
         onSnapshot(ref, (snap) => {
-          if (snap.exists()) {
-              const data = snap.data();
-              setUserData(data);
-          }
+          if (snap.exists()) { setUserData(snap.data()); }
           else setDoc(ref, { uid: u.uid, role: 'guest', streak: 1, level: 'Leaf', karma: 0, lastActive: serverTimestamp() });
           
           const lastMood = localStorage.getItem('ashoka_last_mood_date');
           const today = new Date().toDateString();
           if (lastMood !== today) setShowMood(true);
-
           setLoading(false);
         });
       } else {
-        try {
-          await signInAnonymously(auth);
-        } catch(e) {
-          console.log("Auth failed, possibly due to iframe restrictions. Continuing as offline guest.");
-          setLoading(false);
-        }
+        try { await signInAnonymously(auth); } catch(e) { setLoading(false); }
         setLoading(false);
       }
     });
     return () => unsubscribeAuth();
   }, []);
 
-  // CLOUD SYNC PHASE 1: PUBLIC (WITH CACHING FOR OFFLINE)
   useEffect(() => {
     if (!isFirebaseInitialized) return;
     const configRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'global_settings');
@@ -374,58 +405,27 @@ export default function App() {
             localStorage.setItem('ashoka_cards', JSON.stringify(doc.data().cards));
         }
     });
-
     return () => { unsubConfig(); unsubCards(); };
   }, []);
 
-  // CLOUD SYNC PHASE 2: ADMIN DATA (Protected)
   useEffect(() => {
     if (!isFirebaseInitialized || !user) return; 
-    
-    // --- THE GATEKEEPER ---
-    if (userData.role !== 'admin') {
-        setWhispers([]);
-        setPaymentRequests([]);
-        setReportedPosts([]);
-        setUserList([]);
-        return;
-    }
+    if (userData.role !== 'admin') { setWhispers([]); setPaymentRequests([]); setReportedPosts([]); setUserList([]); return; }
 
-    const whispersRef = collection(db, 'artifacts', appId, 'public', 'data', 'whispers');
-    const unsubWhispers = onSnapshot(query(whispersRef, orderBy('createdAt', 'desc'), limit(20)), (snap) => {
-        setWhispers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (e) => console.log("Whispers Sync: Pending Auth"));
-
-    const paymentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests');
-    const unsubPayments = onSnapshot(query(paymentsRef, orderBy('createdAt', 'desc'), limit(50)), (snap) => {
-        setPaymentRequests(snap.docs.map(d => ({id: d.id, ...d.data()})));
-    }, (e) => console.log("Payments Sync: Pending Auth"));
-
-    const qReports = query(collectionGroup(db, 'messages'), where('reported', '==', true));
-    const unsubReports = onSnapshot(qReports, (snap) => {
-        setReportedPosts(snap.docs.map(d => ({ ...d.data(), id: d.id, refPath: d.ref.path })));
-    }, (e) => console.log("Reports Sync: Pending Auth"));
-
-    const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-    const unsubUsers = onSnapshot(usersRef, (snap) => {
-        setUserList(snap.docs.map(d => ({ id: d.id, ...d.data() }))); 
-    }, (e) => console.log("Users Sync: Pending Auth"));
+    const unsubWhispers = onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), orderBy('createdAt', 'desc'), limit(20)), (snap) => setWhispers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubPayments = onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), orderBy('createdAt', 'desc'), limit(50)), (snap) => setPaymentRequests(snap.docs.map(d => ({id: d.id, ...d.data()}))));
+    const unsubReports = onSnapshot(query(collectionGroup(db, 'messages'), where('reported', '==', true)), (snap) => setReportedPosts(snap.docs.map(d => ({ ...d.data(), id: d.id, refPath: d.ref.path }))));
+    const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (snap) => setUserList(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
     return () => { unsubWhispers(); unsubPayments(); unsubReports(); unsubUsers(); };
   }, [user, userData.role]); 
   
   const showNotify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
    
-  const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." 
-                    : lang === 'te' ? "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు." 
-                    : "केवल शैक्षिक। चिकित्सा सलाह नहीं।";
-
-  const cycleLang = () => {
-      setLang(prev => prev === 'en' ? 'te' : prev === 'te' ? 'hi' : 'en');
-  };
+  const STICKY_TEXT = lang === 'en' ? "Educational Only. Not Medical Advice." : lang === 'te' ? "అవగాహన కోసం మాత్రమే. వైద్య సలహా కాదు." : "केवल शैक्षिक। चिकित्सा सलाह नहीं।";
+  const cycleLang = () => setLang(prev => prev === 'en' ? 'te' : prev === 'te' ? 'hi' : 'en');
 
   if (loading) return <div className="min-h-screen bg-[#020b08] flex items-center justify-center text-emerald-500"><Loader className="animate-spin" size={32}/></div>;
-
   if (view === 'gate') return <GateView onAccept={() => setView('home')} lang={lang} setLang={setLang} policyLink={policyLink} manualLink={manualLink} logo={APP_LOGO} liteMode={liteMode} />;
 
   return (
@@ -440,17 +440,18 @@ export default function App() {
            </>
           )}
       </div>
+      
       {globalAlert && ( <div className="fixed top-[45px] left-0 right-0 z-[390] bg-red-900/90 text-white text-[10px] font-black uppercase tracking-widest p-2 text-center animate-pulse border-b border-red-500">🚨 {globalAlert}</div> )}
       {notification && ( <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[1000] px-6 py-3 bg-emerald-600 text-white rounded-full shadow-2xl font-bold text-xs animate-in slide-in-from-top-10 flex items-center gap-2 border border-emerald-400/50"><ShieldCheck size={14} /> {notification}</div> )}
         
       <div className="fixed top-0 left-0 right-0 z-[400] backdrop-blur-md border-b border-emerald-500/20 p-2 flex justify-between items-center shadow-lg bg-[#020b08]/80">
         <div className="flex items-center gap-2 font-black px-2 text-emerald-100/70"><ShieldCheck size={14} className="text-emerald-500" /><p className="text-[10px] uppercase tracking-tight font-bold">{STICKY_TEXT}</p></div>
-        {/* ONLINE STATUS INDICATOR */}
         <div className="flex items-center gap-2">
             {!isOnline && <div className="flex items-center gap-1 bg-red-600/20 px-2 py-1 rounded text-[9px] text-red-400 border border-red-500/30 animate-pulse"><WifiOff size={10}/> Offline Mode</div>}
             <button onClick={() => setShowSOS(true)} className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-500/50 text-[10px] font-black rounded-lg shadow-sm active:scale-95 transition-all animate-pulse hover:bg-red-600 hover:text-white">SOS</button>
         </div>
       </div>
+      
       <header className="fixed top-[48px] left-0 right-0 p-4 flex justify-between items-center z-[350]">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => { setView('home'); setActiveHall(null); }}>
           <div className="relative">
@@ -472,6 +473,8 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {/* --- MODULE INJECTION TARGET (MAIN VIEW SWITCHER) --- */}
       <main className={`max-w-4xl mx-auto px-5 pb-40 relative z-10 animate-in fade-in duration-700 ${globalAlert ? 'pt-[160px]' : 'pt-[130px]'}`}>
         {!activeHall && (<div className="mb-8 relative group"><Search className="absolute left-6 top-1/2 -translate-y-1/2 size={16} text-emerald-500/50" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={lang === 'en' ? "Search..." : "వెతకండి..."} className="w-full p-4 pl-12 backdrop-blur-xl rounded-[30px] border outline-none font-medium text-sm transition-all shadow-inner bg-white/5 border-white/10 text-emerald-100 focus:border-emerald-500/50"/></div>)}
         
@@ -480,479 +483,97 @@ export default function App() {
         {view === 'lab' && <LabView lang={lang} />}
         {view === 'games' && <GamesView lang={lang} />}
         {view === 'legal' && <LegalView lang={lang} docs={legalDocs} policyLink={policyLink} manualLink={manualLink} />}
-        {/* Pass LiteMode props to ProfileView */}
         {view === 'profile' && <ProfileView userData={userData} setView={setView} user={user} lang={lang} setUserData={setUserData} treasury={treasury} notify={showNotify} setWhispers={setWhispers} liteMode={liteMode} toggleLiteMode={toggleLiteMode} />}
-        
-        {/* LAZY LOADED ADMIN VIEW */}
         {view === 'admin' && (
             <Suspense fallback={<div className="text-center text-emerald-500 text-xs p-10">Accessing Secure Vault...</div>}>
                 <AdminView cards={masterCards} setCards={setMasterCards} docs={legalDocs} setDocs={setLegalDocs} config={mitraConfig} setConfig={setMitraConfig} treasury={treasury} setTreasury={setTreasury} users={userList} setUsers={setUserList} notify={showNotify} alert={globalAlert} setAlert={setGlobalAlert} whispers={whispers} setPolicyLink={setPolicyLink} policyLink={policyLink} setManualLink={setManualLink} manualLink={manualLink} setView={setView} paymentRequests={paymentRequests} reportedPosts={reportedPosts} />
             </Suspense>
         )}
-        
         {view === 'master-deck' && <WisdomDeck onBack={() => setView('home')} lang={lang} cards={masterCards} userData={userData} setView={setView} notify={showNotify} />}
       </main>
+
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md backdrop-blur-xl border p-2 flex justify-around rounded-[40px] z-[500] shadow-2xl bg-[#020604]/80 border-white/10">
         <NavBtn icon={Home} active={view === 'home'} onClick={() => { setView('home'); setActiveHall(null); }} />
         <NavBtn icon={Flame} active={view === 'lab'} onClick={() => { setView('lab'); setActiveHall(null); }} />
         <NavBtn icon={Zap} active={view === 'games'} onClick={() => { setView('games'); setActiveHall(null); }} />
         <NavBtn icon={User} active={view === 'profile'} onClick={() => { setView('profile'); setActiveHall(null); }} />
       </nav>
+      
       {showSOS && <SOSModal onClose={() => setShowSOS(false)} />}
-      
-      {/* DEEP MITRA - NOW ACCEPTS EXTERNAL PROMPTS */}
       {showMitra && <DeepMitra onBack={() => setShowMitra(false)} persona={mitraConfig.persona} userData={userData} user={user} setView={setView} notify={showNotify} initialPrompt={translationRequest} />}
-      
       {showMood && <MoodModal onClose={() => setShowMood(false)} notify={showNotify} />}
     </div>
   );
 }
 
-// --- NEW COMPONENTS (MOOD & SOS) ---
-function MoodModal({ onClose, notify }) {
-  const saveMood = async (mood) => {
-    // 1. Save locally for user privacy
-    localStorage.setItem('ashoka_last_mood_date', new Date().toDateString());
-    
-    // 2. Send ANONYMOUS ping to Clinical Data Bridge
-    if(isFirebaseInitialized) {
-        try {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), {
-                mood: mood,
-                timestamp: serverTimestamp()
-            });
-        } catch(e) { console.log("Offline mood log"); }
-    }
+// =====================================================================
+// 📦 MODULE 5: FEATURE VIEWS (PAGES)
+// HomeHub, Admin, Profile, Wisdom Deck, and specific screen layouts.
+// =====================================================================
 
-    notify(`Mood Logged: ${mood}`);
-    onClose();
-  };
-  return (
-    <div className="fixed inset-0 z-[900] bg-black/90 backdrop-blur-xl flex items-center justify-center p-8 text-center animate-in zoom-in">
-       <div>
-         <h2 className="text-2xl font-black text-emerald-400 mb-6 uppercase">How is your spirit today?</h2>
-         <div className="grid grid-cols-1 gap-3 justify-center">
-            <button onClick={()=>saveMood('Sunny')} className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center gap-4 hover:bg-yellow-500/20">
-                <SunIcon className="text-yellow-400" size={24}/> 
-                <div className="text-left"><h3 className="font-bold text-yellow-400">Sunny</h3><p className="text-[10px] text-gray-400">I feel bright, energetic, and hopeful.</p></div>
-            </button>
-            <button onClick={()=>saveMood('Cloudy')} className="p-4 bg-gray-500/10 border border-gray-500/30 rounded-2xl flex items-center gap-4 hover:bg-gray-500/20">
-                <Cloud className="text-gray-400" size={24}/> 
-                <div className="text-left"><h3 className="font-bold text-gray-400">Cloudy</h3><p className="text-[10px] text-gray-400">I feel okay, but a bit heavy or neutral.</p></div>
-            </button>
-            <button onClick={()=>saveMood('Rainy')} className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center gap-4 hover:bg-blue-500/20">
-                <CloudRain className="text-blue-400" size={24}/> 
-                <div className="text-left"><h3 className="font-bold text-blue-400">Rainy</h3><p className="text-[10px] text-gray-400">I feel sad, heavy, or tearful.</p></div>
-            </button>
-         </div>
-         <button onClick={onClose} className="mt-8 text-xs text-gray-500 underline">Skip for now</button>
-       </div>
-    </div>
-  );
-}
-
-const SOSModal = ({ onClose }) => {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const isIndia = tz.includes("Calcutta") || tz.includes("Asia/Kolkata");
-  const isUS = tz.includes("America");
-  const isUK = tz.includes("London");
-
-  const numbers = isIndia ? {police:"100", amb:"108", help:"14416"} 
-                : isUS ? {police:"911", amb:"911", help:"988"}
-                : isUK ? {police:"999", amb:"999", help:"111"}
-                : {police:"112", amb:"112", help:"112"}; 
-
-  const silentSOS = () => {
-      const msg = encodeURIComponent("I need help. I am using AshokaManas SOS. Please check on me.");
-      window.open(`https://wa.me/?text=${msg}`, '_blank');
-  };
-
-  return (
-    <div className="fixed inset-0 bg-[#310404]/98 backdrop-blur-[100px] z-[1000] flex flex-col items-center justify-center p-8 text-white text-center animate-in zoom-in duration-500">
-      <div className="w-32 h-32 bg-red-600 rounded-full flex items-center justify-center mb-10 animate-pulse shadow-[0_0_60px_rgba(220,38,38,0.6)]"><Siren size={60} className="text-white" /></div>
-      <h2 className="text-6xl font-black uppercase mb-2 tracking-tighter">Emergency</h2>
-      <p className="text-xs uppercase tracking-widest text-red-400 mb-8 font-bold">Detected Region: {isIndia ? "India" : "Global"}</p>
-       
-      <a href={`tel:${numbers.amb}`} className="block w-full py-5 bg-red-600 rounded-[30px] font-black text-2xl shadow-2xl mb-4 border-b-4 border-red-800 active:scale-95 transition-all">CALL AMBULANCE ({numbers.amb})</a>
-      <a href={`tel:${numbers.help}`} className="block w-full py-5 bg-blue-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-blue-800 active:scale-95 transition-all">MENTAL HELPLINE ({numbers.help})</a>
-      <button onClick={silentSOS} className="block w-full py-5 bg-emerald-600 rounded-[30px] font-black text-xl shadow-2xl border-b-4 border-emerald-800 active:scale-95 transition-all mt-4">SILENT SOS (WHATSAPP)</button>
-       
-      <button onClick={onClose} className="mt-10 text-gray-500 font-black uppercase tracking-[0.4em] underline decoration-red-900 underline-offset-8 text-[10px] hover:text-white transition-colors">Return to Safety</button>
-    </div>
-  );
-};
-
-// --- HOME HUB ---
-function HomeHub({ setHall, setView, openMitra, userData, notify }) {
+function HomeHub({ setHall, setView, openMitra, userData, notify, query, lang }) {
   const isPaid = userData?.role === 'patron' || userData?.role === 'doctor';
   const lockedClick = (feature) => { notify(`${feature} requires Contribution.`); setView('profile'); };
   const [pulse, setPulse] = useState(false); const triggerHeart = () => { setPulse(true); SoundEngine.playFreq(60, 'sine', 0.6); setTimeout(()=>setPulse(false), 1000); };
+  
+  // V2.0 UPGRADE: Active Multilingual Search Filtering
+  const filteredHalls = HALLS.filter(h => {
+      if(!query) return true;
+      const q = query.toLowerCase();
+      return h.label.toLowerCase().includes(q) || (h.te && h.te.includes(q)) || (h.hi && h.hi.includes(q));
+  });
+
   return (
     <div className="space-y-8 pb-32 relative">
-      {/* COSMIC PULSE MAP BACKGROUND */}
       <PulseMap />
-
       <div onClick={triggerHeart} className="relative rounded-[60px] bg-gradient-to-br from-[#064E3B] to-[#022c22] p-10 text-center text-white shadow-2xl overflow-hidden cursor-pointer group border border-emerald-500/20 active:scale-95 transition-all duration-500 z-10">
         <div className={`absolute inset-0 bg-emerald-500/20 rounded-full blur-3xl transition-transform duration-1000 ${pulse ? 'scale-150 opacity-100' : 'scale-0 opacity-0'}`} style={{left:'50%', top:'50%', transform:'translate(-50%, -50%)'}}></div><Heart size={48} className="text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.6)] animate-pulse mx-auto mb-6 relative z-10" fill="currentColor" /><h2 className="text-4xl font-black uppercase tracking-tighter leading-none relative z-10">Sanctuary</h2><p className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[0.4em] mt-4 relative z-10">Tap to Breathe</p>
       </div>
-      <div className="grid grid-cols-2 gap-4 relative z-10">
-        <button onClick={() => {SoundEngine.playClick(); isPaid ? openMitra() : lockedClick("Deep Mitra");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#1e1b4b]/40 border-indigo-500/20 hover:border-indigo-500/50">
-            {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-indigo-500/20 text-indigo-300"><Sparkles size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-indigo-100">Trusted Companion</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-indigo-400">AI Friend</p>
-        </button>
-        <button onClick={() => {SoundEngine.playClick(); isPaid ? setView('master-deck') : lockedClick("Wisdom Deck");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#451a03]/40 border-amber-500/20 hover:border-amber-500/50">
-            {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-amber-500/20 text-amber-300"><Crown size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-amber-100">Master Deck</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-amber-500">Ancient Wisdom</p>
-        </button>
-      </div>
+      
+      {!query && (
+          <div className="grid grid-cols-2 gap-4 relative z-10">
+            <button onClick={() => {SoundEngine.playClick(); isPaid ? openMitra() : lockedClick("Deep Mitra");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#1e1b4b]/40 border-indigo-500/20 hover:border-indigo-500/50">
+                {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-indigo-500/20 text-indigo-300"><Sparkles size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-indigo-100">Trusted Companion</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-indigo-400">AI Friend</p>
+            </button>
+            <button onClick={() => {SoundEngine.playClick(); isPaid ? setView('master-deck') : lockedClick("Wisdom Deck");}} className="p-6 border rounded-[40px] text-left relative overflow-hidden group transition-all active:scale-95 bg-[#451a03]/40 border-amber-500/20 hover:border-amber-500/50">
+                {!isPaid && <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center backdrop-blur-sm"><Lock className="text-white opacity-80"/></div>}<div className="absolute top-4 right-4 p-2 rounded-full bg-amber-500/20 text-amber-300"><Crown size={14}/></div><h3 className="text-lg font-black uppercase tracking-tight mt-6 text-amber-100">Master Deck</h3><p className="text-[9px] font-bold uppercase mt-1 tracking-wider text-amber-500">Ancient Wisdom</p>
+            </button>
+          </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-        {HALLS.map(h => (
-          <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
-            {/* LOGO IMPLEMENTATION */}
-            <div className="relative">
-               {APP_LOGO ? (
-                   <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">
-                      <img src={APP_LOGO} className="w-full h-full object-cover" alt="AshokaManas Logo"/>
-                   </div>
-               ) : (
-                   <div className="p-4 rounded-2xl shadow-inner bg-white/10 text-emerald-400"><h.icon size={24} /></div>
-               )}
+        {filteredHalls.length > 0 ? (
+            filteredHalls.map(h => (
+              <button key={h.id} onClick={() => {SoundEngine.playClick(); setHall(h);}} className="p-6 rounded-[40px] shadow-lg transition-all text-left flex items-center gap-5 border active:scale-95 bg-white/5 border-white/5 hover:border-emerald-500/30">
+                <div className="relative">
+                   {APP_LOGO ? (
+                       <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:scale-105 transition-transform">
+                          <img src={APP_LOGO} className="w-full h-full object-cover" alt="AshokaManas Logo"/>
+                       </div>
+                   ) : (
+                       <div className="p-4 rounded-2xl shadow-inner bg-white/10 text-emerald-400"><h.icon size={24} /></div>
+                   )}
+                </div>
+                <div><h3 className="font-black text-lg uppercase tracking-tight leading-none text-emerald-50">{h.label}</h3></div>
+              </button>
+            ))
+        ) : (
+            <div className="col-span-1 md:col-span-2 p-8 text-center text-emerald-500/50 border border-emerald-500/10 rounded-[40px] bg-white/5 animate-in fade-in">
+                 <Wind size={32} className="mx-auto mb-4 opacity-50" />
+                 <p className="text-sm font-bold uppercase tracking-widest">{lang === 'en' ? "Space not found. Breathe and try again." : lang === 'te' ? "స్థలం దొరకలేదు. శ్వాస తీసుకుని మళ్లీ ప్రయత్నించండి." : "स्थान नहीं मिला। सांस लें और फिर से प्रयास करें।"}</p>
             </div>
-            <div><h3 className="font-black text-lg uppercase tracking-tight leading-none text-emerald-50">{h.label}</h3></div>
-          </button>
-        ))}
+        )}
       </div>
     </div>
   );
 }
 
-// --- ADMIN / FOUNDER STUDIO (UPDATED: STATS, MODERATION & SAFE SEARCH) ---
-function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests, reportedPosts }) {
-  const [tab, setTab] = useState('sentinel');
-  const [jsonInput, setJsonInput] = useState("");
-  const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
-  const [adminSearch, setAdminSearch] = useState(""); 
-  
-  // NEW: Clinical Data State
-  const [clinicalData, setClinicalData] = useState({ sunny:0, rainy:0, cloudy:0, totalSessions:0, avgReduction:0 });
-
-  useEffect(() => {
-      // Fetch Clinical Data
-      if(isFirebaseInitialized) {
-          const qMoods = query(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), limit(100));
-          const qSessions = query(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), limit(100));
-          
-          getDocs(qMoods).then(snap => {
-              let s=0, r=0, c=0;
-              snap.forEach(d => {
-                  const m = d.data().mood;
-                  if(m==='Sunny') s++; else if(m==='Rainy') r++; else c++;
-              });
-              setClinicalData(prev => ({...prev, sunny:s, rainy:r, cloudy:c}));
-          });
-          
-          getDocs(qSessions).then(snap => {
-              let totalRed = 0;
-              let count = 0;
-              snap.forEach(d => {
-                  const data = d.data();
-                  if(data.pre && data.post) {
-                      totalRed += (data.pre - data.post);
-                      count++;
-                  }
-              });
-              const avg = count > 0 ? (totalRed / count).toFixed(1) : 0;
-              setClinicalData(prev => ({...prev, totalSessions: snap.size, avgReduction: avg}));
-          });
-      }
-  }, []);
-   
-  // STATS CALCULATION
-  const stats = {
-    total: users.length,
-    doctors: users.filter(u => u.role === 'doctor').length,
-    patrons: users.filter(u => u.role === 'patron').length,
-    guests: users.filter(u => u.role === 'guest').length
-  };
-
-  const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
-   
-  const depositSeeds = () => { 
-      try { 
-          const data = JSON.parse(jsonInput); 
-          if(Array.isArray(data)) { 
-              const seedsWithIds = data.map((item, idx) => ({
-                  ...item,
-                  id: item.id || `seed_${Date.now()}_${idx}`
-              }));
-              setCards(prev => [...prev, ...seedsWithIds]); 
-              saveToCloud('config', 'master_deck', { cards: [...cards, ...seedsWithIds] }); 
-              notify("Seeds Planted."); 
-              setJsonInput(""); 
-          } 
-      } catch(e) { notify("Invalid JSON"); } 
-  };
-
-  const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
-  const exileUser = (id) => { updateUserRole(id, 'banned'); notify("User Exiled"); }; 
-  const restoreUser = (id) => { updateUserRole(id, 'guest'); notify("User Restored to Guest"); }; 
-  const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs, policy: policyLink, manual: manualLink });
-  const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona, ai_key: config.key });
-  const saveTreasury = () => saveToCloud('config', 'global_settings', { treasury: treasury });
-  const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
-   
-  // BANK ACTIONS
-  const approvePayment = async (req) => {
-      if(isFirebaseInitialized) {
-          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', req.uid), { role: 'patron' });
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', req.id));
-          notify("User Upgraded to Patron");
-      }
-  };
-
-  const denyPayment = async (id) => {
-      if(isFirebaseInitialized) {
-          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', id));
-          notify("Request Denied");
-      }
-  };
-
-  // --- NEW ACTIONS FOR ADMIN ---
-  const deleteWhisper = async (id) => {
-    if(!id) return;
-    try {
-        if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'whispers', id));
-        notify("Whisper Burned.");
-    } catch(e) { notify("Error deleting whisper."); }
-  };
-
-  const updateUserRole = async (uid, newRole) => {
-    try {
-        if (newRole === 'banned') {
-             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'banned' });
-        } else if (newRole === 'guest') {
-             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'active', role: 'guest' });
-        } else {
-             if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { role: newRole });
-             notify(`User promoted to ${newRole}`);
-        }
-    } catch(e) { notify("Error updating role."); }
-  };
-
-  const deleteUser = async (id) => {
-    if(!confirm("Destroy this user record? Cannot be undone.")) return;
-    try {
-        if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
-        notify("User Obliterated.");
-    } catch(e) { notify("Error deleting user."); }
-  };
-
-  // --- DIGITAL JANITOR (DATA PURGE) ---
-  const purgeOldChats = async () => {
-      if(!confirm("⚠️ NUKE OLD CHATS? This deletes all General Hall messages older than 7 days.")) return;
-      if(!isFirebaseInitialized) return;
-      
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      try {
-          const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'posts', 'General', 'messages'), where('createdAt', '<', sevenDaysAgo), limit(400));
-          const snapshot = await getDocs(q);
-          const batch = writeBatch(db);
-          snapshot.docs.forEach((doc) => {
-              batch.delete(doc.ref);
-          });
-          await batch.commit();
-          notify(`Purged ${snapshot.size} old messages.`);
-      } catch(e) { notify("Purge Error."); }
-  };
-   
-  // MODERATION ACTIONS
-  const resolveReport = async (post, action) => {
-      try {
-          const postRef = doc(db, post.refPath); 
-          if (action === 'ban') {
-              await deleteDoc(postRef);
-              notify("Message Nuked.");
-          } else {
-              await updateDoc(postRef, { reported: false });
-              notify("Message Forgiven.");
-          }
-      } catch (e) { notify("Error actioning report."); }
-  };
-
-  // FILTERED LISTS - CRASH PROOF
-  const filteredPayments = paymentRequests.filter(req => 
-      (req.paymentId || "").toLowerCase().includes(adminSearch.toLowerCase()) || 
-      (req.uid || "").toLowerCase().includes(adminSearch.toLowerCase())
-  );
-
-  return (
-    <div className="pb-20">
-      <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['sentinel', 'clinical', 'bank', 'law', 'brain', 'treasury', 'seed', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
-       
-      {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
-      {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
-      {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
-      {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
-       
-      {/* NEW CLINICAL TAB */}
-      {tab === 'clinical' && (
-          <div className="space-y-6">
-              <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight">Clinical Evidence Engine</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
-                      <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold uppercase text-[10px]"><Activity size={14}/> Therapy Sessions</div>
-                      <h4 className="text-3xl font-black text-white">{clinicalData.totalSessions}</h4>
-                      <p className="text-[10px] text-gray-500">Tools Completed</p>
-                  </div>
-                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
-                      <div className="flex items-center gap-2 mb-2 text-blue-400 font-bold uppercase text-[10px]"><TrendingDown size={14}/> Efficacy</div>
-                      <h4 className="text-3xl font-black text-white">{clinicalData.avgReduction}</h4>
-                      <p className="text-[10px] text-gray-500">Avg. Stress Reduction</p>
-                  </div>
-              </div>
-
-              <div className="p-6 bg-black rounded-[30px] border border-white/10">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Community Mood Distribution</h4>
-                  <div className="flex items-end gap-2 h-32 pl-2 border-l border-white/10 pb-2 border-b">
-                      <div className="flex-1 bg-yellow-500/20 rounded-t-lg relative group">
-                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.sunny/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
-                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-yellow-500">{clinicalData.sunny}</span>
-                      </div>
-                      <div className="flex-1 bg-gray-500/20 rounded-t-lg relative group">
-                          <div className="absolute bottom-0 left-0 right-0 bg-gray-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.cloudy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
-                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-500">{clinicalData.cloudy}</span>
-                      </div>
-                      <div className="flex-1 bg-blue-500/20 rounded-t-lg relative group">
-                          <div className="absolute bottom-0 left-0 right-0 bg-blue-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.rainy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div>
-                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-500">{clinicalData.rainy}</span>
-                      </div>
-                  </div>
-                  <div className="flex justify-between text-[9px] text-gray-500 uppercase font-bold mt-2 px-4">
-                      <span>Sunny</span><span>Cloudy</span><span>Rainy</span>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      {/* THE BANK */}
-      {tab === 'bank' && (
-         <div className="space-y-4">
-             <div className="flex justify-between items-center"><h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3>
-             <input value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} placeholder="Search ID..." className="bg-white/10 text-white p-2 rounded text-[10px] w-32 border border-white/10"/></div>
-             
-             {filteredPayments.length === 0 && <p className="text-center text-xs opacity-50">No pending requests found.</p>}
-             {filteredPayments.map((req) => (
-                 <div key={req.id} className="p-4 rounded-xl border border-amber-500/30 bg-[#1a1400] flex justify-between items-center">
-                     <div>
-                         <p className="text-xs font-mono text-amber-200">ID: {req.paymentId}</p>
-                         {/* 💉 STITCH 3: The "Substring" Shield */}
-                         <p className="text-[9px] text-gray-500">User: {(req?.uid || "Unknown").substring(0,8)}...</p>
-                     </div>
-                     <div className="flex gap-2">
-                        <button onClick={()=>approvePayment(req)} className="px-3 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold uppercase">Approve</button>
-                        <button onClick={()=>denyPayment(req.id)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Deny</button>
-                     </div>
-                 </div>
-             ))}
-         </div>
-      )}
-       
-      {tab === 'sentinel' && ( 
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2 mb-6">
-             <div className="p-4 bg-emerald-900/30 rounded-xl text-center border border-emerald-500/30">
-                <h3 className="text-2xl font-black text-emerald-400">{stats.doctors}</h3>
-                <p className="text-[9px] uppercase tracking-widest text-emerald-200">Doctors</p>
-             </div>
-             <div className="p-4 bg-amber-900/30 rounded-xl text-center border border-amber-500/30">
-                <h3 className="text-2xl font-black text-amber-400">{stats.patrons}</h3>
-                <p className="text-[9px] uppercase tracking-widest text-amber-200">Patrons</p>
-             </div>
-             <div className="p-4 bg-gray-800 rounded-xl text-center border border-gray-600">
-                <h3 className="text-2xl font-black text-gray-300">{stats.total}</h3>
-                <p className="text-[9px] uppercase tracking-widest text-gray-400">Total Souls</p>
-             </div>
-          </div>
-            
-          <h3 className="text-xs uppercase font-bold text-orange-500 mt-6">Moderation Queue ({reportedPosts.length})</h3>
-          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2 bg-[#1a0505]">
-             {reportedPosts.length === 0 && <p className="text-center text-xs opacity-50">All clear. No reports.</p>}
-             {reportedPosts.map((post) => (
-                 <div key={post.id} className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg flex justify-between items-start gap-2">
-                    <p className="text-xs text-gray-300 flex-1">{post.text}</p>
-                    <div className="flex flex-col gap-1">
-                         <button onClick={()=>resolveReport(post, 'ban')} className="px-2 py-1 bg-red-600 text-[9px] font-bold rounded hover:bg-red-500">BAN</button>
-                         <button onClick={()=>resolveReport(post, 'keep')} className="px-2 py-1 bg-gray-600 text-[9px] font-bold rounded hover:bg-gray-500">KEEP</button>
-                    </div>
-                 </div>
-             ))}
-          </div>
-
-          <h3 className="text-xs uppercase font-bold text-red-500 mt-6">Global Alert</h3>
-          <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
-            
-          <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
-          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
-            {(whispers||[]).map((w,i)=>(
-                <div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400 flex justify-between items-center">
-                    <span>{w.text}</span>
-                    <button onClick={() => deleteWhisper(w.id)} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
-                </div>
-            ))}
-            {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
-          </div>
-            
-          <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
-          <div className="h-60 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
-            {users.map((u, i) => (
-                <div key={i} className="p-4 rounded-xl border flex flex-col gap-2 bg-[#111] border-white/10">
-                    <div className="flex justify-between items-center">
-                        {/* 💉 STITCH 3: The "Substring" Shield */}
-                        <span className="text-xs font-mono text-white">{(u?.uid || "Unknown").substring(0,10)}... <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.role})</span></span>
-                        <div className="flex gap-2">
-                           <button onClick={() => deleteUser(u.id)} className="p-1 bg-red-900/50 text-red-400 rounded hover:bg-red-600 hover:text-white"><Trash2 size={12}/></button>
-                        </div>
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                        {u.status === 'active' ? (
-                            <button onClick={() => exileUser(u.id)} className="flex-1 py-1 bg-red-600 text-white rounded text-[9px] font-bold uppercase">Exile</button>
-                        ) : (
-                            <button onClick={() => restoreUser(u.id)} className="flex-1 py-1 bg-gray-600 text-white rounded text-[9px] font-bold uppercase border border-gray-500">Restore</button>
-                        )}
-                        <button onClick={() => updateUserRole(u.id, 'doctor')} className={`flex-1 py-1 text-white rounded text-[9px] font-bold uppercase ${u.role==='doctor' ? 'bg-indigo-600 opacity-50' : 'bg-indigo-600'}`}>Make Dr.</button>
-                        <button onClick={() => updateUserRole(u.id, 'patron')} className={`flex-1 py-1 text-black rounded text-[9px] font-bold uppercase ${u.role==='patron' ? 'bg-amber-500 opacity-50' : 'bg-amber-500'}`}>Make Patron</button>
-                    </div>
-                </div>
-            ))}
-          </div>
-
-          <h3 className="text-xs uppercase font-bold text-red-500 mt-6 flex items-center gap-2"><Eraser size={12}/> Danger Zone: Database Cleanup</h3>
-          <button onClick={purgeOldChats} className="w-full py-4 bg-red-900/50 border border-red-500 text-red-200 text-xs font-bold uppercase rounded-xl hover:bg-red-900">
-              PURGE MESSAGES {'>'} 7 DAYS OLD
-          </button>
-        </div> 
-      )}
-       
-      {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
-    </div>
-  );
-}
-
-// --- PROFILE & SUSTENANCE ---
 function ProfileView({ userData, setView, user, lang, setUserData, treasury, notify, setWhispers, liteMode, toggleLiteMode }) {
-  const [agreed, setAgreed] = useState(false);
-  const [showPay, setShowPay] = useState(false);
   const [key, setKey] = useState("");
   const [whisper, setWhisper] = useState("");
-  const [paymentId, setPaymentId] = useState("");
   const [trustContact, setTrustContact] = useState(() => localStorage.getItem('ashoka_trust_contact') || "");
 
-  const saveTrustContact = () => {
-      localStorage.setItem('ashoka_trust_contact', trustContact);
-      notify("Safety Contact Saved.");
-  };
+  const saveTrustContact = () => { localStorage.setItem('ashoka_trust_contact', trustContact); notify("Safety Contact Saved."); };
 
   const verify = async () => {
     if (!key.trim()) return;
@@ -964,8 +585,7 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
       if (docSnap.exists()) {
         const role = docSnap.data().role;
         if (isFirebaseInitialized && user) {
-            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
-            await updateDoc(userRef, { role: role, access_key: key.trim() });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { role: role, access_key: key.trim() });
         }
         if (role === 'admin') { setView('admin'); notify("Welcome, Founder."); } 
         else if (role === 'doctor') {
@@ -975,37 +595,13 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
         }
         setKey("");
       } else { notify("Invalid Access Key."); }
-    } catch (e) { notify("Verification Failed. Check Internet."); }
+    } catch (e) { notify("Verification Failed."); }
   };
 
   const sendWhisper = async () => { if(!whisper.trim()) return; notify("Sent to Founder"); setWhispers(p=>[...p,{text:whisper, date:Date.now()}]); if(isFirebaseInitialized) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'whispers'), { text: whisper, createdAt: serverTimestamp(), uid: user.uid }); setWhisper(""); };
   const deleteAccount = async () => { if (confirm("⚠️ WARNING: Wipe identity?")) { if (auth) await signOut(auth); localStorage.clear(); window.location.reload(); } };
-  
-  // 💉 STITCH 3: The "Substring" Shield
   const copyID = () => { navigator.clipboard.writeText(user?.uid); notify("Soul ID Copied"); };
-   
-  const submitPaymentRequest = async () => {
-      if(paymentId.length < 5) { notify("Invalid ID"); return; }
-      notify("Verifying with Founder...");
-      if(isFirebaseInitialized) {
-          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'payment_requests'), { uid: user.uid, paymentId: paymentId, createdAt: serverTimestamp() });
-          notify("Request Sent! Wait for Approval.");
-          setShowPay(false);
-      } else { notify("Offline: Cannot Verify."); }
-  };
-
-  const sustText = {
-    en: "We are a community-supported space designed for clarity and peace.",
-    te: "ఇది మనశ్శాంతి కోసం మరియు స్పష్టత కోసం రూపొందించిన వేదిక.",
-    hi: "हम शांति और स्पष्टता के लिए एक समुदाय समर्थित स्थान हैं।"
-  };
-   
-  const getKarmaRank = (k) => {
-      if(k > 50) return "Guardian Angel";
-      if(k > 20) return "Healer";
-      if(k > 5) return "Compassionate Soul";
-      return "Seeker";
-  };
+  const getKarmaRank = (k) => { if(k > 50) return "Guardian Angel"; if(k > 20) return "Healer"; if(k > 5) return "Compassionate Soul"; return "Seeker"; };
 
   return (
     <div className="pb-24 space-y-8">
@@ -1014,8 +610,6 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
         <User size={48} className="mx-auto mb-2"/>
         <h2 className="text-2xl font-black uppercase">{userData.role === 'guest' ? 'Member' : userData.role}</h2>
         <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-2">{getKarmaRank(userData.karma || 0)} • {userData.karma || 0} Karma</p>
-        
-        {/* 💉 STITCH 3: The "Substring" Shield */}
         <button onClick={copyID} className="mt-4 flex items-center justify-center gap-2 bg-black/20 px-4 py-2 rounded-full text-[10px] font-mono hover:bg-black/40"><Copy size={12}/> ID: {(user?.uid || "Unknown").substring(0,8)}...</button>
       </div>
 
@@ -1041,12 +635,8 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
           </div>
       </button>
 
-      <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20">
-        <div className="flex items-center gap-3 mb-4"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang==='en'?"Premium Features":"ప్రీమియం"}</h3></div>
-        <button disabled className="w-full py-3 bg-gray-500/20 text-gray-400 rounded-xl font-bold uppercase text-xs cursor-not-allowed border border-gray-500/30">
-          🔒 Coming Soon
-        </button>
-      </div>
+      {/* 📦 INJECTED MODULE: DIGITAL GOODS API BLOCK */}
+      <SustenanceGateway user={user} notify={notify} setUserData={setUserData} lang={lang} />
 
       <div className="p-6 rounded-[40px] border bg-white/5 border-white/5">
         <h3 className="font-bold uppercase text-xs mb-4 opacity-50 text-white">Restore / Admin</h3>
@@ -1071,34 +661,165 @@ function ProfileView({ userData, setView, user, lang, setUserData, treasury, not
   );
 }
 
-// --- DEEP MITRA AI ---
+function AdminView({ cards, setCards, docs, setDocs, config, setConfig, treasury, setTreasury, users, setUsers, notify, alert, setAlert, whispers, policyLink, setPolicyLink, manualLink, setManualLink, setView, paymentRequests, reportedPosts }) {
+  const [tab, setTab] = useState('sentinel');
+  const [jsonInput, setJsonInput] = useState("");
+  const [newCard, setNewCard] = useState({ title: "", question: "", answer: "", category: "Self" });
+  const [adminSearch, setAdminSearch] = useState(""); 
+  const [clinicalData, setClinicalData] = useState({ sunny:0, rainy:0, cloudy:0, totalSessions:0, avgReduction:0 });
+
+  useEffect(() => {
+      if(isFirebaseInitialized) {
+          const qMoods = query(collection(db, 'artifacts', appId, 'public', 'data', 'mood_logs'), limit(100));
+          const qSessions = query(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), limit(100));
+          getDocs(qMoods).then(snap => {
+              let s=0, r=0, c=0; snap.forEach(d => { const m = d.data().mood; if(m==='Sunny') s++; else if(m==='Rainy') r++; else c++; });
+              setClinicalData(prev => ({...prev, sunny:s, rainy:r, cloudy:c}));
+          });
+          getDocs(qSessions).then(snap => {
+              let totalRed = 0, count = 0;
+              snap.forEach(d => { const data = d.data(); if(data.pre && data.post) { totalRed += (data.pre - data.post); count++; } });
+              const avg = count > 0 ? (totalRed / count).toFixed(1) : 0;
+              setClinicalData(prev => ({...prev, totalSessions: snap.size, avgReduction: avg}));
+          });
+      }
+  }, []);
+   
+  const stats = { total: users.length, doctors: users.filter(u => u.role === 'doctor').length, patrons: users.filter(u => u.role === 'patron').length, guests: users.filter(u => u.role === 'guest').length };
+  const saveToCloud = async (collectionName, docName, data) => { if(!isFirebaseInitialized) { notify("Offline: Saved Locally"); return; } try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', docName), data, { merge: true }); notify("Cloud Sync Active."); } catch(e) { notify("Sync Failed."); } };
+  const depositSeeds = () => { try { const data = JSON.parse(jsonInput); if(Array.isArray(data)) { const seedsWithIds = data.map((item, idx) => ({ ...item, id: item.id || `seed_${Date.now()}_${idx}` })); setCards(prev => [...prev, ...seedsWithIds]); saveToCloud('config', 'master_deck', { cards: [...cards, ...seedsWithIds] }); notify("Seeds Planted."); setJsonInput(""); } } catch(e) { notify("Invalid JSON"); } };
+  const updateLegal = (index, field, value) => { const newDocs = [...docs]; newDocs[index][field] = value; setDocs(newDocs); };
+  const exileUser = (id) => { updateUserRole(id, 'banned'); notify("User Exiled"); }; 
+  const restoreUser = (id) => { updateUserRole(id, 'guest'); notify("User Restored to Guest"); }; 
+  const saveLaw = () => saveToCloud('config', 'global_settings', { legal: docs, policy: policyLink, manual: manualLink });
+  const saveBrain = () => saveToCloud('config', 'global_settings', { persona: config.persona, ai_key: config.key });
+  const saveTreasury = () => saveToCloud('config', 'global_settings', { treasury: treasury });
+  const saveAlert = () => saveToCloud('config', 'global_settings', { alert: alert });
+   
+  const approvePayment = async (req) => { if(isFirebaseInitialized) { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', req.uid), { role: 'patron' }); await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', req.id)); notify("User Upgraded to Patron"); } };
+  const denyPayment = async (id) => { if(isFirebaseInitialized) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'payment_requests', id)); notify("Request Denied"); } };
+  const deleteWhisper = async (id) => { if(!id) return; try { if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'whispers', id)); notify("Whisper Burned."); } catch(e) { notify("Error deleting whisper."); } };
+  const updateUserRole = async (uid, newRole) => { try { if (newRole === 'banned') { if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'banned' }); } else if (newRole === 'guest') { if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { status: 'active', role: 'guest' }); } else { if(isFirebaseInitialized) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', uid), { role: newRole }); notify(`User promoted to ${newRole}`); } } catch(e) { notify("Error updating role."); } };
+  const deleteUser = async (id) => { if(!confirm("Destroy this user record? Cannot be undone.")) return; try { if(isFirebaseInitialized) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id)); notify("User Obliterated."); } catch(e) { notify("Error deleting user."); } };
+  
+  const purgeOldChats = async () => {
+      if(!confirm("⚠️ NUKE OLD CHATS? This deletes all General Hall messages older than 7 days.")) return;
+      if(!isFirebaseInitialized) return;
+      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      try {
+          const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'posts', 'General', 'messages'), where('createdAt', '<', sevenDaysAgo), limit(400));
+          const snapshot = await getDocs(q); const batch = writeBatch(db);
+          snapshot.docs.forEach((doc) => batch.delete(doc.ref)); await batch.commit(); notify(`Purged ${snapshot.size} old messages.`);
+      } catch(e) { notify("Purge Error."); }
+  };
+   
+  const resolveReport = async (post, action) => { try { const postRef = doc(db, post.refPath); if (action === 'ban') { await deleteDoc(postRef); notify("Message Nuked."); } else { await updateDoc(postRef, { reported: false }); notify("Message Forgiven."); } } catch (e) { notify("Error actioning report."); } };
+  const filteredPayments = paymentRequests.filter(req => (req.paymentId || "").toLowerCase().includes(adminSearch.toLowerCase()) || (req.uid || "").toLowerCase().includes(adminSearch.toLowerCase()));
+
+  return (
+    <div className="pb-20">
+      <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-black uppercase text-white">Founder Studio</h2><button onClick={()=>setView('home')}><X className="text-white"/></button></div>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{['sentinel', 'clinical', 'bank', 'law', 'brain', 'treasury', 'seed', 'editor'].map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase ${tab === t ? 'bg-emerald-500 text-black' : 'bg-gray-800 text-gray-400'}`}>{t}</button>))}</div>
+       
+      {tab === 'seed' && ( <div className="space-y-8"><textarea value={jsonInput} onChange={e => setJsonInput(e.target.value)} className="w-full h-80 border rounded-xl p-6 text-emerald-500 text-sm font-mono leading-relaxed bg-[#0a0a0a] border-white/10" placeholder='Paste JSON Array here...' /><button onClick={depositSeeds} className="w-full py-5 bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-emerald-900/40">Execute Deposit</button></div> )}
+      {tab === 'law' && ( <div className="space-y-6">{docs.map((d, i) => (<div key={i} className="p-4 rounded-xl border space-y-2 bg-[#111] border-white/10"><input value={d.t} onChange={e => updateLegal(i, 't', e.target.value)} className="w-full bg-transparent font-bold mb-2 outline-none text-white" /><textarea value={d.m} onChange={e => updateLegal(i, 'm', e.target.value)} className="w-full bg-transparent text-xs h-20 outline-none resize-none opacity-70 text-white" /></div>))}<input value={policyLink} onChange={e=>setPolicyLink(e.target.value)} placeholder="Privacy Policy URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><input value={manualLink} onChange={e=>setManualLink(e.target.value)} placeholder="User Manual URL" className="w-full p-4 rounded-xl bg-[#111] border border-white/10 text-white text-xs"/><button onClick={saveLaw} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Update Constitution</button></div> )}
+      {tab === 'brain' && ( <div className="space-y-4"><input value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="w-full p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-white" placeholder="API Key" /><textarea value={config.persona} onChange={e => setConfig({...config, persona: e.target.value})} className="w-full h-40 p-4 rounded-xl text-xs font-mono border outline-none bg-black border-indigo-500/30 text-indigo-300" /><button onClick={saveBrain} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg">Save Brain</button></div> )}
+      {tab === 'treasury' && ( <div className="space-y-6"><input value={treasury.india} onChange={e=>setTreasury({...treasury, india:e.target.value})} placeholder="Razorpay Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><input value={treasury.global} onChange={e=>setTreasury({...treasury, global:e.target.value})} placeholder="Global Link" className="w-full p-4 rounded-xl border outline-none text-xs bg-black border-white/10 text-white" /><button onClick={saveTreasury} className="w-full py-3 bg-amber-600 text-black rounded-xl font-bold uppercase text-xs">Save Treasury</button></div> )}
+      {tab === 'clinical' && (
+          <div className="space-y-6">
+              <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight">Clinical Evidence Engine</h3>
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
+                      <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold uppercase text-[10px]"><Activity size={14}/> Therapy Sessions</div>
+                      <h4 className="text-3xl font-black text-white">{clinicalData.totalSessions}</h4><p className="text-[10px] text-gray-500">Tools Completed</p>
+                  </div>
+                  <div className="p-6 bg-white/5 rounded-[30px] border border-white/10">
+                      <div className="flex items-center gap-2 mb-2 text-blue-400 font-bold uppercase text-[10px]"><TrendingDown size={14}/> Efficacy</div>
+                      <h4 className="text-3xl font-black text-white">{clinicalData.avgReduction}</h4><p className="text-[10px] text-gray-500">Avg. Stress Reduction</p>
+                  </div>
+              </div>
+              <div className="p-6 bg-black rounded-[30px] border border-white/10">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">Community Mood Distribution</h4>
+                  <div className="flex items-end gap-2 h-32 pl-2 border-l border-white/10 pb-2 border-b">
+                      <div className="flex-1 bg-yellow-500/20 rounded-t-lg relative group"><div className="absolute bottom-0 left-0 right-0 bg-yellow-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.sunny/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-yellow-500">{clinicalData.sunny}</span></div>
+                      <div className="flex-1 bg-gray-500/20 rounded-t-lg relative group"><div className="absolute bottom-0 left-0 right-0 bg-gray-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.cloudy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-500">{clinicalData.cloudy}</span></div>
+                      <div className="flex-1 bg-blue-500/20 rounded-t-lg relative group"><div className="absolute bottom-0 left-0 right-0 bg-blue-500 rounded-t-lg transition-all" style={{height: `${(clinicalData.rainy/(clinicalData.sunny+clinicalData.rainy+clinicalData.cloudy || 1))*100}%`}}></div><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-blue-500">{clinicalData.rainy}</span></div>
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-500 uppercase font-bold mt-2 px-4"><span>Sunny</span><span>Cloudy</span><span>Rainy</span></div>
+              </div>
+          </div>
+      )}
+      {tab === 'bank' && (
+         <div className="space-y-4">
+             <div className="flex justify-between items-center"><h3 className="text-xs uppercase font-bold text-amber-500">Pending Approvals</h3><input value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} placeholder="Search ID..." className="bg-white/10 text-white p-2 rounded text-[10px] w-32 border border-white/10"/></div>
+             {filteredPayments.length === 0 && <p className="text-center text-xs opacity-50">No pending requests found.</p>}
+             {filteredPayments.map((req) => (
+                 <div key={req.id} className="p-4 rounded-xl border border-amber-500/30 bg-[#1a1400] flex justify-between items-center">
+                     <div><p className="text-xs font-mono text-amber-200">ID: {req.paymentId}</p><p className="text-[9px] text-gray-500">User: {(req?.uid || "Unknown").substring(0,8)}...</p></div>
+                     <div className="flex gap-2"><button onClick={()=>approvePayment(req)} className="px-3 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold uppercase">Approve</button><button onClick={()=>denyPayment(req.id)} className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-bold uppercase">Deny</button></div>
+                 </div>
+             ))}
+         </div>
+      )}
+      {tab === 'sentinel' && ( 
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 mb-6">
+             <div className="p-4 bg-emerald-900/30 rounded-xl text-center border border-emerald-500/30"><h3 className="text-2xl font-black text-emerald-400">{stats.doctors}</h3><p className="text-[9px] uppercase tracking-widest text-emerald-200">Doctors</p></div>
+             <div className="p-4 bg-amber-900/30 rounded-xl text-center border border-amber-500/30"><h3 className="text-2xl font-black text-amber-400">{stats.patrons}</h3><p className="text-[9px] uppercase tracking-widest text-amber-200">Patrons</p></div>
+             <div className="p-4 bg-gray-800 rounded-xl text-center border border-gray-600"><h3 className="text-2xl font-black text-gray-300">{stats.total}</h3><p className="text-[9px] uppercase tracking-widest text-gray-400">Total Souls</p></div>
+          </div>
+          <h3 className="text-xs uppercase font-bold text-orange-500 mt-6">Moderation Queue ({reportedPosts.length})</h3>
+          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2 bg-[#1a0505]">
+             {reportedPosts.length === 0 && <p className="text-center text-xs opacity-50">All clear. No reports.</p>}
+             {reportedPosts.map((post) => (
+                 <div key={post.id} className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg flex justify-between items-start gap-2">
+                    <p className="text-xs text-gray-300 flex-1">{post.text}</p>
+                    <div className="flex flex-col gap-1"><button onClick={()=>resolveReport(post, 'ban')} className="px-2 py-1 bg-red-600 text-[9px] font-bold rounded hover:bg-red-500">BAN</button><button onClick={()=>resolveReport(post, 'keep')} className="px-2 py-1 bg-gray-600 text-[9px] font-bold rounded hover:bg-gray-500">KEEP</button></div>
+                 </div>
+             ))}
+          </div>
+          <h3 className="text-xs uppercase font-bold text-red-500 mt-6">Global Alert</h3>
+          <input value={alert} onChange={e=>setAlert(e.target.value)} className="w-full p-3 rounded-lg bg-red-900/20 border border-red-500/30 text-red-200 text-xs" placeholder="Broadcast Message..."/><button onClick={saveAlert} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg mt-2">Broadcast</button>
+          <h3 className="text-xs uppercase font-bold text-blue-500 mt-6">Whispers (Feedback)</h3>
+          <div className="h-40 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+            {(whispers||[]).map((w,i)=>( <div key={i} className="p-3 bg-white/5 rounded-lg text-xs text-gray-400 flex justify-between items-center"><span>{w.text}</span><button onClick={() => deleteWhisper(w.id)} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button></div> ))}
+            {(!whispers || whispers.length===0) && <p className="text-center text-xs opacity-50">No whispers.</p>}
+          </div>
+          <h3 className="text-xs uppercase font-bold text-emerald-500 mt-6">User Management</h3>
+          <div className="h-60 overflow-y-auto space-y-2 border border-white/10 rounded-xl p-2">
+            {users.map((u, i) => (
+                <div key={i} className="p-4 rounded-xl border flex flex-col gap-2 bg-[#111] border-white/10">
+                    <div className="flex justify-between items-center"><span className="text-xs font-mono text-white">{(u?.uid || "Unknown").substring(0,10)}... <span className={u.status==='active'?'text-green-500':'text-red-500'}>({u.role})</span></span><div className="flex gap-2"><button onClick={() => deleteUser(u.id)} className="p-1 bg-red-900/50 text-red-400 rounded hover:bg-red-600 hover:text-white"><Trash2 size={12}/></button></div></div>
+                    <div className="flex gap-2 mt-2">
+                        {u.status === 'active' ? ( <button onClick={() => exileUser(u.id)} className="flex-1 py-1 bg-red-600 text-white rounded text-[9px] font-bold uppercase">Exile</button> ) : ( <button onClick={() => restoreUser(u.id)} className="flex-1 py-1 bg-gray-600 text-white rounded text-[9px] font-bold uppercase border border-gray-500">Restore</button> )}
+                        <button onClick={() => updateUserRole(u.id, 'doctor')} className={`flex-1 py-1 text-white rounded text-[9px] font-bold uppercase ${u.role==='doctor' ? 'bg-indigo-600 opacity-50' : 'bg-indigo-600'}`}>Make Dr.</button>
+                        <button onClick={() => updateUserRole(u.id, 'patron')} className={`flex-1 py-1 text-black rounded text-[9px] font-bold uppercase ${u.role==='patron' ? 'bg-amber-500 opacity-50' : 'bg-amber-500'}`}>Make Patron</button>
+                    </div>
+                </div>
+            ))}
+          </div>
+          <h3 className="text-xs uppercase font-bold text-red-500 mt-6 flex items-center gap-2"><Eraser size={12}/> Danger Zone: Database Cleanup</h3>
+          <button onClick={purgeOldChats} className="w-full py-4 bg-red-900/50 border border-red-500 text-red-200 text-xs font-bold uppercase rounded-xl hover:bg-red-900">PURGE MESSAGES {'>'} 7 DAYS OLD</button>
+        </div> 
+      )}
+      {tab === 'editor' && ( <div className="space-y-6"><input value={newCard.title} onChange={e=>setNewCard({...newCard, title:e.target.value})} placeholder="Title" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><input value={newCard.question} onChange={e=>setNewCard({...newCard, question:e.target.value})} placeholder="Question" className="w-full border p-5 rounded-xl text-lg bg-[#111] border-white/10" /><textarea value={newCard.answer} onChange={e=>setNewCard({...newCard, answer:e.target.value})} placeholder="Answer" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><textarea value={newCard.awarenessLogic} onChange={e=>setNewCard({...newCard, awarenessLogic:e.target.value})} placeholder="Logic" className="w-full border p-5 rounded-xl h-32 text-sm bg-[#111] border-white/10" /><button onClick={()=>{setCards(prev => [...prev, { id: Date.now(), ...newCard }]); notify("Card Added.");}} className="w-full py-5 bg-white text-black rounded-xl font-black uppercase text-sm tracking-widest border border-gray-300">PUBLISH CARD</button></div> )}
+    </div>
+  );
+}
+
 function DeepMitra({ onBack, persona, userData, user, setView, notify, initialPrompt }) {
   const [msgs, setMsgs] = useState([{role: 'bot', text: "Namaste. I am your Trusted Companion. Listening."}]);
   const [txt, setTxt] = useState("");
   const scrollRef = useRef(null); 
 
-  useEffect(() => {
-    if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [msgs]);
-
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [msgs]);
   useEffect(() => {
       if (initialPrompt && isFirebaseInitialized) {
           setMsgs(p => [...p, {role: 'user', text: initialPrompt}]);
           const sendAuto = async () => {
               try {
-                  const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
-                      prompt: initialPrompt,
-                      persona: persona, 
-                      createdAt: serverTimestamp()
-                  });
-                  const unsub = onSnapshot(docRef, (snap) => {
-                      if (snap.exists() && snap.data().response) {
-                          setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]);
-                          unsub(); 
-                      }
-                  });
+                  const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), { prompt: initialPrompt, persona: persona, createdAt: serverTimestamp() });
+                  const unsub = onSnapshot(docRef, (snap) => { if (snap.exists() && snap.data().response) { setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]); unsub(); } });
               } catch(e) {}
           };
           sendAuto();
@@ -1109,35 +830,15 @@ function DeepMitra({ onBack, persona, userData, user, setView, notify, initialPr
 
   const reply = async () => {
     if(!txt.trim()) return;
-    setMsgs(p => [...p, {role: 'user', text: txt}]);
-    setTxt(""); 
-     
-    if (txt.toLowerCase().includes("diagnos") || txt.toLowerCase().includes("medic")) {
-        setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I am a wise friend, not a doctor. I cannot provide medical diagnosis."}]), 500);
-        return;
-    }
-
+    setMsgs(p => [...p, {role: 'user', text: txt}]); setTxt(""); 
+    if (txt.toLowerCase().includes("diagnos") || txt.toLowerCase().includes("medic")) { setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I am a wise friend, not a doctor. I cannot provide medical diagnosis."}]), 500); return; }
     if (isFirebaseInitialized) {
         try {
-            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), {
-                prompt: txt,
-                persona: persona, 
-                uid: user.uid, 
-                createdAt: serverTimestamp()
-            });
-            const unsub = onSnapshot(docRef, (snap) => {
-                if (snap.exists() && snap.data().response) {
-                    setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]);
-                    unsub(); 
-                }
-            });
+            const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'ai_chats'), { prompt: txt, persona: persona, uid: user.uid, createdAt: serverTimestamp() });
+            const unsub = onSnapshot(docRef, (snap) => { if (snap.exists() && snap.data().response) { setMsgs(p => [...p, {role: 'bot', text: snap.data().response}]); unsub(); } });
             setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "Reflecting..."}]), 1000);
-        } catch(e) {
-            setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "Connection weak. I am listening locally."}]), 500);
-        }
-    } else {
-        setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I hear you. Tell me more."}]), 500);
-    }
+        } catch(e) { setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "Connection weak. I am listening locally."}]), 500); }
+    } else { setTimeout(() => setMsgs(p => [...p, {role: 'bot', text: "I hear you. Tell me more."}]), 500); }
   };
 
   return (
@@ -1147,13 +848,7 @@ function DeepMitra({ onBack, persona, userData, user, setView, notify, initialPr
         <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10"><X size={18} className="text-gray-400"/></button>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6 scroll-smooth">
-        {msgs.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-gray-200 rounded-bl-none shadow-sm'}`}>
-                  {m.text}
-              </div>
-          </div>
-        ))}
+        {msgs.map((m, i) => ( <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed whitespace-pre-wrap ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-gray-200 rounded-bl-none shadow-sm'}`}>{m.text}</div></div> ))}
       </div>
       <div className="p-4 border-t flex gap-2 bg-black/40 border-white/10">
         <input value={txt} onChange={e => setTxt(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && reply()} className="flex-1 p-3 rounded-xl outline-none bg-white/10 text-white border-white/5 placeholder-white/30" placeholder="Type..." />
@@ -1163,66 +858,27 @@ function DeepMitra({ onBack, persona, userData, user, setView, notify, initialPr
   );
 }
 
-// --- WISDOM DECK ---
 function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
-  const [exp, setExp] = useState(null);
-  const [filter, setFilter] = useState("All");
+  const [exp, setExp] = useState(null); const [filter, setFilter] = useState("All");
   const isUnlocked = userData?.role === 'patron' || userData?.role === 'doctor';
-   
-  if (!isUnlocked) { 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center">
-        <div className="space-y-4">
-          <Lock size={40} className="mx-auto text-amber-500"/>
-          <h2 className="text-xl font-bold">Premium Feature</h2>
-          <p className="text-xs opacity-60">Ancient Wisdom is currently in closed beta.</p>
-          <button disabled className="px-6 py-2 bg-gray-600 rounded-full text-xs font-bold text-gray-300 opacity-50 cursor-not-allowed">🔒 Coming Soon</button>
-          <button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button>
-        </div>
-      </div>
-    ); 
-  }
-
-  const filteredCards = filter === 'All' 
-    ? cards 
-    : cards.filter(c => c.category === filter);
+  if (!isUnlocked) { return ( <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 text-white p-8 text-center"><div className="space-y-4"><Lock size={40} className="mx-auto text-amber-500"/><h2 className="text-xl font-bold">Premium Feature</h2><p className="text-xs opacity-60">Ancient Wisdom is currently in closed beta.</p><button disabled className="px-6 py-2 bg-gray-600 rounded-full text-xs font-bold text-gray-300 opacity-50 cursor-not-allowed">🔒 Coming Soon</button><button onClick={onBack} className="block w-full mt-4 text-xs opacity-50">Back</button></div></div> ); }
+  const filteredCards = filter === 'All' ? cards : cards.filter(c => c.category === filter);
    
   return (
     <div className="min-h-screen p-4 bg-black text-amber-50">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-xl font-black uppercase">Master Deck</h2>
-        <button onClick={onBack}><X/></button>
-      </div>
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-         {['All', 'Self', 'Mind', 'Life', 'Crisis', 'Relationships'].map(f => (
-           <button key={f} onClick={()=>setFilter(f)} className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase border transition-all ${filter===f ? 'bg-amber-500 text-black border-amber-500' : 'border-amber-900 text-amber-700 bg-transparent'}`}>
-             {f}
-           </button>
-         ))}
-      </div>
+      <div className="flex justify-between items-center mb-8"><h2 className="text-xl font-black uppercase">Master Deck</h2><button onClick={onBack}><X/></button></div>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">{['All', 'Self', 'Mind', 'Life', 'Crisis', 'Relationships'].map(f => ( <button key={f} onClick={()=>setFilter(f)} className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase border transition-all ${filter===f ? 'bg-amber-500 text-black border-amber-500' : 'border-amber-900 text-amber-700 bg-transparent'}`}>{f}</button> ))}</div>
       <div className="space-y-6">
         {filteredCards.map((c, i) => (
            <div key={`${c.id}-${i}`} className="p-6 rounded-[30px] border bg-[#1c1204] border-amber-900/30 transition-all hover:border-amber-500/30">
-             <h3 className="text-lg font-black uppercase mb-4 text-amber-100 tracking-tight">{c.title}</h3>
-             <p className="text-sm font-bold text-amber-50 mb-2 leading-relaxed">
-               {c.question || c.hurdle}
-             </p>
+             <h3 className="text-lg font-black uppercase mb-4 text-amber-100 tracking-tight">{c.title}</h3><p className="text-sm font-bold text-amber-50 mb-2 leading-relaxed">{c.question || c.hurdle}</p>
              {exp === c.id ? (
                <div className="space-y-4 pt-4 border-t border-amber-500/20 text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
-                 {c.answer && <p className="text-amber-200/90 italic mb-4 border-l-2 border-amber-500/50 pl-3">{c.answer}</p>}
-                 {c.ancestralRoot && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Ancestral Root</strong> {c.ancestralRoot}</p>}
-                 {c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Logic</strong> {c.awarenessLogic}</p>}
-                 <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-500/10 mt-4">
-                     <strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest flex items-center gap-2"><Flame size={12}/> Action</strong> 
-                     {c.action}
-                 </div>
+                 {c.answer && <p className="text-amber-200/90 italic mb-4 border-l-2 border-amber-500/50 pl-3">{c.answer}</p>}{c.ancestralRoot && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Ancestral Root</strong> {c.ancestralRoot}</p>}{c.awarenessLogic && <p><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest">Logic</strong> {c.awarenessLogic}</p>}
+                 <div className="p-4 bg-amber-900/20 rounded-xl border border-amber-500/10 mt-4"><strong className="text-amber-500 text-xs uppercase block mb-1 tracking-widest flex items-center gap-2"><Flame size={12}/> Action</strong> {c.action}</div>
                  <button onClick={() => setExp(null)} className="text-xs opacity-50 uppercase w-full text-center mt-6 py-2">Close Card</button>
                </div>
-             ) : ( 
-               <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl mt-4 hover:bg-amber-700/30 transition-colors">
-                 Read Answer
-               </button> 
-             )}
+             ) : ( <button onClick={() => setExp(c.id)} className="w-full py-3 bg-amber-700/20 text-amber-500 font-bold uppercase text-xs rounded-xl mt-4 hover:bg-amber-700/30 transition-colors">Read Answer</button> )}
            </div>
         ))}
         {filteredCards.length === 0 && <p className="text-center text-xs opacity-50 mt-10">No wisdom found in this category yet.</p>}
@@ -1231,133 +887,53 @@ function WisdomDeck({ onBack, lang, cards, userData, setView, notify }) {
   );
 }
 
-// --- HALL VIEW ---
 function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, setUserData, notify, welcomeMsgs, setTranslationRequest, setShowMitra }) { 
-  const [posts, setPosts] = useState(() => {
-     const saved = localStorage.getItem(`chat_${hall.id}`);
-     return saved ? JSON.parse(saved) : [];
-  }); 
+  const [posts, setPosts] = useState(() => { const saved = localStorage.getItem(`chat_${hall.id}`); return saved ? JSON.parse(saved) : []; }); 
   const [msg, setMsg] = useState(""); const [replyTo, setReplyTo] = useState(null);
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => { 
     if (hall.expertOnly && userData?.role !== 'doctor') return; 
     if (!isFirebaseInitialized) return; 
-    const qPosts = collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'); 
-    return onSnapshot(query(qPosts, orderBy('createdAt', 'desc'), limit(50)), (snap) => {
+    return onSnapshot(query(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), orderBy('createdAt', 'desc'), limit(50)), (snap) => {
         const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt);
-        setPosts(fetched);
-        localStorage.setItem(`chat_${hall.id}`, JSON.stringify(fetched));
+        setPosts(fetched); localStorage.setItem(`chat_${hall.id}`, JSON.stringify(fetched));
     }); 
   }, [hall, userData]);
 
   const startListening = () => {
-      if (!('webkitSpeechRecognition' in window)) {
-          notify("Browser does not support Voice.");
-          return;
-      }
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
+      if (!('webkitSpeechRecognition' in window)) { notify("Browser does not support Voice."); return; }
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
             const recognition = new window.webkitSpeechRecognition();
             recognition.lang = lang === 'te' ? 'te-IN' : lang === 'hi' ? 'hi-IN' : 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-            setIsListening(true);
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                setMsg(prev => prev + " " + transcript);
-                setIsListening(false);
-            };
-            recognition.onerror = (event) => {
-                console.error("Speech error", event.error);
-                setIsListening(false);
-                notify("Voice Error: Check Mic Permissions.");
-            };
-            recognition.onend = () => setIsListening(false);
-            recognition.start();
-        })
-        .catch((err) => {
-            console.error("Mic Permission Denied", err);
-            notify("Please Allow Microphone Access.");
-        });
+            recognition.interimResults = false; recognition.maxAlternatives = 1; setIsListening(true);
+            recognition.onresult = (e) => { setMsg(p => p + " " + e.results[0][0].transcript); setIsListening(false); };
+            recognition.onerror = () => { setIsListening(false); notify("Voice Error: Check Mic Permissions."); };
+            recognition.onend = () => setIsListening(false); recognition.start();
+        }).catch(() => notify("Please Allow Microphone Access."));
   };
 
   const send = async () => { 
     if (!msg.trim()) return; 
     if (/[0-9]{10}/.test(msg) || /\S+@\S+\.\S+/.test(msg)) { notify("Safety Block: Personal Contacts not allowed."); return; }
-    const forbidden = ["kill", "die", "suicide", "hate", "stupid", "idiot", "abuse", "scam"];
-    if (forbidden.some(w => msg.toLowerCase().includes(w))) { notify("Safety Block: Harmful language detected."); return; }
+    if (["kill", "die", "suicide", "hate", "stupid", "idiot", "abuse", "scam"].some(w => msg.toLowerCase().includes(w))) { notify("Safety Block: Harmful language detected."); return; }
 
     const textToSend = replyTo ? `[Replying to: "${(replyTo?.text || "").substring(0, 20)}..."]\n${msg}` : msg; 
-    const currentUid = user?.uid || "guest_" + Date.now();
-    const tempId = "temp_" + Date.now();
-    const userRole = userData?.role || 'guest';
-    const tempPost = { id: tempId, text: textToSend, uid: currentUid, role: userRole, createdAt: { seconds: Date.now()/1000 }, likes: 0 };
-    setPosts(prev => [tempPost, ...prev]);
-    localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
+    const tempPost = { id: "temp_" + Date.now(), text: textToSend, uid: user?.uid || "guest_" + Date.now(), role: userData?.role || 'guest', createdAt: { seconds: Date.now()/1000 }, likes: 0 };
+    setPosts(prev => [tempPost, ...prev]); localStorage.setItem(`chat_${hall.id}`, JSON.stringify([tempPost, ...posts])); 
     setMsg(""); setReplyTo(null); SoundEngine.playClick();
-    if (isFirebaseInitialized && user) {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { 
-            uid: user.uid, 
-            text: textToSend, 
-            role: userRole, 
-            createdAt: serverTimestamp(), 
-            reported: false, 
-            likes: 0, 
-            pinned: false 
-        }); 
-    }
+    if (isFirebaseInitialized && user) await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages'), { uid: user.uid, text: textToSend, role: userData?.role || 'guest', createdAt: serverTimestamp(), reported: false, likes: 0, pinned: false }); 
   };
   
-  const handleTranslate = (text) => {
-      notify("Opening Mitra to Translate...");
-      const targetLang = lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : 'English';
-      const prompt = `Translate this text to ${targetLang}: "${text}"`;
-      setTranslationRequest(prompt);
-      setShowMitra(true);
-  };
-
-  const handleGratitude = async (targetUid) => {
-      if(!targetUid || targetUid === user?.uid) { notify("You cannot thank yourself."); return; }
-      SoundEngine.playKarma();
-      notify("Gratitude Sent! Karma +1");
-      if(isFirebaseInitialized) {
-          try {
-              const targetRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid);
-              await updateDoc(targetRef, { karma: increment(1) });
-          } catch(e) { console.log("Karma error"); }
-      }
-  };
-
-  const handleLike = (id, currentLikes) => { 
-    setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p));
-    if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); 
-    SoundEngine.playClick(); 
-  };
+  const handleTranslate = (text) => { notify("Opening Mitra to Translate..."); setTranslationRequest(`Translate this text to ${lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : 'English'}: "${text}"`); setShowMitra(true); };
+  const handleGratitude = async (targetUid) => { if(!targetUid || targetUid === user?.uid) { notify("You cannot thank yourself."); return; } SoundEngine.playKarma(); notify("Gratitude Sent! Karma +1"); if(isFirebaseInitialized) try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', targetUid), { karma: increment(1) }); } catch(e) {} };
+  const handleLike = (id, currentLikes) => { setPosts(posts.map(p => p.id === id ? {...p, likes: (p.likes || 0) + 1} : p)); if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { likes: (currentLikes || 0) + 1 }); SoundEngine.playClick(); };
   const handleFlag = (id) => { if(isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { reported: true }); notify("Reported"); };
-  const handleDelete = (id) => { 
-      const newPosts = posts.filter(p => p.id !== id);
-      setPosts(newPosts);
-      localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts));
-      notify("Deleted");
-      if(isFirebaseInitialized && !id.startsWith("temp")) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id)); 
-  };
-  const handlePin = (id, currentPin) => {
-      setPosts(posts.map(p => p.id === id ? {...p, pinned: !p.pinned} : p));
-      if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin });
-      notify(currentPin ? "Unpinned" : "Pinned");
-  };
-
-  const formatTime = (t) => {
-    if (!t) return "Just now";
-    try {
-        const date = t.toDate ? t.toDate() : new Date(t.seconds * 1000 || t);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch(e) { return ""; }
-  };
+  const handleDelete = (id) => { const newPosts = posts.filter(p => p.id !== id); setPosts(newPosts); localStorage.setItem(`chat_${hall.id}`, JSON.stringify(newPosts)); notify("Deleted"); if(isFirebaseInitialized && !id.startsWith("temp")) deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id)); };
+  const handlePin = (id, currentPin) => { setPosts(posts.map(p => p.id === id ? {...p, pinned: !p.pinned} : p)); if(userData?.role === 'doctor' && isFirebaseInitialized && !id.startsWith("temp")) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', hall.id, 'messages', id), { pinned: !currentPin }); notify(currentPin ? "Unpinned" : "Pinned"); };
+  const formatTime = (t) => { if (!t) return "Just now"; try { return (t.toDate ? t.toDate() : new Date(t.seconds * 1000 || t)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch(e) { return ""; } };
   
   if (hall.expertOnly && userData?.role !== 'doctor') return <ExpertGate setView={setView} onBack={onBack} setUserData={setUserData} />;
-  
   const msgData = welcomeMsgs?.[hall.id] || { en: "Welcome", te: "స్వాగతం", hi: "स्वागत है" };
 
   return (
@@ -1366,33 +942,20 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
       <div className="p-8 bg-emerald-900 rounded-[40px] text-white">
         <h2 className="text-2xl font-black uppercase mb-2">{hall.label}</h2>
         <p className="text-sm opacity-80 leading-relaxed">{lang === 'en' ? msgData.en : lang === 'te' ? msgData.te : lang === 'hi' ? msgData.hi : ""}</p>
-        <div className="mt-4 pt-4 border-t border-emerald-500/30">
-             <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-                 <AlertTriangle size={12}/> {lang === 'en' ? "Notice" : "గమనిక"}
-             </p>
-             <p className="text-[10px] opacity-60 mt-1">{lang === 'en' ? msgData.disclaimer_en : lang === 'te' ? msgData.disclaimer_te : msgData.disclaimer_hi}</p>
-        </div>
+        <div className="mt-4 pt-4 border-t border-emerald-500/30"><p className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2"><AlertTriangle size={12}/> {lang === 'en' ? "Notice" : "గమనిక"}</p><p className="text-[10px] opacity-60 mt-1">{lang === 'en' ? msgData.disclaimer_en : lang === 'te' ? msgData.disclaimer_te : msgData.disclaimer_hi}</p></div>
       </div>
-      
       <div className="p-4 rounded-[30px] border bg-white/5 border-white/5 relative">
         {replyTo && <div className="flex justify-between items-center bg-emerald-500/10 p-2 rounded mb-2"><span className="text-[10px] opacity-70">Replying to: {(replyTo?.text || "").substring(0,15)}...</span><button onClick={()=>setReplyTo(null)}><X size={12}/></button></div>}
         <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Share..." className="w-full bg-transparent border-none outline-none resize-none h-20 text-sm font-medium text-white pr-10" />
-        <button onClick={startListening} className={`absolute top-4 right-4 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-white/10 text-gray-400'}`}>
-            <Mic size={16}/>
-        </button>
+        <button onClick={startListening} className={`absolute top-4 right-4 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-white/10 text-gray-400'}`}><Mic size={16}/></button>
         <div className="flex justify-end mt-2"><button onClick={send} className="p-3 bg-emerald-600 rounded-full text-white"><Send size={18}/></button></div>
       </div>
-      
       <div className="space-y-3">
         {posts.map(p => {
           const isExpert = p.role === 'doctor' || p.role === 'admin';
           return (
             <div key={p.id} className={`p-6 rounded-[35px] border ${isExpert ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-white/5 border-white/5'} ${p.pinned ? 'border-l-4 border-l-emerald-500' : ''}`}>
-                {isExpert && (
-                    <div className="flex items-center gap-1 mb-2 text-emerald-400 text-[10px] font-black uppercase tracking-wider">
-                        <ShieldCheck size={12} fill="currentColor" className="text-emerald-900"/> Verified Expert
-                    </div>
-                )}
+                {isExpert && <div className="flex items-center gap-1 mb-2 text-emerald-400 text-[10px] font-black uppercase tracking-wider"><ShieldCheck size={12} fill="currentColor" className="text-emerald-900"/> Verified Expert</div>}
                 <div className="text-sm font-medium text-gray-200 whitespace-pre-wrap">{p.text}</div>
                 <div className="flex justify-between items-center mt-4 opacity-50 text-white">
                     <span className="text-[9px] font-mono tracking-wide">{formatTime(p.createdAt)}</span>
@@ -1414,22 +977,19 @@ function HallView({ hall, onBack, userData, user, lang, searchQuery, setView, se
   );
 }
 
-// --- LAB VIEW ---
+// =====================================================================
+// 📦 MODULE 6: EXPERIENTIAL TOOLS (LAB & GAMES)
+// Breathing pacers, burn vaults, offline mini-games.
+// =====================================================================
+
 function LabView({ lang }) { 
-    const [a, s] = useState(null); 
-    const t = GAME_INFO.lab; 
-    
+    const [a, s] = useState(null); const t = GAME_INFO.lab; 
     if(a==='b')return <BurnVault onBack={()=>s(null)}/>; 
     if(a==='p')return <PranaBreath onBack={()=>s(null)}/>; 
     if(a==='pa')return <Panchabhoota onBack={()=>s(null)}/>; 
-
     return (
         <div className="space-y-6 animate-in fade-in">
-           <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-[40px] mb-8 text-center">
-               <h2 className="text-2xl font-black text-blue-100 uppercase tracking-tight mb-2">{lang==='en' ? t.t : lang==='te' ? t.te_t : t.hi_t}</h2>
-               <p className="text-xs text-blue-200/70 mb-4">{lang==='en' ? t.d : lang==='te' ? t.te_d : t.hi_d}</p>
-               <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{lang==='en' ? t.warn_en : lang==='te' ? t.warn_te : t.warn_hi}</p>
-           </div>
+           <div className="p-6 bg-blue-900/20 border border-blue-500/20 rounded-[40px] mb-8 text-center"><h2 className="text-2xl font-black text-blue-100 uppercase tracking-tight mb-2">{lang==='en' ? t.t : lang==='te' ? t.te_t : t.hi_t}</h2><p className="text-xs text-blue-200/70 mb-4">{lang==='en' ? t.d : lang==='te' ? t.te_d : t.hi_d}</p><p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{lang==='en' ? t.warn_en : lang==='te' ? t.warn_te : t.warn_hi}</p></div>
            <StationCard icon={Flame} title="Burn Vault" te="బర్న్ వాల్ట్" hi="बर्न वॉल्ट" onClick={()=>s('b')} color="bg-orange-900/20 border-orange-500/30"/>
            <StationCard icon={Wind} title="Breath" te="ప్రాణ" hi="सांस" onClick={()=>s('p')} color="bg-blue-900/20 border-blue-500/30"/>
            <StationCard icon={Sparkles} title="Pancha" te="పంచ" hi="पंच" onClick={()=>s('pa')} color="bg-emerald-900/20 border-emerald-500/30"/>
@@ -1437,7 +997,6 @@ function LabView({ lang }) {
     ); 
 }
 
-// --- GAMES VIEW ---
 function GamesView({ lang }) { 
     const [a, s] = useState(null); 
     if(a==='s')return <SnakeGame onBack={()=>s(null)} lang={lang}/>; 
@@ -1454,25 +1013,95 @@ function GamesView({ lang }) {
 }
 
 function SnakeGame({ onBack, lang }) { 
-    const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); 
-    const info = GAME_INFO.snake;
+    const [s, SS] = useState([{x:10,y:10}]); const [f, SF] = useState({x:5,y:5}); const [d, SD] = useState({x:0,y:-1}); const info = GAME_INFO.snake;
     useEffect(() => { const i = setInterval(() => { const h = {x:s[0].x+d.x, y:s[0].y+d.y}; if(h.x<0||h.x>19||h.y<0||h.y>19) return; const n = [h, ...s]; if(h.x===f.x && h.y===f.y) { SF({x:Math.floor(Math.random()*20), y:Math.floor(Math.random()*20)}); SoundEngine.playFreq(600,'sine',0.1); } else n.pop(); SS(n); }, 150); return () => clearInterval(i); }, [s, d, f]); 
     return (
-      <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50">
-        <div className="mb-6">
-            <h3 className="text-xl font-black text-emerald-400 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3>
-            <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : lang==='te' ? info.te_d : info.hi_d}</p>
-        </div>
-        <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button>
-        <div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div>
-        <div className="flex justify-center gap-4 mt-6"><button onClick={()=>SD({x:-1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16}/></button><button onClick={()=>SD({x:0,y:-1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16}/></button><button onClick={()=>SD({x:0,y:1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16} className="rotate-180"/></button><button onClick={()=>SD({x:1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16} className="rotate-180"/></button></div>
-      </div>
+      <div className="p-6 rounded-[50px] text-center border-4 bg-black border-emerald-900/50"><div className="mb-6"><h3 className="text-xl font-black text-emerald-400 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3><p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : lang==='te' ? info.te_d : info.hi_d}</p></div><button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-4">Exit</button><div className="grid grid-cols-[repeat(20,12px)] border mx-auto w-fit gap-[1px] p-1 rounded-xl bg-[#05100a] border-white/5">{Array.from({length:400}).map((_,i)=>{ const x=i%20,y=Math.floor(i/20); const isS=s.some(p=>p.x===x&&p.y===y); const isF=f.x===x&&f.y===y; return <div key={i} className={`w-[12px] h-[12px] rounded-sm ${isS?'bg-emerald-500':isF?'bg-amber-400 animate-pulse': 'bg-white/5'}`}/> })}</div><div className="flex justify-center gap-4 mt-6"><button onClick={()=>SD({x:-1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16}/></button><button onClick={()=>SD({x:0,y:-1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16}/></button><button onClick={()=>SD({x:0,y:1})} className="p-4 bg-gray-500/20 rounded-full"><ArrowUp size={16} className="rotate-180"/></button><button onClick={()=>SD({x:1,y:0})} className="p-4 bg-gray-500/20 rounded-full"><ArrowLeft size={16} className="rotate-180"/></button></div></div>
     ); 
 }
 
 function MandalaArt({ onBack, lang }) { 
-    const r = useRef(); const info = GAME_INFO.mandala;
-    const d = e => { if (!r.current) return; const c = r.current.getContext('2d'); const b = r.current.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; const x = clientX - b.left - 150, y = clientY - b.top - 150; c.translate(150, 150); c.strokeStyle = '#10b981'; c.lineWidth = 2; for (let i = 0; i < 8; i++) { c.rotate(Math.PI / 4); c.beginPath(); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.save(); c.scale(1, -1); c.moveTo(x, y); c.lineTo(x + 1, y + 1); c.stroke(); c.restore(); } c.setTransform(1, 0, 0, 1, 0, 0); }; 
+    const r = useRef(); 
+    const info = GAME_INFO.mandala;
+    
+    // V2.0 UPGRADE: Cosmic Ink States
+    const hueRef = useRef(150); // Start at Emerald
+    const isDrawing = useRef(false);
+    const lastPos = useRef({ x: 0, y: 0 });
+
+    const startDrawing = (e) => {
+        isDrawing.current = true;
+        const b = r.current.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        lastPos.current = { x: clientX - b.left - 150, y: clientY - b.top - 150 };
+    };
+
+    const stopDrawing = () => {
+        isDrawing.current = false;
+    };
+
+    const d = e => { 
+        if (!isDrawing.current || !r.current) return; 
+        const c = r.current.getContext('2d'); 
+        const b = r.current.getBoundingClientRect(); 
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX; 
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY; 
+        const x = clientX - b.left - 150, y = clientY - b.top - 150; 
+        
+        c.translate(150, 150); 
+        
+        // Dynamic Glow and Color
+        const currentColor = `hsl(${hueRef.current}, 100%, 50%)`;
+        c.strokeStyle = currentColor; 
+        c.shadowBlur = 15;
+        c.shadowColor = currentColor;
+        c.lineWidth = 2.5; 
+        c.lineCap = 'round';
+        c.lineJoin = 'round';
+
+        for (let i = 0; i < 8; i++) { 
+            c.rotate(Math.PI / 4); 
+            
+            // Standard Stroke
+            c.beginPath(); 
+            c.moveTo(lastPos.current.x, lastPos.current.y); 
+            c.lineTo(x, y); 
+            c.stroke(); 
+            
+            // Mirrored Stroke
+            c.save(); 
+            c.scale(1, -1); 
+            c.beginPath();
+            c.moveTo(lastPos.current.x, lastPos.current.y); 
+            c.lineTo(x, y); 
+            c.stroke(); 
+            c.restore(); 
+        } 
+        
+        c.setTransform(1, 0, 0, 1, 0, 0); 
+        lastPos.current = { x, y };
+        hueRef.current = (hueRef.current + 1) % 360; // Cycle color spectrum
+    }; 
+
+    const saveImage = () => {
+        if(!r.current) return;
+        // Create a temporary canvas with a dark background so the saved image isn't transparent
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 300;
+        tempCanvas.height = 300;
+        const tCtx = tempCanvas.getContext('2d');
+        tCtx.fillStyle = '#050505'; 
+        tCtx.fillRect(0, 0, 300, 300);
+        tCtx.drawImage(r.current, 0, 0);
+        
+        const link = document.createElement('a');
+        link.download = `AshokaManas_Mandala_${Date.now()}.png`;
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+        SoundEngine.playClick();
+    };
+
     return (
       <div className="p-8 rounded-[50px] text-center border-4 bg-black border-purple-900/50">
         <div className="mb-6">
@@ -1480,7 +1109,25 @@ function MandalaArt({ onBack, lang }) {
             <p className="text-[10px] text-gray-400 mt-2">{lang==='en' ? info.d : lang==='te' ? info.te_d : info.hi_d}</p>
         </div>
         <button onClick={onBack} className="text-gray-500 text-[10px] uppercase font-bold mb-6">Exit</button>
-        <canvas ref={r} width={300} height={300} className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" onMouseMove={e => e.buttons === 1 && d(e)} onTouchMove={d} /><button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="mt-6 px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase">Clear</button>
+        
+        <canvas 
+            ref={r} 
+            width={300} 
+            height={300} 
+            className="rounded-full mx-auto touch-none border cursor-crosshair bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.2)] border-white/5" 
+            onMouseDown={startDrawing}
+            onMouseMove={d} 
+            onMouseUp={stopDrawing}
+            onMouseOut={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={d} 
+            onTouchEnd={stopDrawing}
+        />
+        
+        <div className="flex justify-center gap-4 mt-6">
+            <button onClick={() => r.current.getContext('2d').clearRect(0, 0, 300, 300)} className="px-6 py-2 bg-gray-500/20 rounded-full text-[10px] font-bold uppercase text-gray-400">Clear</button>
+            <button onClick={saveImage} className="px-6 py-2 bg-purple-600/20 border border-purple-500/30 rounded-full text-[10px] font-bold uppercase flex items-center gap-2 text-purple-400"><Download size={12}/> Save</button>
+        </div>
       </div>
     ); 
 }
@@ -1489,68 +1136,23 @@ function BubblePop({ onBack, lang }) {
     const [b, setB] = useState(Array.from({length:15},(_,i)=>({id:i,x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}))); const info = GAME_INFO.bubble;
     const pop = (id) => { SoundEngine.playPop(); setB(p=>p.filter(i=>i.id!==id)); setTimeout(()=>setB(p=>[...p,{id:Date.now(),x:Math.random()*80+10,y:Math.random()*80+10, s: Math.random()*20+40}]), 500); }; 
     return (
-       <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30">
-         <div className="absolute top-6 left-6 z-20">
-             <button onClick={onBack} className="text-blue-400 font-black text-[10px] uppercase mb-2">Back</button>
-             <h3 className="text-lg font-black text-blue-100 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3>
-             <p className="text-[9px] text-blue-300 w-40">{lang==='en' ? info.warn_en : lang==='te' ? info.warn_te : info.warn_hi}</p>
-         </div>
-         {b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}
-       </div>
+       <div className="p-4 rounded-[60px] h-[500px] relative overflow-hidden border-4 bg-[#0f172a] border-blue-900/30"><div className="absolute top-6 left-6 z-20"><button onClick={onBack} className="text-blue-400 font-black text-[10px] uppercase mb-2">Back</button><h3 className="text-lg font-black text-blue-100 uppercase">{lang==='en' ? info.t : lang==='te' ? info.te_t : info.hi_t}</h3><p className="text-[9px] text-blue-300 w-40">{lang==='en' ? info.warn_en : lang==='te' ? info.warn_te : info.warn_hi}</p></div>{b.map(x=><button key={x.id} onClick={()=>pop(x.id)} className="absolute bg-blue-500/20 rounded-full border border-blue-400/50 backdrop-blur-sm active:scale-90 transition-transform shadow-[0_0_15px_rgba(59,130,246,0.3)]" style={{left:`${x.x}%`,top:`${x.y}%`,width:`${x.s}px`,height:`${x.s}px`}} />)}</div>
     ); 
 }
 
-function NavBtn({ icon: Icon, active, onClick }) { return <button onClick={onClick} className={`p-4 rounded-[30px] transition-all duration-500 ${active ? 'bg-emerald-500 text-[#022c22] shadow-[0_0_20px_rgba(16,185,129,0.4)] scale-110' : 'text-emerald-500/30 hover:bg-white/5 hover:text-emerald-400'}`}><Icon size={24} /></button>; }
-function StationCard({ icon: Icon, title, te, hi, onClick, color }) { return <button onClick={onClick} className={`p-8 border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{te || hi}</p></div></button>; }
-function GameBtn({ icon: Icon, title, desc, onClick, color }) { return <button onClick={onClick} className={`p-8 ${color} border rounded-[50px] flex items-center gap-6 w-full text-left shadow-sm active:scale-95 transition-all group bg-white/5 border-white/10`}><Icon size={32} className="text-white/80 group-hover:scale-110 transition-transform"/><div><h3 className="text-xl font-black uppercase text-white">{title}</h3><p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{desc}</p></div></button>; }
-
-const logToolSession = async (toolName, pre, post) => {
-    if(isFirebaseInitialized) {
-        try {
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), {
-                tool: toolName,
-                pre: pre,
-                post: post,
-                timestamp: serverTimestamp()
-            });
-        } catch(e) {}
-    }
-};
-
+const logToolSession = async (toolName, pre, post) => { if(isFirebaseInitialized) try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tool_sessions'), { tool: toolName, pre: pre, post: post, timestamp: serverTimestamp() }); } catch(e) {} };
 const ToolCheckin = ({ title, onSelect }) => (
-    <div className="text-center animate-in zoom-in duration-300">
-        <h3 className="text-lg font-black text-white uppercase mb-6 tracking-tight">{title}</h3>
-        <p className="text-[10px] text-gray-400 mb-4 font-bold uppercase tracking-widest">Rate your Stress (1 = Calm, 5 = Panic)</p>
-        <div className="flex justify-center gap-3">
-            {[1,2,3,4,5].map(n => (
-                <button key={n} onClick={()=>onSelect(n)} className={`w-12 h-12 rounded-xl font-black text-lg transition-all active:scale-90 ${n<3?'bg-emerald-500 text-black':n===3?'bg-yellow-500 text-black':'bg-red-500 text-white'}`}>
-                    {n}
-                </button>
-            ))}
-        </div>
-    </div>
+    <div className="text-center animate-in zoom-in duration-300"><h3 className="text-lg font-black text-white uppercase mb-6 tracking-tight">{title}</h3><p className="text-[10px] text-gray-400 mb-4 font-bold uppercase tracking-widest">Rate your Stress (1 = Calm, 5 = Panic)</p><div className="flex justify-center gap-3">{[1,2,3,4,5].map(n => ( <button key={n} onClick={()=>onSelect(n)} className={`w-12 h-12 rounded-xl font-black text-lg transition-all active:scale-90 ${n<3?'bg-emerald-500 text-black':n===3?'bg-yellow-500 text-black':'bg-red-500 text-white'}`}>{n}</button> ))}</div></div>
 );
 
 function BurnVault({ onBack }) { 
-    const [step, setStep] = useState('pre'); 
-    const [scores, setScores] = useState({pre:0, post:0});
-    const [t,T]=useState(""); 
-    const [b,B]=useState(false); 
-    const finish = (finalScore) => {
-        logToolSession('BurnVault', scores.pre, finalScore);
-        onBack();
-    };
+    const [step, setStep] = useState('pre'); const [scores, setScores] = useState({pre:0, post:0}); const [t,T]=useState(""); const [b,B]=useState(false); 
+    const finish = (finalScore) => { logToolSession('BurnVault', scores.pre, finalScore); onBack(); };
     return (
         <div className="p-10 rounded-[60px] text-center min-h-[400px] flex flex-col justify-center border bg-black border-orange-900/30 relative">
             <button onClick={onBack} className="absolute top-8 left-8 text-gray-500 text-[10px] uppercase font-bold tracking-widest">Exit</button>
             {step === 'pre' && <ToolCheckin title="Before we begin..." onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
-            {step === 'active' && !b && (
-                <div className="animate-in fade-in">
-                    <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div>
-                    <textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." />
-                    <button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); setStep('post'); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button>
-                </div>
-            )}
+            {step === 'active' && !b && ( <div className="animate-in fade-in"><div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6"><Flame className="text-orange-500" size={40} /></div><textarea value={t} onChange={e => T(e.target.value)} className="p-6 rounded-[30px] w-full h-40 mb-6 border outline-none resize-none font-medium bg-[#111] text-white border-white/10" placeholder="Write it down..." /><button onClick={() => { SoundEngine.playBurn(); B(true); setTimeout(() => { B(false); T(""); setStep('post'); }, 2000); }} className="bg-gradient-to-r from-orange-600 to-red-600 text-white py-4 rounded-[30px] w-full font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">Burn to Ash</button></div> )}
             {step === 'active' && b && <div className="text-8xl animate-bounce">🔥</div>}
             {step === 'post' && <ToolCheckin title="How do you feel now?" onSelect={(n)=>finish(n)} />}
         </div>
@@ -1559,32 +1161,96 @@ function BurnVault({ onBack }) {
 
 function PranaBreath({ onBack }) { 
     const [step, setStep] = useState('pre'); 
-    const [scores, setScores] = useState({pre:0, post:0});
-    const [s, S] = useState(1); const [t, T] = useState("Ready"); const [c, C] = useState(0); 
-    const finish = (finalScore) => {
-        logToolSession('PranaBreath', scores.pre, finalScore);
-        onBack();
+    const [scores, setScores] = useState({pre:0, post:0}); 
+    const [s, S] = useState(1); 
+    const [t, T] = useState("Ready"); 
+    const [c, C] = useState(0); 
+
+    const finish = (finalScore) => { 
+        logToolSession('PranaBreath', scores.pre, finalScore); 
+        onBack(); 
     };
+
     const start = () => { 
         T("Inhale"); S(1.5); let i = 1; 
-        const timer = setInterval(() => { C(i++); if (i > 4) { clearInterval(timer); T("Hold"); i = 1; const hTimer = setInterval(() => { C(i++); if (i > 7) { clearInterval(hTimer); T("Exhale"); S(1); i = 1; const eTimer = setInterval(() => { C(i++); if (i > 8) { clearInterval(eTimer); T("Ready"); C(0); setStep('post'); } }, 1000); } }, 1000); } }, 1000); 
+        const timer = setInterval(() => { 
+            C(i++); 
+            if (i > 4) { 
+                clearInterval(timer); 
+                T("Hold"); i = 1; 
+                const hTimer = setInterval(() => { 
+                    C(i++); 
+                    if (i > 7) { 
+                        clearInterval(hTimer); 
+                        T("Exhale"); S(1); i = 1; 
+                        const eTimer = setInterval(() => { 
+                            C(i++); 
+                            if (i > 8) { 
+                                clearInterval(eTimer); 
+                                T("Ready"); C(0); setStep('post'); 
+                            } 
+                        }, 1000); 
+                    } 
+                }, 1000); 
+            } 
+        }, 1000); 
     }; 
+
     return (
         <div className="p-16 rounded-[80px] shadow-2xl text-center relative border bg-[#0f172a] border-blue-500/20 min-h-[400px] flex flex-col justify-center">
             <button onClick={onBack} className="absolute top-8 left-8 text-blue-500/50 font-black text-[10px] uppercase tracking-widest">Back</button>
             {step === 'pre' && <ToolCheckin title="Check Pulse" onSelect={(n)=>{setScores({...scores, pre:n}); setStep('active');}} />}
-            {step === 'active' && (
-                <div className="animate-in zoom-in">
-                    <div className="flex justify-center py-10"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div>
-                    {t === 'Ready' && <button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button>}
-                </div>
-            )}
+            {step === 'active' && ( <div className="animate-in zoom-in"><div className="flex justify-center py-10"><div className="bg-blue-500/20 rounded-full transition-all duration-[4000ms] border-2 border-blue-400 flex items-center justify-center" style={{ width: `${200 * s}px`, height: `${200 * s}px` }}><div className="text-center"><span className="text-blue-400 font-black uppercase tracking-widest text-xs block">{t}</span><span className="text-4xl font-black text-white">{c > 0 ? c : ''}</span></div></div></div>{t === 'Ready' && <button onClick={start} className="mt-4 bg-blue-600 text-white px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-lg active:scale-95">Start 4-7-8</button>}</div> )}
             {step === 'post' && <ToolCheckin title="Check Pulse Again" onSelect={(n)=>finish(n)} />}
         </div>
     );
 }
 
 function Panchabhoota({ onBack }) { return <div className="space-y-4 pb-20"><button onClick={onBack} className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 block">Back</button>{[{t:'Earth (396Hz)',i:Mountain,f:396},{t:'Water (417Hz)',i:Droplets,f:417},{t:'Fire (528Hz)',i:Flame,f:528},{t:'Air (639Hz)',i:Wind,f:639},{t:'Space (963Hz)',i:Sparkles,f:963}].map(e=>(<div key={e.t} onClick={()=>SoundEngine.playAncient(e.f)} className="p-8 border rounded-[40px] flex items-center gap-6 active:scale-95 transition-all cursor-pointer bg-white/5 border-white/5 hover:bg-emerald-900/20"><e.i size={24} className="text-emerald-400"/><div><h3 className="font-black uppercase text-lg text-emerald-100">{e.t}</h3></div></div>))}</div>; }
+
+// =====================================================================
+// 📦 MODULE 7: PAYMENT GATEWAYS & EXTERNAL APIS
+// Google Play Digital Goods block injected earlier.
+// =====================================================================
+
+function SustenanceGateway({ user, notify, setUserData, lang }) {
+  const [isPlayStoreContext, setIsPlayStoreContext] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { if ('getDigitalGoodsService' in window) setIsPlayStoreContext(true); }, []);
+
+  const initiatePurchase = async () => {
+    setLoading(true); notify("Connecting to Google Play...");
+    try {
+      if (!('getDigitalGoodsService' in window)) throw new Error("Digital Goods API not found. Are you in the Play Store app?");
+      const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+      const itemDetails = await service.getDetails(['patron_tier_monthly']);
+      if (itemDetails.length === 0) throw new Error("Patron SKU not found on Play Console.");
+      const request = new PaymentRequest([{ supportedMethods: 'https://play.google.com/billing', data: { sku: 'patron_tier_monthly' } }]);
+      const response = await request.show();
+      const token = response.details.token;
+      await response.complete('success');
+      notify("Purchase Successful! Upgrading...");
+      setUserData(p => ({...p, role: 'patron'}));
+      if(isFirebaseInitialized && user) await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { role: 'patron', subscription_token: token });
+    } catch (err) { notify("Transaction Cancelled or Failed: " + err.message); } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="p-6 rounded-[40px] border bg-amber-900/10 border-amber-500/20 relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-tr from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div className="flex items-center gap-3 mb-4 relative z-10"><Crown className="text-amber-500"/><h3 className="font-black uppercase text-amber-100">{lang === 'en' ? "Sustenance Portal" : "ప్రీమియం"}</h3></div>
+      <p className="text-[10px] text-amber-200/60 mb-4 leading-relaxed font-medium relative z-10">Unlock Ancient Wisdom and Deep Mitra AI by becoming a Patron. Your contribution keeps this sanctuary ad-free and sovereign.</p>
+      {isPlayStoreContext ? (
+          <button onClick={initiatePurchase} disabled={loading} className={`w-full py-4 bg-amber-600 text-black rounded-xl font-black uppercase text-xs shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:bg-amber-500 transition-colors flex items-center justify-center gap-2 relative z-10 ${loading ? 'opacity-50 cursor-wait' : ''}`}>
+              {loading ? <Loader size={16} className="animate-spin" /> : <CreditCard size={16} />} {loading ? "Connecting..." : "Become a Patron (Google Play)"}
+          </button>
+      ) : (
+          <div className="w-full py-3 bg-gray-500/10 text-amber-500/50 rounded-xl font-bold uppercase text-xs border border-amber-500/20 text-center relative z-10">⚠️ Available only in the Google Play App</div>
+      )}
+    </div>
+  );
+}
 
 function ExpertGate({ setView, onBack, setUserData }) { 
   const [key, setKey] = useState("");
@@ -1593,25 +1259,11 @@ function ExpertGate({ setView, onBack, setUserData }) {
     try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'secure_gates', key.trim());
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists() && docSnap.data().role === 'doctor') {
-        setUserData(p => ({...p, role: 'doctor'}));
-        localStorage.setItem('ashoka_role', 'doctor');
-        alert("Verified: Access Granted.");
-      } else {
-        alert("Invalid Key.");
-      }
+      if (docSnap.exists() && docSnap.data().role === 'doctor') { setUserData(p => ({...p, role: 'doctor'})); localStorage.setItem('ashoka_role', 'doctor'); alert("Verified: Access Granted."); } else { alert("Invalid Key."); }
     } catch(e) { alert("Verification Failed."); }
   };
   return (
-    <div className="p-12 rounded-[60px] text-center space-y-8 shadow-2xl animate-in zoom-in border bg-[#022c22] border-emerald-500/20">
-      <Lock size={60} className="mx-auto opacity-20 text-emerald-400" />
-      <h2 className="text-3xl font-black uppercase tracking-tighter text-emerald-100">Expert Only</h2>
-      <div className="space-y-4">
-        <input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="Enter Key" className="w-full p-4 rounded-[30px] text-center font-black outline-none border bg-black/40 text-white border-emerald-500/30"/>
-        <button onClick={verify} className="w-full py-4 bg-emerald-700 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl border border-emerald-500/50">Unlock Hub</button>
-      </div>
-      <button onClick={onBack} className="text-[10px] uppercase font-bold text-emerald-500/50">Return</button>
-    </div>
+    <div className="p-12 rounded-[60px] text-center space-y-8 shadow-2xl animate-in zoom-in border bg-[#022c22] border-emerald-500/20"><Lock size={60} className="mx-auto opacity-20 text-emerald-400" /><h2 className="text-3xl font-black uppercase tracking-tighter text-emerald-100">Expert Only</h2><div className="space-y-4"><input type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="Enter Key" className="w-full p-4 rounded-[30px] text-center font-black outline-none border bg-black/40 text-white border-emerald-500/30"/><button onClick={verify} className="w-full py-4 bg-emerald-700 text-white rounded-full font-black uppercase text-xs tracking-widest shadow-xl border border-emerald-500/50">Unlock Hub</button></div><button onClick={onBack} className="text-[10px] uppercase font-bold text-emerald-500/50">Return</button></div>
   ); 
 }
 
